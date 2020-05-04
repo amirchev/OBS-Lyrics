@@ -81,13 +81,11 @@ end
 function save_song_clicked(props, p)
 	local name = obs.obs_data_get_string(script_sets, "prop_edit_song_title")
 	local text = obs.obs_data_get_string(script_sets, "prop_edit_song_text")
-	print("saving song: " .. name)
 	if save_song(name, text) then -- this is a new song
 		local prop_dir_list = obs.obs_properties_get(props, "prop_directory_list")
 		obs.obs_property_list_add_string(prop_dir_list, name, name)
 		obs.obs_data_set_string(script_sets, "prop_directory_list", name)
 		obs.obs_properties_apply_settings(props, script_sets)
-		print("added new song: " .. name)
 	elseif displayed_song == name then
 		prepare_lyrics(name)
 		update_lyrics_display()
@@ -123,7 +121,6 @@ function delete_song_clicked(props, p)
 				end
 			end
 			obs.obs_properties_apply_settings(props, script_sets)
-			print("deleted song: " .. name)
 			return true
 		end
 	end
@@ -139,7 +136,6 @@ function prepare_song_clicked(props, p)
 		obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
 	end
 	obs.obs_properties_apply_settings(props, script_sets)
-	print("prepared song: " .. prepared_songs[#prepared_songs])
 	return true
 end
 
@@ -147,13 +143,11 @@ function prepare_selection_made(props, prop, settings)
 	local name = obs.obs_data_get_string(settings, "prop_prepared_list")
 	prepare_lyrics(name)
 	if displayed_song ~= name then
-		print ("fire")
 		display_index = 1
 		visible = false
 	end
 	displayed_song = name
 	update_lyrics_display()
-	print("displaying: " .. name)
 	return true
 end
 
@@ -174,7 +168,6 @@ function preview_selection_made(props, prop, settings)
 		end
 	end
 	obs.obs_data_set_string(settings, "prop_edit_song_text", combined_text)
-	print("previewing: " .. name)
 	return true
 end
 
@@ -187,7 +180,6 @@ function clear_prepared_clicked(props, p)
 	obs.obs_property_list_clear(prep_prop)
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
 	obs.obs_properties_apply_settings(props, script_sets)
-	print("cleared prepared songs")
 	return true
 end
 
@@ -204,7 +196,6 @@ function update_lyrics_display()
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 		obs.obs_source_release(source)
-		print("done")
 	end
 end
 
@@ -222,7 +213,6 @@ function load_song_directory()
 	else
 		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
 	end
-	print("loaded " .. #song_directory .. " songs")
 end
 
 -- saves the updated song directory
@@ -268,7 +258,6 @@ function prepare_lyrics(name)
 	local cur_line = 1
 	lyrics = {}
 	for _, line in ipairs(song_lines) do
-		print(#lyrics)
 		if line:sub(-3) == "###" then
 			lyrics[#lyrics + 1] = line:sub(1, -4)
 			cur_line = 1
@@ -417,7 +406,6 @@ function script_update(settings)
 		prepare_lyrics(displayed_song)
 		display_index = 1
 		update_lyrics_display()
-		print("update reloaded")
 	end
 end
 
