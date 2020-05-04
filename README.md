@@ -14,4 +14,4 @@ Please post any bugs or feature requests here to the OBS forum.
 
 Feel free to make pull requests for any features you implement yourself, I'll be happy to take a look at them.
 
-- amirchev
+amirchev
