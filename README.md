@@ -10,6 +10,10 @@ Manage and display lyrics to any text source in your OBS scene.
 6. Advance lyrics as needed using the buttons or appropriate hotkeys. 
 7. When you're finished with the current song, hide the lyrics and select the next song from the "Prepared Songs" list. 
 
+## Things to know
+- Append `###` to the end of a line to display it by itself.
+
+## That's it
 Please post any bugs or feature requests here to the OBS forum. 
 
 Feel free to make pull requests for any features you implement yourself, I'll be happy to take a look at them.
