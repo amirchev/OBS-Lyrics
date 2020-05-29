@@ -16,7 +16,7 @@ Manage and display lyrics to any text source in your OBS scene.
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
 
 ## That's it
-Please post any bugs or feature requests here to the OBS forum. 
+Please post any bugs or feature requests here or to the OBS forum. 
 
 Feel free to make pull requests for any features you implement yourself, I'll be happy to take a look at them.
 
