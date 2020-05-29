@@ -12,13 +12,16 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
+
+
+--TODO: refresh properties after next prepared selection
+--TODO: add text formatting guide
 obs = obslua
 source_name = ""
 windows_os = false
 
 display_lines = 1
 visible = false
-
 displayed_song = ""
 lyrics = {}
 display_index = 1
@@ -28,8 +31,11 @@ prepared_songs = {}
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_p_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_c_id = obs.OBS_INVALID_HOTKEY_ID
+hotkey_n_p_id = obs.OBS_INVALID_HOTKEY_ID
+hotkey_p_p_id = obs.OBS_INVALID_HOTKEY_ID
 
 script_sets = nil
+script_props = nil
 
 ------------------------------------------------------------------------- EVENTS
 
@@ -39,6 +45,8 @@ function next_lyric(pressed)
 	end
 	if display_index + 1 <= #lyrics then
 		display_index = display_index + 1
+	else
+		if next_prepared(true) then visible = true end
 	end
 	update_lyrics_display()
 end
@@ -49,10 +57,8 @@ function prev_lyric(pressed)
 	end
 	if display_index > 1 then
 		display_index = display_index - 1
-	else
-		display_index = 1
+		update_lyrics_display()
 	end
-	update_lyrics_display()
 end
 
 function clear_lyric(pressed)
@@ -62,20 +68,53 @@ function clear_lyric(pressed)
 	visible = not visible
 	update_lyrics_display()
 end
+                
+function next_prepared(pressed)
+	if not pressed then return false end
+	--if current index < size, then current index ++
+	local prop_prep_list = obs.obs_properties_get(script_props, "prop_prepared_list")
+	local prepared_song_amount = obs.obs_property_list_item_count(prop_prep_list)
+	if prepared_song_amount < 2 then return end
+	for i = 0, prepared_song_amount - 2 do
+		if obs.obs_property_list_item_string(prop_prep_list, i) == displayed_song then
+			local next_song = obs.obs_property_list_item_string(prop_prep_list, i + 1)
+			obs.obs_data_set_string(script_sets, "prop_prepared_list", next_song)
+			obs.obs_properties_apply_settings(script_props, script_sets)
+			return true
+		end
+	end
+	return false
+end
+                
+function prev_prepared(pressed)
+	if not pressed then return end
+	--if current index > 0, then current index ++
+	local prop_prep_list = obs.obs_properties_get(script_props, "prop_prepared_list")
+	local prepared_song_amount = obs.obs_property_list_item_count(prop_prep_list)
+	if prepared_song_amount < 2 then return end
+	for i = 1, prepared_song_amount - 1 do
+		if obs.obs_property_list_item_string(prop_prep_list, i) == displayed_song then
+			local next_song = obs.obs_property_list_item_string(prop_prep_list, i - 1)
+			obs.obs_data_set_string(script_sets, "prop_prepared_list", next_song)
+			obs.obs_properties_apply_settings(script_props, script_sets)
+			return
+		end
+	end
+end
 
 function next_button_clicked(props, p)
 	next_lyric(true)
-	return false
+	return true
 end
 
 function prev_button_clicked(props, p)
 	prev_lyric(true)
-	return false
+	return true
 end
 
 function clear_button_clicked(props, p)
 	clear_lyric(true)
-	return false
+	return true
 end
 
 function save_song_clicked(props, p)
@@ -183,6 +222,8 @@ function clear_prepared_clicked(props, p)
 	return true
 end
 
+-------------------------------------------------------------- PROGRAM FUNCTIONS
+
 -- updates the displayed lyrics
 function update_lyrics_display()
 	local text = ""
@@ -199,7 +240,43 @@ function update_lyrics_display()
 	end
 end
 
--------------------------------------------------------------- PROGRAM FUNCTIONS
+
+-- prepares lyrics using selected_song
+function prepare_lyrics(name)
+	if name == nil then return nil end
+	local song_lines = get_song_text(name)
+	local cur_line = 1
+	lyrics = {}
+	for _, line in ipairs(song_lines) do
+		local single_line = false
+		if line:find("###") ~= nil then
+			line = line:gsub("%s*###%s*", "")
+			single_line = true
+		end
+		local comment_index = line:find("%s*//")
+		if comment_index ~= nil then
+			line = line:sub(1, comment_index - 1)
+		end
+		
+		if line:len() > 0 then 
+			if single_line then
+				lyrics[#lyrics + 1] = line
+				cur_line = 1
+			else
+				if cur_line == 1 then
+					lyrics[#lyrics + 1] = line
+				else
+					lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+				end
+				cur_line = cur_line + 1
+				if (cur_line > display_lines) then
+					cur_line = 1
+				end
+			end
+		end
+	end
+	lyrics[#lyrics + 1] = ""
+end
 
 -- loads the song directory
 function load_song_directory()
@@ -239,7 +316,10 @@ function save_song(name, text)
 	local file = io.open(get_song_file_path(name), "w")
 	if file ~= nil then
 		for line in string.gmatch(text, "([^\n]+)") do
-			file:write(line, "\n")
+			local trimmed = line:match("%s*(%S-.*%S+)%s*")
+			if trimmed ~= nil then
+				file:write(trimmed, "\n")
+			end
 		end
 		file:close()
 		if get_index_in_list(song_directory, name) == nil then
@@ -249,28 +329,6 @@ function save_song(name, text)
 		end
 	end
 	return false
-end
-
--- prepares lyrics using selected_song
-function prepare_lyrics(name)
-	if name == nil then return nil end
-	local song_lines = get_song_text(name)
-	local cur_line = 1
-	lyrics = {}
-	for _, line in ipairs(song_lines) do
-		if line:sub(-3) == "###" then
-			lyrics[#lyrics + 1] = line:sub(1, -4)
-			cur_line = 1
-		else
-			if cur_line == 1 then
-				lyrics[#lyrics + 1] = line
-			else
-				lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
-			end
-			cur_line = cur_line + 1
-			if (cur_line > display_lines) then cur_line = 1 end
-		end
-	end
 end
 
 -- finds the index of a song in the directory
@@ -340,22 +398,22 @@ end
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
 function script_properties()
-	local props = obs.obs_properties_create()
+	script_props = obs.obs_properties_create()
 	
-	obs.obs_properties_add_text(props, "prop_edit_song_title", "Song Title", obs.OBS_TEXT_DEFAULT)
-	obs.obs_properties_add_text(props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
-	obs.obs_properties_add_button(props, "prop_save_button", "Save Song", save_song_clicked)
+	obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title", obs.OBS_TEXT_DEFAULT)
+	obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
+	obs.obs_properties_add_button(script_props, "prop_save_button", "Save Song", save_song_clicked)
 	
-	local prop_dir_list = obs.obs_properties_add_list(props, "prop_directory_list", "Song Directory", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local prop_dir_list = obs.obs_properties_add_list(script_props, "prop_directory_list", "Song Directory", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	for _, name in ipairs(song_directory) do
 		obs.obs_property_list_add_string(prop_dir_list, name, name)
 	end
 	obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
-	obs.obs_properties_add_button(props, "prop_prepare_button", "Prepare Song", prepare_song_clicked)
-	obs.obs_properties_add_button(props, "prop_delete_button", "Delete Song", delete_song_clicked)
+	obs.obs_properties_add_button(script_props, "prop_prepare_button", "Prepare Song", prepare_song_clicked)
+	obs.obs_properties_add_button(script_props, "prop_delete_button", "Delete Song", delete_song_clicked)
 
-	obs.obs_properties_add_int(props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
-	local source_prop = obs.obs_properties_add_list(props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
+	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _, source in ipairs(sources) do
@@ -369,18 +427,18 @@ function script_properties()
 	obs.source_list_release(sources)
 	
 	
-	local prep_prop = obs.obs_properties_add_list(props, "prop_prepared_list", "Prepared Songs", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local prep_prop = obs.obs_properties_add_list(script_props, "prop_prepared_list", "Prepared Songs", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	for _, name in ipairs(prepared_songs) do
 		obs.obs_property_list_add_string(prep_prop, name, name)
 	end
 	obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
-	obs.obs_properties_add_button(props, "prop_clear_button", "Clear Prepared Songs", clear_prepared_clicked)
+	obs.obs_properties_add_button(script_props, "prop_clear_button", "Clear Prepared Songs", clear_prepared_clicked)
 
-	obs.obs_properties_add_button(props, "prop_next_button", "Next Lyric", next_button_clicked)
-	obs.obs_properties_add_button(props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
-	obs.obs_properties_add_button(props, "prop_hide_button", "Show/Hide Lyrics", clear_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_next_button", "Next Lyric", next_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/Hide Lyrics", clear_button_clicked)
 
-	return props
+	return script_props
 end
 
 -- A function named script_description returns the description shown to
@@ -428,6 +486,17 @@ function script_save(settings)
 	
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_c_id)
 	obs.obs_data_set_array(settings, "lyric_clear_hotkey", hotkey_save_array)
+	hotkey_save_array = obs.obs_hotkey_save(hotkey_c_id)
+	obs.obs_data_array_release(hotkey_save_array)
+                
+	hotkey_save_array = obs.obs_hotkey_save(hotkey_n_p_id)
+	obs.obs_data_set_array(settings, "next_prepared_hotkey", hotkey_save_array)
+	hotkey_save_array = obs.obs_hotkey_save(hotkey_n_p_id)
+	obs.obs_data_array_release(hotkey_save_array)
+                
+	hotkey_save_array = obs.obs_hotkey_save(hotkey_p_p_id)
+	obs.obs_data_set_array(settings, "previous_prepared_hotkey", hotkey_save_array)
+	hotkey_save_array = obs.obs_hotkey_save(hotkey_p_p_id)
 	obs.obs_data_array_release(hotkey_save_array)
 end
 
@@ -436,6 +505,8 @@ function script_load(settings)
 	hotkey_n_id = obs.obs_hotkey_register_frontend("lyric_next_hotkey_thing", "Advance Lyrics", next_lyric)
 	hotkey_p_id = obs.obs_hotkey_register_frontend("lyric_prev_hotkey_thing", "Go Back Lyrics", prev_lyric)
 	hotkey_c_id = obs.obs_hotkey_register_frontend("lyric_clear_hotkey_thing", "Show/Hide Lyrics", clear_lyric)
+	hotkey_n_p_id = obs.obs_hotkey_register_frontend("next_prepared_hotkey_thing", "Prepare Next", next_prepared)
+	hotkey_p_p_id = obs.obs_hotkey_register_frontend("previous_prepared_hotkey_thing", "Prepare Previous", prev_prepared)
 	
 	local hotkey_save_array = obs.obs_data_get_array(settings, "lyric_next_hotkey")
 	obs.obs_hotkey_load(hotkey_n_id, hotkey_save_array)
@@ -447,6 +518,14 @@ function script_load(settings)
 	
 	hotkey_save_array = obs.obs_data_get_array(settings, "lyric_clear_hotkey")
 	obs.obs_hotkey_load(hotkey_c_id, hotkey_save_array)
+	obs.obs_data_array_release(hotkey_save_array)
+	
+	hotkey_save_array = obs.obs_data_get_array(settings, "next_prepared_hotkey")
+	obs.obs_hotkey_load(hotkey_n_p_id, hotkey_save_array)
+	obs.obs_data_array_release(hotkey_save_array)
+	
+	hotkey_save_array = obs.obs_data_get_array(settings, "previous_prepared_hotkey")
+	obs.obs_hotkey_load(hotkey_p_p_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 
 	obs.obs_data_addref(settings)
