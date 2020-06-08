@@ -10,6 +10,8 @@ Manage and display lyrics to any text source in your OBS scene.
 6. Advance lyrics as needed using the buttons or appropriate hotkeys. You can also advance to the next prepared song using hotkeys.
 7. When you're finished with the current song, hide the lyrics and select the next song from the "Prepared Songs" list. 
 
+There is a much more in-depth guide [here](https://obsproject.com/forum/resources/display-lyrics-as-subtitles.1005/).
+
 ## Things to know
 - Append `###` to the end of a line to display it by itself.
 - Use `//` to write a comment that will not display to your viewers, e.g. `We sing to you God //repeats 5 times`
