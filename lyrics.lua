@@ -288,7 +288,11 @@ function load_song_directory()
 		end
 		file:close()
 	else
-		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
+		if windows_os then
+			os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
+		else
+			os.execute("mkdir -p \"" .. get_songs_folder_path() .. "\"")
+		end
 	end
 end
 
