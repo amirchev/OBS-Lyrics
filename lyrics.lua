@@ -19,6 +19,7 @@
 obs = obslua
 source_name = ""
 windows_os = false
+first_open = true
 
 display_lines = 1
 ensure_lines = true
@@ -478,6 +479,13 @@ end
 -- A function named script_defaults will be called to set the default settings
 function script_defaults(settings)
 	obs.obs_data_set_default_int(settings, "prop_lines_counter", 2)
+	
+	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
+	if windows_os then
+		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
+	else
+		os.execute("mkdir -p \"" .. get_songs_folder_path() .. "\"")
+	end
 end
 
 -- A function named script_save will be called when the script is saved
@@ -539,10 +547,5 @@ function script_load(settings)
 	obs.obs_data_addref(settings)
 	script_sets = settings
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
-	if windows_os then
-		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
-	else
-		os.execute("mkdir -p \"" .. get_songs_folder_path() .. "\"")
-	end
 	load_song_directory()
 end
