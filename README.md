@@ -14,8 +14,10 @@ There is a much more in-depth guide [here](https://obsproject.com/forum/resource
 
 ## Things to know
 - Append `###` to the end of a line to display it by itself.
-- Use `//` to write a comment that will not display to your viewers, e.g. `We sing to you God //repeats 5 times`
+- Use `//` to write a comment that will not display to your viewers, e.g., `We sing to you God //repeats 5 times`
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
+- Removed the use of "directory.txt" file used for song directories.
+- Ensure a constant number of lines displayed using the checkbox, e.g., if the song ends and only one line is left, lyrics will be padded with blank lines to ensure you hava a minimum number of lines.
 
 ## That's it
 Please post any bugs or feature requests here or to the OBS forum. 
