@@ -21,6 +21,7 @@ source_name = ""
 windows_os = false
 
 display_lines = 1
+ensure_lines = true
 visible = false
 displayed_song = ""
 lyrics = {}
@@ -222,6 +223,13 @@ function clear_prepared_clicked(props, p)
 	return true
 end
 
+function open_button_clicked(props, p)
+	if windows_os then
+		os.execute("explorer \"" .. get_songs_folder_path() .. "\"")
+	else
+		os.execute("xdg-open \"" .. get_songs_folder_path() .. "\"")
+	end
+end
 -------------------------------------------------------------- PROGRAM FUNCTIONS
 
 -- updates the displayed lyrics
@@ -241,9 +249,9 @@ function update_lyrics_display()
 end
 
 
--- prepares lyrics using selected_song
+-- prepares lyrics of the song
 function prepare_lyrics(name)
-	if name == nil then return nil end
+	if name == nil then return end
 	local song_lines = get_song_text(name)
 	local cur_line = 1
 	lyrics = {}
@@ -275,35 +283,31 @@ function prepare_lyrics(name)
 			end
 		end
 	end
+	if ensure_lines and cur_line <= display_lines then
+		for i = cur_line, display_lines, 1 do
+			lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+		end
+	end
 	lyrics[#lyrics + 1] = ""
 end
 
 -- loads the song directory
 function load_song_directory()
     song_directory = {}
-    local file = io.open(get_song_directory_file_path(), "r")
-	if file ~= nil then
-		for line in file:lines() do
-			song_directory[#song_directory + 1] = line
+	if windows_os then
+		local res = io.popen("dir \"" .. get_songs_folder_path() .. "\" /b")
+		if res ~= nil then
+			for line in res:lines() do
+				song_directory[#song_directory + 1] = line:match("(.-).txt")
+			end
 		end
-		file:close()
 	else
-		if windows_os then
-			os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
-		else
-			os.execute("mkdir -p \"" .. get_songs_folder_path() .. "\"")
+		local res = io.popen("ls \"" .. get_songs_folder_path() .. "\"")
+		if res ~= nil then
+			for line in res:gmatch("%s*(.-).txt") do
+				song_directory[#song_directory + 1] = line
+			end
 		end
-	end
-end
-
--- saves the updated song directory
-function save_song_directory()
-    local file = io.open(get_song_directory_file_path(), "w")
-	if file ~= nil then
-		for _, song in ipairs(song_directory) do
-			file:write(song, "\n")
-		end
-		file:close()
 	end
 end
 
@@ -311,7 +315,6 @@ end
 function delete_song(name)
 	os.remove(get_song_file_path(name))
 	table.remove(song_directory, get_index_in_list(song_directory, name))
-	save_song_directory()
 	load_song_directory()
 end
 
@@ -319,7 +322,7 @@ end
 function save_song(name, text)
 	local file = io.open(get_song_file_path(name), "w")
 	if file ~= nil then
-		for line in string.gmatch(text, "([^\n]+)") do
+		for line in text:gmatch("([^\n]+)") do
 			local trimmed = line:match("%s*(%S-.*%S+)%s*")
 			if trimmed ~= nil then
 				file:write(trimmed, "\n")
@@ -328,7 +331,6 @@ function save_song(name, text)
 		file:close()
 		if get_index_in_list(song_directory, name) == nil then
 			song_directory[#song_directory + 1] = name
-			save_song_directory()
 			return true
 		end
 	end
@@ -344,11 +346,6 @@ function get_index_in_list(list, q_item)
 end
 
 ----------------------------------------------------------------- FILE FUNCTIONS
-
--- returns path of the song directory file
-function get_song_directory_file_path()
-    return get_songs_folder_path() .. "/directory.txt"
-end
 
 -- returns path of the given song name
 function get_song_file_path(name)
@@ -415,8 +412,10 @@ function script_properties()
 	obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
 	obs.obs_properties_add_button(script_props, "prop_prepare_button", "Prepare Song", prepare_song_clicked)
 	obs.obs_properties_add_button(script_props, "prop_delete_button", "Delete Song", delete_song_clicked)
+	obs.obs_properties_add_button(script_props, "prop_open_button", "Open Songs Folder", open_button_clicked)
 
 	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
+	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
@@ -462,6 +461,11 @@ function script_update(settings)
 	local cur_source_name = obs.obs_data_get_string(settings, "prop_source_list")
 	if source_name ~= cur_source_name then
 		source_name = cur_source_name
+		reload = true
+	end
+	local cur_ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
+	if cur_ensure_lines ~= ensure_lines then
+		ensure_lines = cur_ensure_lines
 		reload = true
 	end
 	if reload then
@@ -535,5 +539,10 @@ function script_load(settings)
 	obs.obs_data_addref(settings)
 	script_sets = settings
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
+	if windows_os then
+		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
+	else
+		os.execute("mkdir -p \"" .. get_songs_folder_path() .. "\"")
+	end
 	load_song_directory()
 end
