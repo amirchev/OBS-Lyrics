@@ -299,14 +299,19 @@ function load_song_directory()
 		local res = io.popen("dir \"" .. get_songs_folder_path() .. "\" /b")
 		if res ~= nil then
 			for line in res:lines() do
-				song_directory[#song_directory + 1] = line:match("(.-).txt")
+				local name = line:match("(.-).txt")
+				if name ~= "directory" then
+					song_directory[#song_directory + 1] = name
+				end
 			end
 		end
 	else
 		local res = io.popen("ls \"" .. get_songs_folder_path() .. "\"")
 		if res ~= nil then
-			for line in res:gmatch("%s*(.-).txt") do
-				song_directory[#song_directory + 1] = line
+			for name in res:gmatch("%s*(.-).txt") do
+				if name ~= "directory" then
+					song_directory[#song_directory + 1] = name
+				end
 			end
 		end
 	end
