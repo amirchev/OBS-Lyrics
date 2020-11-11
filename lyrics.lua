@@ -294,28 +294,23 @@ end
 
 -- loads the song directory
 function load_song_directory()
-    song_directory = {}
-	if windows_os then
-		local res = io.popen("dir \"" .. get_songs_folder_path() .. "\" /b")
-		if res ~= nil then
-			for line in res:lines() do
-				local name = line:match("(.-).txt")
-				if name ~= "directory" then
-					song_directory[#song_directory + 1] = name
-				end
-			end
-		end
-	else
-		local res = io.popen("ls \"" .. get_songs_folder_path() .. "\"")
-		if res ~= nil then
-			for name in res:gmatch("%s*(.-).txt") do
-				if name ~= "directory" then
-					song_directory[#song_directory + 1] = name
-				end
-			end
-		end
-	end
+	song_directory = {}
+	local filenames = {}
+	local dir = obslua.os_opendir(get_songs_folder_path())
+	local entry
+	local songExt
+	local songTitle
+	repeat
+	  entry = obslua.os_readdir(dir)
+	  if entry and not entry.directory and obslua.os_get_path_extension(entry.d_name)==".txt" then
+		songExt = obslua.os_get_path_extension(entry.d_name)
+		songTitle=string.sub(entry.d_name, 0, string.len(entry.d_name) - string.len(songExt))
+		song_directory[#song_directory + 1] = songTitle
+	  end
+	until not entry
+	obslua.os_closedir(dir)
 end
+
 
 -- delete previewed song
 function delete_song(name)
