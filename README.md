@@ -13,10 +13,11 @@ Manage and display lyrics to any text source in your OBS scene.
 There is a much more in-depth guide [here](https://obsproject.com/forum/resources/display-lyrics-as-subtitles.1005/).
 
 ## Things to know
+- Add `#L:3` in the start of the lyrics to specify that a particular song is to be displayed 3 lines at a time (works with any number).
+- To display a specific song when a scene is activated, add a "Source" to the scene by clicking the + sign in the scene, adding a "Prepare Lyric" source, and selecting the song to open.
 - Append `###` to the end of a line to display it by itself.
 - Use `//` to write a comment that will not display to your viewers, e.g., `We sing to you God //repeats 5 times`
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
-- Removed the use of "directory.txt" file used for song directories.
 - Ensure a constant number of lines displayed using the checkbox, e.g., if the song ends and only one line is left, lyrics will be padded with blank lines to ensure you hava a minimum number of lines.
 
 ## That's it
@@ -25,3 +26,4 @@ Please post any bugs or feature requests here or to the OBS forum.
 Feel free to make pull requests for any features you implement yourself, I'll be happy to take a look at them.
 
 amirchev
+with significant contributions from taxilian and DC Strato
