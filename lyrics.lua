@@ -132,13 +132,10 @@ function prev_prepared(pressed)
 end
 
 function home_prepared(pressed)
-	print("pressed")
 	if not isLoaded then  
-		print(".")
 		local source = obs.obs_get_source_by_name(source_name)		
 		sh = obs.obs_source_get_signal_handler(source)
 		if sh ~= nil then -- Source finally loaded!
-			print("finally")
 			obs.signal_handler_connect(sh,"show",showText)   --Set Showing Text Callback			
 			obs.signal_handler_connect(sh,"hide",hideText)	   --Set Not Showing Text Callback
 			isLoaded = true
@@ -297,14 +294,12 @@ function update_lyrics_display()
 	if visible and #lyrics > 0 then
 		text = lyrics[display_index]
 	end
-	text_opacity = 0  -- set to 0%
-	text_fade_dir = 0 -- stop fading
 	local source = obs.obs_get_source_by_name(source_name)
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
-		obs.obs_data_set_int(settings, "Opacity", 0)    
-		obs.obs_data_set_int(settings, "Outline.Opacity", 0)    
+		obs.obs_data_set_int(settings, "opacity", 0)    
+		obs.obs_data_set_int(settings, "outline.Opacity", 0)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 	end
@@ -591,12 +586,10 @@ function script_description()
 end
 
 function showText(sd)
-print("show lyric")
 	isActive = true
 end
 
 function hideText(sd)
-print("hide lyric")
 	isActive = false
 end
 
