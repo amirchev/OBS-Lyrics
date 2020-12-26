@@ -98,14 +98,13 @@ end
 
 function fade_lyrics_display() 
 	if text_fade_enabled then
-		if text_opacity == 100 or not visible then 
+		if text_opacity == 100 then 
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
 		end
-   	    if text_opacity == 0 and visible then 
+   	    if text_opacity == 0 then 
 			text_opacity = 1
 			text_fade_dir = 2  -- fade in
-			update_lyrics_display()			
 		end
 	else
 		update_lyrics_display()
@@ -298,6 +297,8 @@ function update_lyrics_display()
 	if visible and #lyrics > 0 then
 		text = lyrics[display_index]
 	end
+	text_opacity = 0  -- set to 0%
+	text_fade_dir = 0 -- stop fading
 	local source = obs.obs_get_source_by_name(source_name)
 	if source ~= nil then
 		local settings = obs.obs_data_create()
@@ -620,7 +621,6 @@ print("Do Lyric Update")
 		end
 		obs.obs_source_release(source)	
 		source_name = cur_source_name	
-		print(source_name)		
 		local source = obs.obs_get_source_by_name(source_name)
 		sh = obs.obs_source_get_signal_handler(source)
 		obs.signal_handler_connect(sh,"show",showText)   --Set Showing Text Callback			
