@@ -291,6 +291,8 @@ end
 -- updates the displayed lyrics
 function update_lyrics_display()
 	local text = ""
+	text_opacity = 0
+	text_fade_dir = 0
 	if visible and #lyrics > 0 then
 		text = lyrics[display_index]
 	end
@@ -299,7 +301,7 @@ function update_lyrics_display()
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
 		obs.obs_data_set_int(settings, "opacity", 0)    
-		obs.obs_data_set_int(settings, "outline.Opacity", 0)    
+		obs.obs_data_set_int(settings, "outline_opacity", 0)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 	end
