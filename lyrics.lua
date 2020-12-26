@@ -602,7 +602,6 @@ end
 
 -- A function named script_update will be called when settings are changed
 function script_update(settings)
-print("Do Lyric Update")
     text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled")   -- 	Fade Enable (WZ)
 	text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")   -- 	Fade Speed (WZ)	
 	reload = false
