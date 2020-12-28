@@ -13,7 +13,7 @@ Manage and display lyrics to any text source in your OBS scene.
 There is a much more in-depth guide [here](https://obsproject.com/forum/resources/display-lyrics-as-subtitles.1005/).
 
 ## Things to know
-- Add `##P` on any line that you want to keep as an empty line.
+- Add `##P` on any line that you want to keep as an empty line (for line padding, etc.)
 - Add `#L:3` in the start of the lyrics to specify that a particular song is to be displayed 3 lines at a time (works with any number).
 - To display a specific song when a scene is activated, add a "Source" to the scene by clicking the + sign in the scene, adding a "Prepare Lyric" source, and selecting the song to open.
 - Use "Home" hotkey to return to the beginning of your prepared songs, perhaps after practicing the songs.
