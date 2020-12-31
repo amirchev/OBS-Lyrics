@@ -656,69 +656,69 @@ function script_save(settings)
     save_prepared()
 	local hotkey_save_array = obs.obs_hotkey_save(hotkey_n_id)
 	obs.obs_data_set_array(settings, "lyric_next_hotkey", hotkey_save_array)
-	hotkey_save_array = obs.obs_hotkey_save(hotkey_n_id)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_n_id)
 	obs.obs_data_array_release(hotkey_save_array)
 	
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_p_id)
 	obs.obs_data_set_array(settings, "lyric_prev_hotkey", hotkey_save_array)
-	hotkey_save_array = obs.obs_hotkey_save(hotkey_p_id)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_p_id)
 	obs.obs_data_array_release(hotkey_save_array)
 	
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_c_id)
 	obs.obs_data_set_array(settings, "lyric_clear_hotkey", hotkey_save_array)
-	hotkey_save_array = obs.obs_hotkey_save(hotkey_c_id)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_c_id)
 	obs.obs_data_array_release(hotkey_save_array)
                 
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_n_p_id)
 	obs.obs_data_set_array(settings, "next_prepared_hotkey", hotkey_save_array)
-	hotkey_save_array = obs.obs_hotkey_save(hotkey_n_p_id)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_n_p_id)
 	obs.obs_data_array_release(hotkey_save_array)
                 
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_p_p_id)
 	obs.obs_data_set_array(settings, "previous_prepared_hotkey", hotkey_save_array)
-	hotkey_save_array = obs.obs_hotkey_save(hotkey_p_p_id)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_p_p_id)
 	obs.obs_data_array_release(hotkey_save_array)
 	
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_home_id)
 	obs.obs_data_set_array(settings, "home_prepared_hotkey", hotkey_save_array)
-	hotkey_save_array = obs.obs_hotkey_save(hotkey_home_id)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_home_id)
 	obs.obs_data_array_release(hotkey_save_array)
 end
 
 -- a function named script_load will be called on startup
 function script_load(settings)
-	hotkey_n_id = obs.obs_hotkey_register_frontend("lyric_next_hotkey_thing", "Advance Lyrics", next_lyric)
-	hotkey_p_id = obs.obs_hotkey_register_frontend("lyric_prev_hotkey_thing", "Go Back Lyrics", prev_lyric)
-	hotkey_c_id = obs.obs_hotkey_register_frontend("lyric_clear_hotkey_thing", "Show/Hide Lyrics", clear_lyric)
-	hotkey_n_p_id = obs.obs_hotkey_register_frontend("next_prepared_hotkey_thing", "Prepare Next", next_prepared)
-	hotkey_p_p_id = obs.obs_hotkey_register_frontend("previous_prepared_hotkey_thing", "Prepare Previous", prev_prepared)
-	hotkey_home_id = obs.obs_hotkey_register_frontend("home_prepared_hotkey_thing", "Prepared Home", home_prepared)
-	
+
+	hotkey_n_id = obs.obs_hotkey_register_frontend("lyric_next_hotkey", "Advance Lyrics", next_lyric)
 	local hotkey_save_array = obs.obs_data_get_array(settings, "lyric_next_hotkey")
 	obs.obs_hotkey_load(hotkey_n_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 	
+	hotkey_p_id = obs.obs_hotkey_register_frontend("lyric_prev_hotkey", "Go Back Lyrics", prev_lyric)
 	hotkey_save_array = obs.obs_data_get_array(settings, "lyric_prev_hotkey")
 	obs.obs_hotkey_load(hotkey_p_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 	
+	hotkey_c_id = obs.obs_hotkey_register_frontend("lyric_clear_hotkey", "Show/Hide Lyrics", clear_lyric)
 	hotkey_save_array = obs.obs_data_get_array(settings, "lyric_clear_hotkey")
 	obs.obs_hotkey_load(hotkey_c_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 	
+	hotkey_n_p_id = obs.obs_hotkey_register_frontend("next_prepared_hotkey", "Prepare Next", next_prepared)
 	hotkey_save_array = obs.obs_data_get_array(settings, "next_prepared_hotkey")
 	obs.obs_hotkey_load(hotkey_n_p_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 	
+	hotkey_p_p_id = obs.obs_hotkey_register_frontend("previous_prepared_hotkey", "Prepare Previous", prev_prepared)
 	hotkey_save_array = obs.obs_data_get_array(settings, "previous_prepared_hotkey")
 	obs.obs_hotkey_load(hotkey_p_p_id, hotkey_save_array)
-	obs.obs_data_array_release(hotkey_save_array)
+	obs.obs_data_array_release(hotkey_save_array)	
 	
+	hotkey_home_id = obs.obs_hotkey_register_frontend("home_prepared_hotkey", "Prepared Home", home_prepared)
 	hotkey_save_array = obs.obs_data_get_array(settings, "home_prepared_hotkey")
 	obs.obs_hotkey_load(hotkey_home_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 
-	obs.obs_data_addref(settings)
+	--obs.obs_data_addref(settings)
 	script_sets = settings
 	
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
@@ -737,21 +737,15 @@ function rename_prepareLyric()
 	TextSources = {}
 	local sources = obs.obs_enum_sources()
 	if (sources ~= nil) then
-		-- Name Source with Song Title
-		local i = 1
+			-- count and index sources
+		local t = 1
 		for _, source in ipairs(sources) do
-			local source_id = obs.obs_source_get_unversioned_id(source)						-- Get source
-			if source_id == "Prepare_Lyrics" then									-- Skip if not a Load Lyric source
-				local c_name = obs.obs_source_get_name(source)						-- Get current Source Name
-				local settings = obs.obs_source_get_settings(source)				-- Get settings for this source
-				local song = obs.obs_data_get_string(settings, "songs")				-- Get the current song name to load
-				if (song ~= nil) then 
-					local name = i .. ". Load lyrics for: <i><b>" .. song .. "</i></b>"		
-					if (c_name ~= name) then										-- Skip if already renamed (save processor time)	
-						obs.obs_source_set_name(source, name)						-- Rename Source with unique descriptive name		
-					end	
-					i = i + 1
-				end
+			local source_id = obs.obs_source_get_unversioned_id(source)
+			if source_id == "Prepare_Lyrics" then
+				local settings = obs.obs_source_get_settings(source)
+				obs.obs_data_set_string(settings, "index", t)		-- add index to source data
+				t = t + 1
+				obs.obs_data_release(settings)		-- release memory
 			end
 		end
 		-- Find and mark Duplicates in loadLyric_items table
@@ -768,30 +762,44 @@ function rename_prepareLyric()
 						local source_id = obs.obs_source_get_unversioned_id(source)	-- Get item source_id
 						if source_id == "Prepare_Lyrics" then						-- Skip if not a Prepare_Lyric source item
 							local settings = obs.obs_source_get_settings(source)	-- Get settings for this Prepare_Lyric source
-							local name = obs.obs_source_get_name(source)			-- Get name for this source (renamed earlier)
-							if loadLyric_items[name] == nil then					
-								loadLyric_items[name] = "x"							-- First time to find this source so mark with x
+							local index = obs.obs_data_get_string(settings, "index")	-- Get index for this source (set earlier)
+							if loadLyric_items[index] == nil then					
+								loadLyric_items[index] = "x"							-- First time to find this source so mark with x
 							else
-								loadLyric_items[name] = "*"							-- Found this source again so mark with *
+								loadLyric_items[index] = "*"							-- Found this source again so mark with *
 							end
+							obs.obs_data_release(settings)							-- release memory	
 						end
 					end
 				end
-				obs.sceneitem_list_release(scene_items)								-- Free scene list
+				obs.sceneitem_list_release(scene_items)						-- Free scene list
 			end
 			obs.source_list_release(scenes)											-- Free source list
 		end
-		-- Mark Duplicates with * at the end of name
-		for _, source in ipairs(sources) do											-- Loop through all the sources again
-			local source_id = obs.obs_source_get_id(source)							-- Get source_id			
-			if source_id == "Prepare_Lyrics" then									-- Skip if not a Prepare_Lyric source
-				local p_name = obs.obs_source_get_name(source)						-- Get current name for source
-				if p_name ~= nil then
-					if loadLyric_items[p_name] == "*" then							-- Check table and rename duplicates with * and red
-						p_name = "<span style=\"color:#ffd700\">" .. p_name .. " *" .. "</span>"										
-						obs.obs_source_set_name(source, p_name)
-					end	
+		
+		-- Name Source with Song Title
+		local i = 1
+		for _, source in ipairs(sources) do
+			local source_id = obs.obs_source_get_unversioned_id(source)						-- Get source
+			if source_id == "Prepare_Lyrics" then									-- Skip if not a Load Lyric source
+				local c_name = obs.obs_source_get_name(source)				-- Get current Source Name
+				local settings = obs.obs_source_get_settings(source)				-- Get settings for this source
+				local song = obs.obs_data_get_string(settings, "songs")		-- Get the current song name to load
+				local index = obs.obs_data_get_string(settings, "index")		-- get index
+				if (song ~= nil) then 
+					local name = t-i .. ". Load lyrics for: <i><b>" .. song .. "</i></b>"	-- use index for compare
+					-- Mark Duplicates
+					if index ~= nil then
+						if loadLyric_items[index] == "*" then
+							name =  "<span style=\"color:#FF6050;\">" .. name .. " * </span>"
+						end	
+						if (c_name ~= name) then
+							obs.obs_source_set_name(source, name)
+						end							
+					end					
+					i = i + 1
 				end
+				obs.obs_data_release(settings)
 			end
 		end
 	end
@@ -830,6 +838,7 @@ end
 
 source_def.get_defaults = function(settings) 
    obs.obs_data_set_default_bool(settings, "inPreview", false)
+   obs.obs_data_set_default_string(settings,"index","0")
 end
 
 source_def.destroy = function(source)
@@ -854,6 +863,7 @@ function active(cd)
 			prepared_index = #prepared_songs
 			displayed_song = song
 		end
+		obs.obs_data_release(settings)	
 	end
 end
 
@@ -871,6 +881,7 @@ function showing(cd)
 		  displayed_song = song
 		end
 	end
+	obs.obs_data_release(settings)	
 end
 
 
