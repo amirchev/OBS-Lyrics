@@ -36,13 +36,14 @@ first_open = true
 
 display_lines = 1
 ensure_lines = true
-visible = false
+hide_lyrics = false
 displayed_song = ""
 lyrics = {}
 display_index = 1
-prepared_index = 1---
+prepared_index = 1
 song_directory = {}
 prepared_songs = {}
+
 TextSources = {}
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_p_id = obs.OBS_INVALID_HOTKEY_ID
@@ -55,9 +56,11 @@ script_sets = nil
 script_props = nil
 
 text_opacity = 100
-text_fade_dir = 0
 text_fade_speed = 1
 text_fade_enabled = true
+bg_enabled = true
+
+update_lyrics = true
 
 isActive = true
 isLoaded = false
@@ -72,7 +75,7 @@ function next_lyric(pressed)
 	else
 		next_prepared(true) 
 	end
-	fade_lyrics_display()
+	start_lyrics_update()
 end
 
 function prev_lyric(pressed)
@@ -84,31 +87,25 @@ function prev_lyric(pressed)
 	else
 		prev_prepared(true) 
 	end
-	fade_lyrics_display()
+	start_lyrics_update()
+end
+
+function start_lyrics_update()
+	if text_fade_enabled and not hide_lyrics then
+		text_opacity = 99
+		hide_lyrics = true
+		update_lyrics = true
+	else
+		update_lyrics_display()
+	end
 end
 
 function clear_lyric(pressed)
 	if not pressed or not isActive then
 		return
 	end
-	visible = not visible
-	fade_lyrics_display()
-end
-
-
-function fade_lyrics_display() 
-	if text_fade_enabled then
-		if text_opacity == 100 then 
-			text_opacity = 99
-			text_fade_dir = 1  -- fade out
-		end
-   	    if text_opacity == 0 then 
-			text_opacity = 1
-			text_fade_dir = 2  -- fade in
-		end
-	else
-		update_lyrics_display()
-	end
+	hide_lyrics = not hide_lyrics
+	update_lyrics = false
 end
 
 function next_prepared(pressed)
@@ -291,53 +288,64 @@ end
 -- updates the displayed lyrics
 function update_lyrics_display()
 	local text = ""
-	text_opacity = 0
-	text_fade_dir = 0
-	if visible and #lyrics > 0 then
+	
+	if #lyrics > 0 then
 		text = lyrics[display_index]
 	end
+	
 	local source = obs.obs_get_source_by_name(source_name)
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
-		obs.obs_data_set_int(settings, "opacity", 0)    
-		obs.obs_data_set_int(settings, "outline_opacity", 0)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 	end
-	obs.obs_source_release(source)	
-	if visible then
-		text_fade_dir = 2   -- new text so just fade up if not already
-	end
+	obs.obs_source_release(source)
+
+	print("set text to\n***\n" .. text .. "\n***")
 
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
 function timer_callback()
-
-	
-	if text_fade_dir > 0 then 
-		if text_fade_dir == 1 then	
-		    if text_opacity > text_fade_speed then
-		       text_opacity = text_opacity - text_fade_speed
+	local update = false
+	if hide_lyrics and text_opacity > 0 then
+		update = true
+		if text_fade_enabled then 
+			if text_opacity > text_fade_speed then
+			   text_opacity = text_opacity - text_fade_speed
 			else
-			   text_fade_dir = 0  -- stop fading
-			   text_opacity = 0  -- set to 0%
-			   update_lyrics_display()
-			end   
+				text_opacity = 0  -- set to 0%
+				if update_lyrics then
+					hide_lyrics = false
+					update_lyrics_display()
+				end
+			end
 		else
-			if text_opacity < 100 - text_fade_speed then
-		       text_opacity = text_opacity + text_fade_speed
-			else
-			   text_fade_dir = 0  -- stop fading
-			   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
-			end 
+			text_opacity = 0
 		end
+	elseif not hide_lyrics and text_opacity < 100 then
+		update = true
+		if text_fade_enabled then
+			if text_opacity < 100 - text_fade_speed then
+				text_opacity = text_opacity + text_fade_speed
+			else
+				text_opacity = 100 -- set to 100%  (TODO: Read initial text/outline/bg opacity and scale it from there to zero instead)
+				update_lyrics = false
+			end
+		else
+			text_opacity = 100
+		end
+	end
+	if update then 
 		local source = obs.obs_get_source_by_name(source_name)
 		if source ~= nil then
 			local settings = obs.obs_data_create()
-			obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
-			obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+			obs.obs_data_set_int(settings, "opacity", text_opacity)
+			obs.obs_data_set_int(settings, "outline_opacity", text_opacity)
+			if bg_enabled and not update_lyrics then
+				obs.obs_data_set_int(settings, "bk_opacity", text_opacity * 0.4)	
+			end
 			obs.obs_source_update(source, settings)
 			obs.obs_data_release(settings)
 		end
@@ -545,8 +553,9 @@ function script_properties()
 
 	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
-	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
-	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 20, 1)
+	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade text in/out")	-- Fade Enable (WZ)
+	obs.obs_properties_add_bool(script_props, "bg_enabled", "Use text background")
+	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 5, 20, 1)
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
@@ -573,7 +582,7 @@ function script_properties()
 
 	obs.obs_properties_add_button(script_props, "prop_next_button", "Next Lyric", next_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
-	obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/Hide Lyrics", clear_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/hide Lyrics", clear_button_clicked)
 	
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
 	obs.obs_properties_apply_settings(script_props, script_sets)
@@ -599,7 +608,23 @@ end
 function script_update(settings)
     text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled")   -- 	Fade Enable (WZ)
 	text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")   -- 	Fade Speed (WZ)	
-	reload = false
+	local reload = false
+	if bg_enabled ~= obs.obs_data_get_bool(settings, "bg_enabled") then
+		bg_enabled = not bg_enabled
+		
+		local source = obs.obs_get_source_by_name(source_name)
+		if source ~= nil then
+			local src_settings = obs.obs_data_create()
+			if bg_enabled and not hide_lyrics then
+				obs.obs_data_set_int(src_settings, "bk_opacity", 40)
+			else
+				obs.obs_data_set_int(src_settings, "bk_opacity", 0)
+			end
+			obs.obs_source_update(source, src_settings)
+			obs.obs_data_release(src_settings)
+		end
+		obs.obs_source_release(source)
+	end
 	local cur_display_lines = obs.obs_data_get_int(settings, "prop_lines_counter")
 	if display_lines ~= cur_display_lines then
 		display_lines = cur_display_lines
@@ -629,7 +654,8 @@ function script_update(settings)
 	end
 	if reload then
 		prepare_lyrics(displayed_song)
-		display_index = 1
+		--display_index = 1
+		print("reload")
 		update_lyrics_display()
 	end
 end
@@ -698,7 +724,7 @@ function script_load(settings)
 	obs.obs_hotkey_load(hotkey_p_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 	
-	hotkey_c_id = obs.obs_hotkey_register_frontend("lyric_clear_hotkey", "Show/Hide Lyrics", clear_lyric)
+	hotkey_c_id = obs.obs_hotkey_register_frontend("lyric_clear_hotkey", "Show/hide Lyrics", clear_lyric)
 	hotkey_save_array = obs.obs_data_get_array(settings, "lyric_clear_hotkey")
 	obs.obs_hotkey_load(hotkey_c_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
