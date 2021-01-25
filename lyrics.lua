@@ -425,8 +425,9 @@ function prepare_lyrics(name)
 		end		
 		local newcount_index = line:find("#R:")
 		if newcount_index ~= nil then
-			local newcount_indexStart,newcount_indexEnd = line:find("%d",newcount_index+3)		
+			local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
 			new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
+			_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
 			line = line:sub(newcount_indexEnd + 1)	
 		end			
 		local newcount_index = line:find("#P:")
