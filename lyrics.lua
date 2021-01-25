@@ -454,9 +454,10 @@ function prepare_lyrics(name)
 				else
 					lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
 				end
-				cur_line = cur_line + 1
 				if single_line or cur_line > adjusted_display_lines then
 					cur_line = 1
+				else
+					cur_line = cur_line + 1
 				end
 				new_lines = new_lines - 1
 			end
