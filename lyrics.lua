@@ -20,6 +20,13 @@
 -- Source updates by W. Zaggle (DCSTRATO) 12/3/2020
 -- Fading Text Out/In with transition option 12/8/2020
 
+-- Source updates by W. Zaggle (DCSTRATO) 1/24/2021
+-- Added ##B as alternative to ##P
+-- Added #B:n and #P:n as way to add multiple blank lines all at once
+-- Added #R:n preceding text as a way to repeat the following text line n times 
+-- Corrected possible timer recursion where timer function could take longer than 100ms callback interval and hang OBS 
+
+
 obs = obslua
 bit = require("bit")
 
@@ -33,6 +40,7 @@ obs = obslua
 source_name = ""
 windows_os = false
 first_open = true
+in_timer = false
 
 display_lines = 1
 ensure_lines = true
@@ -357,8 +365,8 @@ end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
 function timer_callback()
-
-	
+	if in_timer then return end
+	in_timer = true
 	if text_fade_dir > 0 then 
 		if text_fade_dir == 1 then	
 		    if text_opacity > text_fade_speed then
@@ -386,6 +394,7 @@ function timer_callback()
 		end
 		obs.obs_source_release(source)
 	end
+	in_timer = false
 	return
 end
 
@@ -397,6 +406,7 @@ function prepare_lyrics(name)
 	lyrics = {}
     local adjusted_display_lines = display_lines
 	for _, line in ipairs(song_lines) do
+		local new_lines = 1
 		local single_line = false
 		if line:find("###") ~= nil then
 			line = line:gsub("%s*###%s*", "")
@@ -405,31 +415,50 @@ function prepare_lyrics(name)
 		local comment_index = line:find("%s*//")
 		if comment_index ~= nil then
 			line = line:sub(1, comment_index - 1)
+			new_lines = 0							--ignore line
 		end
 		local newcount_index = line:find("#L:")
 		if newcount_index ~= nil then
 			adjusted_display_lines = tonumber(line:sub(newcount_index+3))
 			line = line:sub(1, newcount_index - 1)
+			new_lines = 0							--ignore line
 		end		
+		local newcount_index = line:find("#R:")
+		if newcount_index ~= nil then
+			local newcount_indexStart,newcount_indexEnd = line:find("%d",newcount_index+3)		
+			new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
+			line = line:sub(newcount_indexEnd + 1)	
+		end			
+		local newcount_index = line:find("#P:")
+		if newcount_index ~= nil then
+			new_lines = tonumber(line:sub(newcount_index+3))
+			line = line:sub(1, newcount_index - 1)	
+		end	
+		local newcount_index = line:find("#B:")
+		if newcount_index ~= nil then
+			new_lines = tonumber(line:sub(newcount_index+3))
+			line = line:sub(1, newcount_index - 1)
+		end			
 		local phantom_index = line:find("##P")
 		if phantom_index ~= nil then
 			line = line:sub(1, phantom_index - 1)
-			line = line .. " "
 		end	
-		if line:len() > 0 then 
-			if single_line then
-				lyrics[#lyrics + 1] = line
-				cur_line = 1
-			else
-				if cur_line == 1 then
+		local phantom_index = line:find("##B")
+		if phantom_index ~= nil then
+			line = line:sub(1, phantom_index - 1)
+		end	
+		if new_lines > 0 then 		
+			while (new_lines > 0) do
+				if (cur_line == 1) then
 					lyrics[#lyrics + 1] = line
 				else
 					lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
 				end
 				cur_line = cur_line + 1
-				if (cur_line > adjusted_display_lines) then
+				if single_line or cur_line > adjusted_display_lines then
 					cur_line = 1
 				end
+				new_lines = new_lines - 1
 			end
 		end
 	end
