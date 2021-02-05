@@ -23,8 +23,14 @@
 -- Source updates by W. Zaggle (DCSTRATO) 1/24/2021
 -- Added ##B as alternative to ##P
 -- Added #B:n and #P:n as way to add multiple blank lines all at once
--- Added #R:n preceding text as a way to repeat the following text line n times 
+-- Added #R:n preceding text as a way to Duplicate the following text line n times 
 -- Corrected possible timer recursion where timer function could take longer than 100ms callback interval and hang OBS 
+
+-- Source updates by W. Zaggle (DCSTRATO) 2/4/2021
+-- Changed #R:n to #D:n (Duplicate Lines)
+-- Added #R[ and #R] on lines by themselves to bracket lines of Refrain
+-- Added ##R to repeat the lines bracketed by #R[ and #R] lines
+-- Made chage to showing() function maybe work better if not in studio mode 
 
 
 obs = obslua
@@ -403,6 +409,9 @@ function prepare_lyrics(name)
 	if name == nil then return end
 	local song_lines = get_song_text(name)
 	local cur_line = 1
+	local recordRefrain = false
+	local playRefrain = false
+	refrain = ""
 	lyrics = {}
     local adjusted_display_lines = display_lines
 	for _, line in ipairs(song_lines) do
@@ -423,13 +432,33 @@ function prepare_lyrics(name)
 			line = line:sub(1, newcount_index - 1)
 			new_lines = 0							--ignore line
 		end		
-		local newcount_index = line:find("#R:")
+		local newcount_index = line:find("#D:")
 		if newcount_index ~= nil then
 			local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
 			new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
 			_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
 			line = line:sub(newcount_indexEnd + 1)	
 		end			
+		local refrain_index = line:find("#R%[")
+		if refrain_index ~= nil then
+			recordRefrain = true
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		end
+		refrain_index = line:find("#R]")
+		if refrain_index ~= nil then
+			recordRefrain = false
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		end	
+		refrain_index = line:find("##R")
+		if refrain_index ~= nil then
+			playRefrain = true
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		else
+			playRefrain = false
+		end
 		local newcount_index = line:find("#P:")
 		if newcount_index ~= nil then
 			new_lines = tonumber(line:sub(newcount_index+3))
@@ -452,16 +481,24 @@ function prepare_lyrics(name)
 			while (new_lines > 0) do
 				if (cur_line == 1) then
 					lyrics[#lyrics + 1] = line
+					if recordRefrain == true then
+						refrain = line
+					end
 				else
 					lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+					if recordRefrain == true then
+						refrain = refrain .. "\n" .. line
+					end
 				end
+				cur_line = cur_line + 1
 				if single_line or cur_line > adjusted_display_lines then
 					cur_line = 1
-				else
-					cur_line = cur_line + 1
 				end
 				new_lines = new_lines - 1
 			end
+		end
+		if playRefrain == true then
+		   lyrics[#lyrics + 1] = refrain
 		end
 	end
 	if ensure_lines and (cur_line > 1) and (lyrics[#lyrics] ~= nil) then
@@ -925,6 +962,9 @@ end
 function showing(cd)
     local source = obs.calldata_source(cd,"source")
 	if source == nil or sourceActive() then 
+		return
+	end
+	if sourceActive() and obs.obs_frontend_preview_program_mode_active() then
 		return
 	end
 	loadSong(source,true)
