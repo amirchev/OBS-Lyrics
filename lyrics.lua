@@ -33,6 +33,7 @@
 -- Made chage to showing() function maybe work better if not in studio mode 
 
 
+
 obs = obslua
 bit = require("bit")
 
@@ -288,11 +289,14 @@ end
 
 function prepare_selection_made(props, prop, settings)
 	local name = obs.obs_data_get_string(settings, "prop_prepared_list")
-    prepare_selected(name)
+	if #prepared_songs > 0 then
+	    prepare_selected(name)
+	end
 	return true
 end
 
 function prepare_selected(name)
+	if name == nil then return end
 	prepare_lyrics(name)
 	text_opacity = 0
 	text_fade_dir = 2
@@ -388,6 +392,7 @@ function timer_callback()
 			else
 			   text_fade_dir = 0  -- stop fading
 			   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
+			   update_lyrics_display()
 			end 
 		end
 		local source = obs.obs_get_source_by_name(source_name)
@@ -407,6 +412,9 @@ end
 -- prepares lyrics of the song
 function prepare_lyrics(name)
 	if name == nil then return end
+	while (in_timer) 
+	do end
+	in_timer = true
 	local song_lines = get_song_text(name)
 	local cur_line = 1
 	local recordRefrain = false
@@ -507,6 +515,7 @@ function prepare_lyrics(name)
 		end
 	end
 	lyrics[#lyrics + 1] = ""
+	in_timer = false
 end
 
 -- loads the song directory
@@ -565,6 +574,9 @@ function save_prepared()
 end
 
 function load_prepared()
+	while (in_timer) 
+	do end
+	in_timer = true
 	local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
 	if file ~= nil then
 		for line in file:lines() do
@@ -573,6 +585,7 @@ function load_prepared()
 		
 		file:close()
 	end
+	in_timer = false
 	return true
 end
 
@@ -729,6 +742,7 @@ end
 function script_defaults(settings)
 	obs.obs_data_set_default_int(settings, "prop_lines_counter", 2)
 	obs.obs_data_set_default_string(settings, "prop_source_list", prepared_songs[1] )
+
 	if #prepared_songs ~= 0 then 
 	    displayed_song = prepared_songs[1]
 	else
@@ -810,13 +824,15 @@ function script_load(settings)
 
 	--obs.obs_data_addref(settings)
 	script_sets = settings
-	
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
 	load_song_directory()
 	load_prepared()
 	if #prepared_songs ~= 0 then
 	  prepare_selected(prepared_songs[1])
+	  displayed_song = prepared_songs[1]
 	end
+
+	
 
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
@@ -901,7 +917,7 @@ source_def.get_name = function()
 end
 
 source_def.update = function (data, settings)
-		rename_prepareLyric()						-- Rename and Mark sources instantly on update (WZ)
+	rename_prepareLyric()						-- Rename and Mark sources instantly on update (WZ)
 end
 
 source_def.get_properties = function (data)
@@ -922,7 +938,7 @@ source_def.create = function(settings, source)
 	sh = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_connect(sh,"activate",active)   --Set Active Callback
 	obs.signal_handler_connect(sh,"show",showing)	   --Set Preview Callback
-
+	obs.obs_source_update(source,settings)
 	return data
 end
 
@@ -931,24 +947,25 @@ source_def.get_defaults = function(settings)
    obs.obs_data_set_default_string(settings,"index","0")
 end
 
-source_def.destroy = function(source)
-
-end
-
 function on_event(event)
 	rename_prepareLyric()   -- Rename and Mark sources instantly on event change (WZ)
 end
 
 function loadSong(source, preview)
+	if in_Load == true then return end
+	in_Load = true
 	local settings = obs.obs_source_get_settings(source)
-	if preview and not obs.obs_data_get_bool(settings, "inPreview") then return end
-	local song = obs.obs_data_get_string(settings, "songs")
-	if song ~= displayed_song then 
-	  prepare_selected(song)
-	  prepared_index = #prepared_songs
-	  displayed_song = song
+	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
+		local song = obs.obs_data_get_string(settings, "songs")
+		if song ~= displayed_song then 
+			prepare_selected(song)
+			prepared_index = #prepared_songs+1
+			displayed_song = song
+		end
+		home_prepared(true)
 	end
-	obs.obs_data_release(settings)	
+	obs.obs_data_release(settings)
+	in_Load = false
 end
 
 function active(cd)
@@ -961,14 +978,10 @@ end
 
 function showing(cd)
     local source = obs.calldata_source(cd,"source")
-	if source == nil or sourceActive() then 
-		return
-	end
-	if sourceActive() and obs.obs_frontend_preview_program_mode_active() then
+	if source == nil or (sourceActive() and obs.obs_frontend_preview_program_mode_active()) then
 		return
 	end
 	loadSong(source,true)
 end
-
 
 obs.obs_register_source(source_def);
