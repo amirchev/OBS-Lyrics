@@ -20,6 +20,23 @@
 -- Source updates by W. Zaggle (DCSTRATO) 12/3/2020
 -- Fading Text Out/In with transition option 12/8/2020
 
+-- Source updates by W. Zaggle (DCSTRATO) 1/24/2021
+-- Added ##B as alternative to ##P
+-- Added #B:n and #P:n as way to add multiple blank lines all at once
+-- Added #R:n preceding text as a way to Duplicate the following text line n times 
+-- Corrected possible timer recursion where timer function could take longer than 100ms callback interval and hang OBS 
+
+-- Source updates by W. Zaggle (DCSTRATO) 2/4/2021
+-- Changed #R:n to #D:n (Duplicate Lines)
+-- Added #R[ and #R] on lines by themselves to bracket lines of Refrain
+-- Added ##R to repeat the lines bracketed by #R[ and #R] lines
+-- Made chage to showing() function maybe work better if not in studio mode 
+
+-- Source updates by W. Zaggle (DCSTRATO) 2/13/21
+-- Stability Issues
+-- #r[ loads refrain without showing lines. 
+
+
 obs = obslua
 bit = require("bit")
 
@@ -33,6 +50,10 @@ obs = obslua
 source_name = ""
 windows_os = false
 first_open = true
+in_timer = false
+in_Load = false
+in_directory = false
+pause_timer = false
 
 display_lines = 1
 ensure_lines = true
@@ -71,9 +92,11 @@ function sourceShowing()
 end
 
 function sourceActive()
+	local pscene = obs.obs_frontend_get_current_preview_scene()
+	local ascene = obs.obs_frontend_get_current_scene()
 	local source = obs.obs_get_source_by_name(source_name)
 	local active = false
-	if source ~= nil then
+	if source ~= nil and pscene ~= ascene then
 		active = obs.obs_source_active(source)
 	end
 	obs.obs_source_release(source)	
@@ -184,7 +207,7 @@ function home_prepared(pressed)
 			displayed_song = song
 		end
 	end
-	prepare_selected(prepared_songs[prepared_index])
+	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
 	fade_lyrics_display() 
 	return true
 end
@@ -352,39 +375,40 @@ function update_lyrics_display()
 	if visible then
 		text_fade_dir = 2   -- new text so just fade up if not already
 	end
-
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
 function timer_callback()
-
-	
-	if text_fade_dir > 0 then 
-		if text_fade_dir == 1 then	
-		    if text_opacity > text_fade_speed then
-		       text_opacity = text_opacity - text_fade_speed
+	if not in_timer and not pause_timer then
+		in_timer = true
+		if text_fade_dir > 0 then 
+			if text_fade_dir == 1 then	
+				if text_opacity > text_fade_speed then
+				   text_opacity = text_opacity - text_fade_speed
+				else
+				   text_fade_dir = 0  -- stop fading
+				   text_opacity = 0  -- set to 0%
+				   update_lyrics_display()
+				end   
 			else
-			   text_fade_dir = 0  -- stop fading
-			   text_opacity = 0  -- set to 0%
-			   update_lyrics_display()
-			end   
-		else
-			if text_opacity < 100 - text_fade_speed then
-		       text_opacity = text_opacity + text_fade_speed
-			else
-			   text_fade_dir = 0  -- stop fading
-			   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
-			end 
+				if text_opacity < 100 - text_fade_speed then
+				   text_opacity = text_opacity + text_fade_speed
+				else
+				   text_fade_dir = 0  -- stop fading
+				   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
+				end 
+			end
+			local source = obs.obs_get_source_by_name(source_name)
+			if source ~= nil then
+				local settings = obs.obs_data_create()
+				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+				obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+				obs.obs_source_update(source, settings)
+				obs.obs_data_release(settings)
+			end
+			obs.obs_source_release(source)
 		end
-		local source = obs.obs_get_source_by_name(source_name)
-		if source ~= nil then
-			local settings = obs.obs_data_create()
-			obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
-			obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
-			obs.obs_source_update(source, settings)
-			obs.obs_data_release(settings)
-		end
-		obs.obs_source_release(source)
+		in_timer = false
 	end
 	return
 end
@@ -394,9 +418,14 @@ function prepare_lyrics(name)
 	if name == nil then return end
 	local song_lines = get_song_text(name)
 	local cur_line = 1
+	local recordRefrain = false
+	local playRefrain = false
+	local showRefrain = true
+	refrain = ""
 	lyrics = {}
     local adjusted_display_lines = display_lines
 	for _, line in ipairs(song_lines) do
+		local new_lines = 1
 		local single_line = false
 		if line:find("###") ~= nil then
 			line = line:gsub("%s*###%s*", "")
@@ -405,32 +434,100 @@ function prepare_lyrics(name)
 		local comment_index = line:find("%s*//")
 		if comment_index ~= nil then
 			line = line:sub(1, comment_index - 1)
+			new_lines = 0							--ignore line
 		end
 		local newcount_index = line:find("#L:")
 		if newcount_index ~= nil then
 			adjusted_display_lines = tonumber(line:sub(newcount_index+3))
 			line = line:sub(1, newcount_index - 1)
+			new_lines = 0							--ignore line
 		end		
+		local newcount_index = line:find("#D:")
+		if newcount_index ~= nil then
+			local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
+			new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
+			_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
+			line = line:sub(newcount_indexEnd + 1)	
+		end			
+		local refrain_index = line:find("#R%[")
+		if refrain_index ~= nil then
+			recordRefrain = true
+			showRefrain = true
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		end
+		local refrain_index = line:find("#r%[")
+		if refrain_index ~= nil then
+			recordRefrain = true
+			showRefrain = false
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		end
+		refrain_index = line:find("#R]")
+		if refrain_index ~= nil then
+			recordRefrain = false
+			showRefrain = true
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		end	
+		refrain_index = line:find("#r]")
+		if refrain_index ~= nil then
+			recordRefrain = false
+			showRefrain = true
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		end	
+		refrain_index = line:find("##R")
+		if refrain_index ~= nil then
+			playRefrain = true
+			line = line:sub(1, refrain_index - 1)
+			new_lines = 0	
+		else
+			playRefrain = false
+		end
+		local newcount_index = line:find("#P:")
+		if newcount_index ~= nil then
+			new_lines = tonumber(line:sub(newcount_index+3))
+			line = line:sub(1, newcount_index - 1)	
+		end	
+		local newcount_index = line:find("#B:")
+		if newcount_index ~= nil then
+			new_lines = tonumber(line:sub(newcount_index+3))
+			line = line:sub(1, newcount_index - 1)
+		end			
 		local phantom_index = line:find("##P")
 		if phantom_index ~= nil then
 			line = line:sub(1, phantom_index - 1)
-			line = line .. " "
 		end	
-		if line:len() > 0 then 
-			if single_line then
-				lyrics[#lyrics + 1] = line
-				cur_line = 1
-			else
-				if cur_line == 1 then
-					lyrics[#lyrics + 1] = line
-				else
-					lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+		local phantom_index = line:find("##B")
+		if phantom_index ~= nil then
+			line = line:sub(1, phantom_index - 1)
+		end	
+		if new_lines > 0 then 		
+			while (new_lines > 0) do
+				if recordRefrain then 
+					if (cur_line == 1) then
+						refrain = line
+					else
+						refrain = refrain .. "\n" .. line
+					end
+				end
+				if showRefrain then
+					if (cur_line == 1) then
+						lyrics[#lyrics + 1] = line
+					else
+						lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+					end
 				end
 				cur_line = cur_line + 1
-				if (cur_line > adjusted_display_lines) then
+				if single_line or cur_line > adjusted_display_lines then
 					cur_line = 1
 				end
+				new_lines = new_lines - 1
 			end
+		end
+		if playRefrain == true then
+		   lyrics[#lyrics + 1] = refrain
 		end
 	end
 	if ensure_lines and (cur_line > 1) and (lyrics[#lyrics] ~= nil) then
@@ -443,6 +540,7 @@ end
 
 -- loads the song directory
 function load_song_directory()
+	pause_timer = true
 	song_directory = {}
 	local filenames = {}
 	local dir = obs.os_opendir(get_songs_folder_path())--get_songs_folder_path())
@@ -458,6 +556,7 @@ function load_song_directory()
 	  end
 	until not entry
 	obs.os_closedir(dir)
+	pause_timer = false
 end
 
 -- delete previewed song
@@ -497,6 +596,7 @@ function save_prepared()
 end
 
 function load_prepared()
+	pause_timer = true
 	local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
 	if file ~= nil then
 		for line in file:lines() do
@@ -505,6 +605,7 @@ function load_prepared()
 		
 		file:close()
 	end
+	pause_timer = false
 	return true
 end
 
@@ -541,11 +642,14 @@ function get_song_text(name)
 	local song_lines = {}
 	local file = io.open(get_song_file_path(name), "r")
 	if file ~= nil then
+		pause_timer = true
 		for line in file:lines() do
 			song_lines[#song_lines + 1] = line
 		end
 		file:close()
+		pause_timer = false
 	end
+
 	return song_lines
 end
 
@@ -751,11 +855,12 @@ function script_load(settings)
 	end
 
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
-	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
+	obs.timer_add(timer_callback, 150)	-- Setup callback for text fade effect
 end
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
 function rename_prepareLyric()  
+	pause_timer = true
 	TextSources = {}
 	local sources = obs.obs_enum_sources()
 	if (sources ~= nil) then
@@ -826,6 +931,7 @@ function rename_prepareLyric()
 		end
 	end
 	obs.source_list_release(sources)
+	pause_timer = false
 end
 
 source_def.get_name = function()
@@ -854,7 +960,6 @@ source_def.create = function(settings, source)
 	sh = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_connect(sh,"activate",active)   --Set Active Callback
 	obs.signal_handler_connect(sh,"show",showing)	   --Set Preview Callback
-
 	return data
 end
 
@@ -868,19 +973,21 @@ source_def.destroy = function(source)
 end
 
 function on_event(event)
-	rename_prepareLyric()   -- Rename and Mark sources instantly on event change (WZ)
+	--rename_prepareLyric()   -- Rename and Mark sources instantly on event change (WZ)
 end
 
 function loadSong(source, preview)
 	local settings = obs.obs_source_get_settings(source)
-	if preview and not obs.obs_data_get_bool(settings, "inPreview") then return end
-	local song = obs.obs_data_get_string(settings, "songs")
-	if song ~= displayed_song then 
-	  prepare_selected(song)
-	  prepared_index = #prepared_songs
-	  displayed_song = song
+	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
+		local song = obs.obs_data_get_string(settings, "songs")
+		if song ~= displayed_song then 
+			prepare_selected(song)
+			prepared_index = #prepared_songs
+			displayed_song = song
+		end
+		home_prepared(true)
 	end
-	obs.obs_data_release(settings)	
+	obs.obs_data_release(settings)
 end
 
 function active(cd)
@@ -888,14 +995,18 @@ function active(cd)
 	if source == nil then 
 		return
 	end
+	text_fade_dir = 0  -- stop fading
+	text_opacity = 100
 	loadSong(source,false)
 end
 
 function showing(cd)
     local source = obs.calldata_source(cd,"source")
-	if source == nil or sourceActive() then 
+	if source == nil or (sourceActive() and obs.obs_frontend_preview_program_mode_active()) then
 		return
 	end
+	text_fade_dir = 0  -- stop fading
+	text_opacity = 100
 	loadSong(source,true)
 end
 
