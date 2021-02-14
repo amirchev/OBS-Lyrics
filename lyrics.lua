@@ -846,7 +846,7 @@ function script_load(settings)
 
 	--obs.obs_data_addref(settings)
 	script_sets = settings
-	
+	source_name = obs.obs_data_get_string(settings, "prop_source_list")
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
 	load_song_directory()
 	load_prepared()
