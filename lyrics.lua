@@ -44,6 +44,7 @@
 -- Removed auto HOME when using source to prepare Lyric and returning to scene without a lyric change
 -- Added option to Home lyric when return to scene without a lyric change
 -- Added code to instantly show/hide lyrics ignoring fade option  (Should fade be optional?)
+-- New option to modify Title Text object with Song Title
 
 
 obs = obslua
@@ -57,6 +58,7 @@ source_def.output_flags = bit.bor(obs.OBS_SOURCE_CUSTOM_DRAW )
 
 obs = obslua
 source_name = ""
+title_source_name = ""
 windows_os = false
 first_open = true
 in_timer = false
@@ -153,7 +155,7 @@ function clear_lyric(pressed)
 	else
 	   print ("not visible")
 	end
-	update_lyrics_display(false)
+	update_lyrics_display(true)
 end
 
 
@@ -390,34 +392,45 @@ end
 -- updates the displayed lyrics
 function update_lyrics_display(fade)
 	local text = ""
-	pause_timer = true
+	local text_opacityx = 0
+	local bkopacityx = 0
+	local olopacityx = 0
 	if visible and #lyrics > 0 then
 		text = lyrics[display_index]
-		text_opacity = 0
-		bkopacity = 0
-		olopacity = 0
-		text_fade_dir = 2   -- new text so just fade up if not already
 	end
-	if visible and not fade then
-		text_opacity = maxtxopacity
-		bkopacity = maxbkopacity
-		olopacity = maxolopacity
-		text_fade_dir = 0   -- new text so just fade up if not already
-	end
-	local source = obs.obs_get_source_by_name(source_name)**+
+	--if visible and not fade then
+	--	text_opacityx = maxtxopacity
+	--	bkopacityx = maxbkopacity
+	--	olopacityx = maxolopacity
+	--	text_fade_dir = 2  -- new text so just fade up if not already
+	--end
+	local source = obs.obs_get_source_by_name(source_name)
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
-		obs.obs_data_set_int(settings, "opacity", text_opacity)    
-		obs.obs_data_set_int(settings, "outline_opacity", olopacity)  
+		obs.obs_data_set_int(settings, "opacity", text_opacityx)    
+		obs.obs_data_set_int(settings, "outline_opacity", olopacityx)  
 		if (background_fade_enabled) then 
-			obs.obs_data_set_int(settings, "bk_opacity", bkopacity)
+			obs.obs_data_set_int(settings, "bk_opacity", bkopacityx)
 		end
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 	end
 	obs.obs_source_release(source)	
-	pause_timer = false
+	local title_source = obs.obs_get_source_by_name(title_source_name)
+	if title_source ~= nil then
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_string(settings, "text", displayed_song)
+		obs.obs_source_update(title_source, settings)
+		obs.obs_data_release(settings)
+	end
+	obs.obs_source_release(title_source)	
+	if visible then
+		text_opacity = 0
+		bkopacity = 0
+		olopacity = 0
+		text_fade_dir = 2   -- new text so just fade up if not already
+	end
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
@@ -467,6 +480,7 @@ function timer_callback()
 				end
 				obs.obs_source_update(source, settings)
 				obs.obs_data_release(settings)
+				print("t: " .. text_opacity)
 			end
 			obs.obs_source_release(source)
 		end
@@ -787,7 +801,8 @@ function script_properties()
 	obs.obs_properties_add_bool(script_props, "background_fade_enabled", "Fade text background with text")	-- Fade Enable (WZ)
 	obs.obs_property_set_modified_callback(fadeprop, text_fade_changed)
 	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 20, 1)
-	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local text_source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		local n = {}
@@ -799,7 +814,8 @@ function script_properties()
 		end
 		table.sort(n)
 		for _, name in ipairs(n) do
-			obs.obs_property_list_add_string(source_prop, name, name)
+			obs.obs_property_list_add_string(text_source_prop, name, name)
+			obs.obs_property_list_add_string(title_source_prop, name, name)			
 		end
 	end
 	obs.source_list_release(sources)
@@ -842,6 +858,11 @@ function script_update(settings)
 	local cur_source_name = obs.obs_data_get_string(settings, "prop_source_list")
 	if source_name ~= cur_source_name then
 		source_name = cur_source_name	
+		reload = true
+	end
+	local cur_title_source = obs.obs_data_get_string(settings, "prop_title_list")
+	if title_source_name ~= cur_title_source then
+		title_source_name = cur_title_source	
 		reload = true
 	end
 	local cur_ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
