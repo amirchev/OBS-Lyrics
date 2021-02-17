@@ -36,15 +36,14 @@
 -- Stability Issues
 -- #r[ loads refrain without showing lines. Used if you want to have the refrain at the top of the text but only use it with ##R
 
--- Source updates by W. Zaggle (DCSTRATO) 2/16/21
--- Removed obs_frontend_get_current_preview_scene() in show callback  (crashes OBS)
--- Removed obs_frontend_get_current_scene() in show callback (crashes OBS)
--- Added code to honor current opacity level of Text, Text Outline, and Text Background during fade in/out
--- Added option to NOT fade background color with text
+-- Source updates by W. Zaggle (DCSTRATO) 2/17/21
 -- Removed auto HOME when using source to prepare Lyric and returning to scene without a lyric change
 -- Added option to Home lyric when return to scene without a lyric change
 -- Added code to instantly show/hide lyrics ignoring fade option  (Should fade be optional?)
 -- New option to modify Title Text object with Song Title
+-- Added code to allow text to change in Preview mode if preview and active scene are the same (normally active text object prevents this change in preview)
+-- CLeared up Home and Reset.  Home returns to start of current song.  Reset goes back to 1st song.  
+-- Added new button/hot-key to allow for both Home and Reset functions.
 
 
 obs = obslua
@@ -58,6 +57,8 @@ source_def.output_flags = bit.bor(obs.OBS_SOURCE_CUSTOM_DRAW )
 
 obs = obslua
 source_name = ""
+current_scene = ""
+preview_scene = ""
 title_source_name = ""
 windows_os = false
 first_open = true
@@ -82,21 +83,15 @@ hotkey_c_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_n_p_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_p_p_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_home_id = obs.OBS_INVALID_HOTKEY_ID
+hotkey_reset_id = obs.OBS_INVALID_HOTKEY_ID
 
 script_sets = nil
 script_props = nil
-maxbkopacity = 0
-maxtxopacity = 0
-maxolopacity = 0
-bkopacity = 0
+
 text_opacity = 100
-olopacity = 0
 text_fade_dir = 0
 text_fade_speed = 1
 text_fade_enabled = true
-background_fade_enabled = false
-
-bgprop = obs.obs_property_t
 
 ------------------------------------------------------------------------- EVENTS
 function sourceShowing()
@@ -110,14 +105,15 @@ function sourceShowing()
 end
 
 function sourceActive()
-	--local pscene = obs.obs_frontend_get_current_preview_scene()
-	--local ascene = obs.obs_frontend_get_current_scene()
+
 	local source = obs.obs_get_source_by_name(source_name)
 	local active = false
 	if source ~= nil then
-		active = obs.obs_source_active(source)
-	end
-	obs.obs_source_release(source)	
+		if preview_scene ~= current_scene then
+			active = obs.obs_source_active(source)
+		end
+		obs.obs_source_release(source)
+    end		
 	return active
 end
 
@@ -150,41 +146,30 @@ function clear_lyric(pressed)
 		return
 	end
 	visible = not visible
-	if visible then
-	   print ("visible")
-	else
-	   print ("not visible")
-	end
-	update_lyrics_display(true)
+	update_lyrics_display()
 end
 
 
 function fade_lyrics_display() 
 	if text_fade_enabled then
-		if text_opacity == maxtxopacity then 
-		    text_opacity = maxtxopacity - 1
-			bkopacity = maxbkopacity
-			olopacity = maxolopacity
+		if text_opacity == 100 then 
+			text_opacity = 99
 			text_fade_dir = 1  -- fade out
 		end
-		if text_opacity == 0 then 
-		    text_opacity = 1
-			bkopacity = 0
-			olopacity = 0
+   	    if text_opacity == 0 then 
+			text_opacity = 1
 			text_fade_dir = 2  -- fade in
 		end
 	else
-		text_opacity = maxtxopacity
-		bkopacity = maxbkopacity
-		olopacity = maxolopacity
+		text_opacity = 100
 		text_fade_dir = 2
+		update_lyrics_display()
 	end
-	update_lyrics_display(true)
 end
 
 function next_prepared(pressed)
 	if not pressed then return false end
-	if prepared_index == #prepared_songs then
+	if prepared_index >= #prepared_songs then
 	   return false
 	end
    prepared_index = prepared_index + 1
@@ -227,18 +212,20 @@ function home_prepared(pressed)
 	text_fade_dir = 2
 	visible = true
 	display_index = 1
-	update_lyrics_display(true)
 	prepared_index = 1
-	if #prepared_songs == nil then
-		local song = get_load_lyric_song()
-		if song ~= nil then 
-			--prepare_selected(song)
-			prepared_index = #prepared_songs
-			displayed_song = song
-		end
-	end
 	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
-	fade_lyrics_display() 
+	update_lyrics_display() 
+	return true
+end
+
+function home_song(pressed)
+	if not pressed then return false end
+	text_opacity = 0
+	text_fade_dir = 2
+	visible = true
+	display_index = 1
+	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
+	update_lyrics_display() 
 	return true
 end
 
@@ -258,9 +245,16 @@ function clear_button_clicked(props, p)
 end
 
 function home_button_clicked(props, p)
+	home_song(true)
+	return true
+end
+
+function reset_button_clicked(props, p)
 	home_prepared(true)
 	return true
 end
+
+
 
 function save_song_clicked(props, p)
 	local name = obs.obs_data_get_string(script_sets, "prop_edit_song_title")
@@ -272,7 +266,7 @@ function save_song_clicked(props, p)
 		obs.obs_properties_apply_settings(props, script_sets)
 	elseif displayed_song == name then
 		prepare_lyrics(name)
-		update_lyrics_display(true)
+		update_lyrics_display()
 	end
 	return true
 end
@@ -334,7 +328,7 @@ end
 function prepare_selected(name)
 	if name == nil then return end
 	if name == "" then return end
-	print("Prepare: " .. name)
+	if name == displayed_song then return end
 	prepare_lyrics(name)
 	text_opacity = 0
 	text_fade_dir = 2
@@ -343,7 +337,7 @@ function prepare_selected(name)
 		visible = true   
 	end
 	displayed_song = name
-	update_lyrics_display(true)
+	update_lyrics_display()
 	return true
 end
 
@@ -371,7 +365,7 @@ end
 function clear_prepared_clicked(props, p)
 	prepared_songs = {}
 	lyrics = {}
-	update_lyrics_display(true)
+	update_lyrics_display()
 	local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
 	obs.obs_property_list_clear(prep_prop)
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
@@ -390,33 +384,21 @@ end
 -------------------------------------------------------------- PROGRAM FUNCTIONS
 
 -- updates the displayed lyrics
-function update_lyrics_display(fade)
+function update_lyrics_display()
 	local text = ""
-	local text_opacityx = 0
-	local bkopacityx = 0
-	local olopacityx = 0
 	if visible and #lyrics > 0 then
 		text = lyrics[display_index]
 	end
-	--if visible and not fade then
-	--	text_opacityx = maxtxopacity
-	--	bkopacityx = maxbkopacity
-	--	olopacityx = maxolopacity
-	--	text_fade_dir = 2  -- new text so just fade up if not already
-	--end
 	local source = obs.obs_get_source_by_name(source_name)
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
-		obs.obs_data_set_int(settings, "opacity", text_opacityx)    
-		obs.obs_data_set_int(settings, "outline_opacity", olopacityx)  
-		if (background_fade_enabled) then 
-			obs.obs_data_set_int(settings, "bk_opacity", bkopacityx)
-		end
+		obs.obs_data_set_int(settings, "opacity", 0)    
+		obs.obs_data_set_int(settings, "outline_opacity", 0)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 	end
-	obs.obs_source_release(source)	
+	obs.obs_source_release(source)
 	local title_source = obs.obs_get_source_by_name(title_source_name)
 	if title_source ~= nil then
 		local settings = obs.obs_data_create()
@@ -426,9 +408,6 @@ function update_lyrics_display(fade)
 	end
 	obs.obs_source_release(title_source)	
 	if visible then
-		text_opacity = 0
-		bkopacity = 0
-		olopacity = 0
 		text_fade_dir = 2   -- new text so just fade up if not already
 	end
 end
@@ -439,48 +418,28 @@ function timer_callback()
 		in_timer = true
 		if text_fade_dir > 0 then 
 			if text_fade_dir == 1 then	
-				if text_opacity > (maxtxopacity * text_fade_speed / 100) then
-				   text_opacity = text_opacity - (maxtxopacity * text_fade_speed / 100)
-				   	if (background_fade_enabled) then 
-						bkopacity = bkopacity - (maxbkopacity * text_fade_speed / 100)
-					end
-					olopacity = olopacity - (maxolopacity * text_fade_speed / 100)
+				if text_opacity > text_fade_speed then
+				   text_opacity = text_opacity - text_fade_speed
 				else
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 0  -- set to 0%
-				   	if (background_fade_enabled) then 
-						bkopacity = 0	
-					end
-				   olopacity = 0
-				   update_lyrics_display(true)
+				   update_lyrics_display()
 				end   
 			else
-				if text_opacity < maxtxopacity - (maxtxopacity * text_fade_speed / 100)  then
-				   text_opacity = text_opacity + (maxtxopacity * text_fade_speed / 100)
-				   	if (background_fade_enabled) then 
-						bkopacity = bkopacity + (maxbkopacity * text_fade_speed / 100)
-					end
-				   olopacity = olopacity + (maxolopacity * text_fade_speed / 100)
+				if text_opacity < 100 - text_fade_speed then
+				   text_opacity = text_opacity + text_fade_speed
 				else
 				   text_fade_dir = 0  -- stop fading
-				   text_opacity = maxtxopacity -- set to Max 
-				   	if (background_fade_enabled) then 
-						bkopacity = maxbkopacity	
-					end
-				   olopacity = maxolopacity
+				   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
 				end 
 			end
 			local source = obs.obs_get_source_by_name(source_name)
 			if source ~= nil then
 				local settings = obs.obs_data_create()
-				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to current
-				obs.obs_data_set_int(settings, "outline_opacity", olopacity)  -- Set new text outline opacity to current	
-				if (background_fade_enabled) then 
-					obs.obs_data_set_int(settings, "bk_opacity", bkopacity)
-				end
+				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+				obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
 				obs.obs_source_update(source, settings)
 				obs.obs_data_release(settings)
-				print("t: " .. text_opacity)
 			end
 			obs.obs_source_release(source)
 		end
@@ -489,23 +448,9 @@ function timer_callback()
 	return
 end
 
-function get_opacities()
-	local source = obs.obs_get_source_by_name(source_name)
-	local current_settings = obs.obs_source_get_settings(source)
-	maxbkopacity = obs.obs_data_get_int(current_settings,"bk_opacity")
-	maxtxopacity = obs.obs_data_get_int(current_settings,"opacity")
-	maxolopacity = obs.obs_data_get_int(current_settings,"outline_opacity")
-	if maxtxopacity == 0 then
-	    maxtxopacity = 100
-	end
-	obs.obs_data_release(current_settings)
-	obs.obs_source_release(source)	
-end
-
 -- prepares lyrics of the song
 function prepare_lyrics(name)
 	if name == nil then return end
-
 	local song_lines = get_song_text(name)
 	local cur_line = 1
 	local recordRefrain = false
@@ -763,21 +708,6 @@ end
 
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
-
-function text_fade_changed(props, prop, settings)
-	text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled") 	
-	bgprop = obs.obs_properties_get(props,"background_fade_enabled")
-	if text_fade_enabled then
-	     obs.obs_property_set_enabled(bgprop, true)
-		 obs.obs_property_set_visible(bgprop, true)
-	else
-		 obs.obs_property_set_enabled(bgprop, false)
-		 obs.obs_property_set_visible(bgprop, false)
-	end
-	return true
-end
-
-
 function script_properties()
 	script_props = obs.obs_properties_create()
 	
@@ -797,11 +727,9 @@ function script_properties()
 
 	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
-	local fadeprop = obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
-	obs.obs_properties_add_bool(script_props, "background_fade_enabled", "Fade text background with text")	-- Fade Enable (WZ)
-	obs.obs_property_set_modified_callback(fadeprop, text_fade_changed)
+	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
 	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 20, 1)
-	local text_source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
@@ -814,8 +742,8 @@ function script_properties()
 		end
 		table.sort(n)
 		for _, name in ipairs(n) do
-			obs.obs_property_list_add_string(text_source_prop, name, name)
-			obs.obs_property_list_add_string(title_source_prop, name, name)			
+			obs.obs_property_list_add_string(source_prop, name, name)
+			obs.obs_property_list_add_string(title_source_prop, name, name)		
 		end
 	end
 	obs.source_list_release(sources)
@@ -830,7 +758,8 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "prop_next_button", "Next Lyric", next_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/Hide Lyrics", clear_button_clicked)
-	obs.obs_properties_add_button(script_props, "prop_home_button", "Reset Lyrics", home_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_home_button", "Reset to Song Start", home_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_reset_button", "Reset to First Song", reset_button_clicked)	
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
 	obs.obs_properties_apply_settings(script_props, script_sets)
 	
@@ -846,9 +775,7 @@ end
 -- A function named script_update will be called when settings are changed
 function script_update(settings)
     text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled")   -- 	Fade Enable (WZ)
-	background_fade_enabled = obs.obs_data_get_bool(settings, "background_fade_enabled")   -- 	Fade Enable (WZ)
 	text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")   -- 	Fade Speed (WZ)	
-	print("update")
 	reload = false
 	local cur_display_lines = obs.obs_data_get_int(settings, "prop_lines_counter")
 	if display_lines ~= cur_display_lines then
@@ -864,7 +791,7 @@ function script_update(settings)
 	if title_source_name ~= cur_title_source then
 		title_source_name = cur_title_source	
 		reload = true
-	end
+	end	
 	local cur_ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
 	if cur_ensure_lines ~= ensure_lines then
 		ensure_lines = cur_ensure_lines
@@ -923,7 +850,12 @@ function script_save(settings)
 	obs.obs_data_array_release(hotkey_save_array)
 	
 	hotkey_save_array = obs.obs_hotkey_save(hotkey_home_id)
-	obs.obs_data_set_array(settings, "home_prepared_hotkey", hotkey_save_array)
+	obs.obs_data_set_array(settings, "home_song_hotkey", hotkey_save_array)
+	--hotkey_save_array = obs.obs_hotkey_save(hotkey_home_id)
+	obs.obs_data_array_release(hotkey_save_array)
+	
+	hotkey_save_array = obs.obs_hotkey_save(hotkey_reset_id)
+	obs.obs_data_set_array(settings, "reset_prepared_hotkey", hotkey_save_array)
 	--hotkey_save_array = obs.obs_hotkey_save(hotkey_home_id)
 	obs.obs_data_array_release(hotkey_save_array)
 end
@@ -955,9 +887,14 @@ function script_load(settings)
 	obs.obs_hotkey_load(hotkey_p_p_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)	
 	
-	hotkey_home_id = obs.obs_hotkey_register_frontend("home_prepared_hotkey", "Prepared Home", home_prepared)
-	hotkey_save_array = obs.obs_data_get_array(settings, "home_prepared_hotkey")
+	hotkey_home_id = obs.obs_hotkey_register_frontend("home_song_hotkey", "Reset to Song Start", home_song)
+	hotkey_save_array = obs.obs_data_get_array(settings, "home_song_hotkey")
 	obs.obs_hotkey_load(hotkey_home_id, hotkey_save_array)
+	obs.obs_data_array_release(hotkey_save_array)
+	
+	hotkey_reset_id = obs.obs_hotkey_register_frontend("reset_prepared_hotkey", "Reset to First Song", home_prepared)
+	hotkey_save_array = obs.obs_data_get_array(settings, "reset_prepared_hotkey")
+	obs.obs_hotkey_load(hotkey_reset_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 
 	--obs.obs_data_addref(settings)
@@ -969,8 +906,7 @@ function script_load(settings)
 	if #prepared_songs ~= 0 then
 	  prepare_selected(prepared_songs[1])
 	end
-	get_opacities()
-	pause_timer = true
+
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
 	obs.timer_add(timer_callback, 150)	-- Setup callback for text fade effect
 end
@@ -1069,7 +1005,7 @@ source_def.get_properties = function (data)
 		obs.obs_property_list_add_string(source_dir_list, name, name)
 	end
 	obs.obs_properties_add_bool(props,"inPreview","Change Lyrics in Preview Mode")  -- Option to load new lyric in preview mode
-	obs.obs_properties_add_bool(props,"autoHome","Home Lyrics with Scene")  -- Option to load new lyric in preview mode
+	obs.obs_properties_add_bool(props,"autoHome","Home Lyrics with Scene")  -- Option to home new lyric in preview mode	return props
 	return props
 end
 
@@ -1078,6 +1014,7 @@ source_def.create = function(settings, source)
 	sh = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_connect(sh,"activate",active)   --Set Active Callback
 	obs.signal_handler_connect(sh,"show",showing)	   --Set Preview Callback
+	rename_prepareLyric()  
 	return data
 end
 
@@ -1091,7 +1028,15 @@ source_def.destroy = function(source)
 end
 
 function on_event(event)
-	--rename_prepareLyric()   -- Rename and Mark sources instantly on event change (WZ)
+	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+		rename_prepareLyric()  	
+		local scene = obs.obs_frontend_get_current_scene()
+		current_scene = obs.obs_source_get_name(scene)
+		obs.obs_source_release(scene);
+		scene = obs.obs_frontend_get_current_preview_scene()
+		preview_scene = obs.obs_source_get_name(scene)	
+		obs.obs_source_release(scene);
+	end
 end
 
 function loadSong(source, preview)
@@ -1099,15 +1044,14 @@ function loadSong(source, preview)
 	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
 		local song = obs.obs_data_get_string(settings, "songs")
 		if song ~= displayed_song then 
+		    prepared_songs[1] = song
 			prepare_selected(song)
-			prepared_index = #prepared_songs
+			prepared_index = 1
 			displayed_song = song
 		end
 		if obs.obs_data_get_bool(settings, "autoHome") then
-		   home_prepared(true)
+		    home_prepared(true)
 		end
-		update_lyrics_display(true)
-		fade_lyrics_display() 
 	end
 	obs.obs_data_release(settings)
 end
@@ -1122,9 +1066,10 @@ end
 
 function showing(cd)
     local source = obs.calldata_source(cd,"source")
-	if source == nil or (sourceActive() and obs.obs_frontend_preview_program_mode_active()) then
+	if source == nil then
 		return
 	end
+	if sourceActive() then return end
 	loadSong(source,true)
 end
 
