@@ -109,9 +109,9 @@ function sourceActive()
 	local source = obs.obs_get_source_by_name(source_name)
 	local active = false
 	if source ~= nil then
-		if preview_scene ~= current_scene then
+		--if preview_scene ~= current_scene then
 			active = obs.obs_source_active(source)
-		end
+		--end
 		obs.obs_source_release(source)
     end		
 	return active
@@ -1030,12 +1030,6 @@ end
 function on_event(event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
 		rename_prepareLyric()  	
-		local scene = obs.obs_frontend_get_current_scene()
-		current_scene = obs.obs_source_get_name(scene)
-		obs.obs_source_release(scene);
-		scene = obs.obs_frontend_get_current_preview_scene()
-		preview_scene = obs.obs_source_get_name(scene)	
-		obs.obs_source_release(scene);
 	end
 end
 
@@ -1052,6 +1046,7 @@ function loadSong(source, preview)
 		if obs.obs_data_get_bool(settings, "autoHome") then
 		    home_prepared(true)
 		end
+		update_lyrics_display()
 	end
 	obs.obs_data_release(settings)
 end
