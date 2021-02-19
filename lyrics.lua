@@ -44,7 +44,7 @@
 -- Added code to allow text to change in Preview mode if preview and active scene are the same (normally active text object prevents this change in preview)
 -- CLeared up Home and Reset.  Home returns to start of current song.  Reset goes back to 1st song.  
 -- Added new button/hot-key to allow for both Home and Reset functions.
-
+-- Allow Comment after #L:n markup in Lyrics
 
 obs = obslua
 bit = require("bit")
@@ -473,12 +473,13 @@ function prepare_lyrics(name)
 		end
 		local newcount_index = line:find("#L:")
 		if newcount_index ~= nil then
-			adjusted_display_lines = tonumber(line:sub(newcount_index+3))
+			local iS,iE = line:find("%d+",newcount_index+3)
+			adjusted_display_lines = tonumber(line:sub(iS,iE))
 			line = line:sub(1, newcount_index - 1)
 			new_lines = 0							--ignore line
 		end		
 		local newcount_index = line:find("#D:")
-		if newcount_index ~= nil then
+		if newcount_index ~= nil then 
 			local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
 			new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
 			_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
@@ -1014,7 +1015,6 @@ source_def.create = function(settings, source)
 	sh = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_connect(sh,"activate",active)   --Set Active Callback
 	obs.signal_handler_connect(sh,"show",showing)	   --Set Preview Callback
-	rename_prepareLyric()  
 	return data
 end
 
@@ -1038,7 +1038,7 @@ function loadSong(source, preview)
 	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
 		local song = obs.obs_data_get_string(settings, "songs")
 		if song ~= displayed_song then 
-		    prepared_songs[1] = song
+		    --prepared_songs[1] = song
 			prepare_selected(song)
 			prepared_index = 1
 			displayed_song = song
@@ -1047,6 +1047,7 @@ function loadSong(source, preview)
 		    home_prepared(true)
 		end
 		update_lyrics_display()
+--		fade_lyrics_display()
 	end
 	obs.obs_data_release(settings)
 end
