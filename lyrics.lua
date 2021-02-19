@@ -456,7 +456,7 @@ function prepare_lyrics(name)
 	local recordRefrain = false
 	local playRefrain = false
 	local showRefrain = true
-	refrain = ""
+	refrain = {}
 	lyrics = {}
     local adjusted_display_lines = display_lines
 	for _, line in ipairs(song_lines) do
@@ -487,6 +487,9 @@ function prepare_lyrics(name)
 		end			
 		local refrain_index = line:find("#R%[")
 		if refrain_index ~= nil then
+			if next(refrain) ~= nil then
+				for i, _ in ipairs(refrain) do refrain[i] = nil end
+			end
 			recordRefrain = true
 			showRefrain = true
 			line = line:sub(1, refrain_index - 1)
@@ -494,6 +497,9 @@ function prepare_lyrics(name)
 		end
 		local refrain_index = line:find("#r%[")
 		if refrain_index ~= nil then
+			if next(refrain) ~= nil then
+				for i, _ in ipairs(refrain) do refrain[i] = nil end
+			end
 			recordRefrain = true
 			showRefrain = false
 			line = line:sub(1, refrain_index - 1)
@@ -543,9 +549,9 @@ function prepare_lyrics(name)
 			while (new_lines > 0) do
 				if recordRefrain then 
 					if (cur_line == 1) then
-						refrain = line
+						refrain[#refrain + 1] = line
 					else
-						refrain = refrain .. "\n" .. line
+						refrain[#refrain] = refrain[#refrain] .. "\n" .. line
 					end
 				end
 				if showRefrain then
@@ -557,18 +563,37 @@ function prepare_lyrics(name)
 				end
 				cur_line = cur_line + 1
 				if single_line or cur_line > adjusted_display_lines then
+					if ensure_lines then
+						for i = cur_line, display_lines, 1 do
+							cur_line = i
+							if showRefrain and lyrics[#lyrics] ~= nil then
+								lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+							end
+							if recordRefrain then
+								refrain[#refrain] = refrain[#refrain] .. "\n"
+							end
+						end
+					end
 					cur_line = 1
 				end
 				new_lines = new_lines - 1
 			end
 		end
 		if playRefrain == true then
-		   lyrics[#lyrics + 1] = refrain
+			for _, refrain_line in ipairs(refrain) do
+				lyrics[#lyrics + 1] = refrain_line
+			end
 		end
 	end
-	if ensure_lines and (cur_line > 1) and (lyrics[#lyrics] ~= nil) then
-		for i = cur_line, adjusted_display_lines, 1 do
-			lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+	if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then
+		for i = cur_line, display_lines, 1 do
+			cur_line = i
+			if showRefrain and lyrics[#lyrics] ~= nil then
+				lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+			end
+			if recordRefrain then
+				refrain[#refrain] = refrain[#refrain] .. "\n"
+			end
 		end
 	end
 	lyrics[#lyrics + 1] = ""
