@@ -795,7 +795,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles -  author: amirchev; with significant contributions from taxilian and DC Strato"
+	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian"
 end
 
 -- A function named script_update will be called when settings are changed
