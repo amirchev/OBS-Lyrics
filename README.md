@@ -13,16 +13,72 @@ Manage and display lyrics to any text source in your OBS scene.
 There is a much more in-depth guide [here](https://obsproject.com/forum/resources/display-lyrics-as-subtitles.1005/).
 
 ## Things to know
-- Add `##P` or `##B` on any line that you want to keep as an empty line (for line padding, etc.)
-- Add `#B:3` or  `#P:3` on any line to create 3 empty lines (you may use any number)
-- Use `#D:3 We praise You` to repeat "We praise You" 3 times (you may use any number)
-- Add `#L:3` in the start of the lyrics to specify that a particular song is to be displayed 3 lines at a time (works with any number).
 - To display a specific song when a scene is activated, add a "Source" to the scene by clicking the + sign in the scene, adding a "Prepare Lyric" source, and selecting the song to open.
 - Use "Home" hotkey to return to the beginning of your prepared songs, perhaps after practicing the songs.
-- Append `###` to the end of a line to display it by itself.
-- Use `//` to write a comment that will not display to your viewers, e.g., `We sing to you God //repeats 5 times`
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
 - Ensure a constant number of lines displayed using the checkbox, e.g., if the song ends and only one line is left, lyrics will be padded with blank lines to ensure you hava a minimum number of lines.
+
+## Notation
+### Single blank line/padding (`##P` or `##B`)
+Use on any line that you want to keep as an empty line (for line padding, etc.)
+Try it: 
+```
+This is line 1
+##B
+This is line 3
+```
+### Multiple blank lines/padding (`#B:3` or `#P:3`)
+Use on any line to create 3 empty lines (you may use any number)
+Try it: 
+```
+This is line 1
+#B:2
+This is line 4!!
+```
+### Display line alone (`###`)
+Append `###` to the end of any line to display it alone
+Try it: `This line will show by itself ###`
+### Repeat line (`#D:3`)
+Duplicate a line multiple times.
+Try it: `#D3: Sing this line 3 times!!!`
+### Set number of lines to be displayed (`#L:3`)
+Change the amount of lines displayed at one time throughout the same song.
+Try it:
+```
+#L:2
+For the verse,
+I only want to see two lines.
+#L:3
+But in the chorus,
+it needs to show
+all three!
+```
+### Comment out text (`//`)
+Use `//` to write a comment that will not display to your viewers, e.g., `We sing to you God //long pause/guitar solo after this`
+### Define refrain and show it right away (`#R[` and `#R]`)
+Use this notation to define a refrain that will be displayed right away as well. 
+Try it:
+```
+#R[
+#L:2
+This song starts with this refrain!
+It will only show these two lines!!!
+#R]
+#L:3
+Now the verse begins,
+after the refrain.
+And all three lines will show!
+##R
+Now the second verse begins,
+it will also continue with three lines per verse.
+Now hit the refrain again!
+##R
+```
+### Play refrain (`##R`)
+Use this annotation to show where a refrain should be inserted. See above.
+### Define refrain but DON'T show it right away (`#r[` and `#r]`)
+Used in the same way as `#R[` and `#R]`, but the refrain is not show in the beginning. It will only be displayed when `##R` is called.
+
 
 ## That's it
 Please post any bugs or feature requests here or to the OBS forum. 
