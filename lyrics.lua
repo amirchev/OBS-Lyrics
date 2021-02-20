@@ -417,17 +417,18 @@ function timer_callback()
 	if not in_timer and not pause_timer then
 		in_timer = true
 		if text_fade_dir > 0 then 
+			local real_fade_speed = 10 + (text_fade_speed * 3)
 			if text_fade_dir == 1 then	
-				if text_opacity > text_fade_speed then
-				   text_opacity = text_opacity - text_fade_speed
+				if text_opacity > real_fade_speed then
+				   text_opacity = text_opacity - real_fade_speed
 				else
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 0  -- set to 0%
 				   update_lyrics_display()
 				end   
 			else
-				if text_opacity < 100 - text_fade_speed then
-				   text_opacity = text_opacity + text_fade_speed
+				if text_opacity < 100 - real_fade_speed then
+				   text_opacity = text_opacity + real_fade_speed
 				else
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
@@ -456,7 +457,7 @@ function prepare_lyrics(name)
 	local recordRefrain = false
 	local playRefrain = false
 	local showRefrain = true
-	refrain = ""
+	refrain = {}
 	lyrics = {}
     local adjusted_display_lines = display_lines
 	for _, line in ipairs(song_lines) do
@@ -487,6 +488,9 @@ function prepare_lyrics(name)
 		end			
 		local refrain_index = line:find("#R%[")
 		if refrain_index ~= nil then
+			if next(refrain) ~= nil then
+				for i, _ in ipairs(refrain) do refrain[i] = nil end
+			end
 			recordRefrain = true
 			showRefrain = true
 			line = line:sub(1, refrain_index - 1)
@@ -494,6 +498,9 @@ function prepare_lyrics(name)
 		end
 		local refrain_index = line:find("#r%[")
 		if refrain_index ~= nil then
+			if next(refrain) ~= nil then
+				for i, _ in ipairs(refrain) do refrain[i] = nil end
+			end
 			recordRefrain = true
 			showRefrain = false
 			line = line:sub(1, refrain_index - 1)
@@ -543,9 +550,9 @@ function prepare_lyrics(name)
 			while (new_lines > 0) do
 				if recordRefrain then 
 					if (cur_line == 1) then
-						refrain = line
+						refrain[#refrain + 1] = line
 					else
-						refrain = refrain .. "\n" .. line
+						refrain[#refrain] = refrain[#refrain] .. "\n" .. line
 					end
 				end
 				if showRefrain then
@@ -557,18 +564,37 @@ function prepare_lyrics(name)
 				end
 				cur_line = cur_line + 1
 				if single_line or cur_line > adjusted_display_lines then
+					if ensure_lines then
+						for i = cur_line, display_lines, 1 do
+							cur_line = i
+							if showRefrain and lyrics[#lyrics] ~= nil then
+								lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+							end
+							if recordRefrain then
+								refrain[#refrain] = refrain[#refrain] .. "\n"
+							end
+						end
+					end
 					cur_line = 1
 				end
 				new_lines = new_lines - 1
 			end
 		end
 		if playRefrain == true then
-		   lyrics[#lyrics + 1] = refrain
+			for _, refrain_line in ipairs(refrain) do
+				lyrics[#lyrics + 1] = refrain_line
+			end
 		end
 	end
-	if ensure_lines and (cur_line > 1) and (lyrics[#lyrics] ~= nil) then
-		for i = cur_line, adjusted_display_lines, 1 do
-			lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+	if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then
+		for i = cur_line, display_lines, 1 do
+			cur_line = i
+			if showRefrain and lyrics[#lyrics] ~= nil then
+				lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+			end
+			if recordRefrain then
+				refrain[#refrain] = refrain[#refrain] .. "\n"
+			end
 		end
 	end
 	lyrics[#lyrics + 1] = ""
@@ -729,7 +755,7 @@ function script_properties()
 	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
 	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
-	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 20, 1)
+	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
@@ -770,7 +796,11 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
+<<<<<<< HEAD
 	return "Manage song lyrics to be displayed as subtitles -  author: amirchev; with significant contributions from taxilian and DC Strato. Test Version DC5 "
+=======
+	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian"
+>>>>>>> 2393f67843a7954b470a7f498a9e1eea0e7b5ad9
 end
 
 -- A function named script_update will be called when settings are changed
@@ -909,7 +939,7 @@ function script_load(settings)
 	end
 
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
-	obs.timer_add(timer_callback, 150)	-- Setup callback for text fade effect
+	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
