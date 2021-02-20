@@ -417,7 +417,7 @@ function timer_callback()
 	if not in_timer and not pause_timer then
 		in_timer = true
 		if text_fade_dir > 0 then 
-			local real_fade_speed = 10 + (text_fade_speed * 4)
+			local real_fade_speed = 10 + (text_fade_speed * 3)
 			if text_fade_dir == 1 then	
 				if text_opacity > real_fade_speed then
 				   text_opacity = text_opacity - real_fade_speed
@@ -935,7 +935,7 @@ function script_load(settings)
 	end
 
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
-	obs.timer_add(timer_callback, 150)	-- Setup callback for text fade effect
+	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
