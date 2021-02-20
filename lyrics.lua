@@ -417,17 +417,18 @@ function timer_callback()
 	if not in_timer and not pause_timer then
 		in_timer = true
 		if text_fade_dir > 0 then 
+			local real_fade_speed = 10 + (text_fade_speed * 4)
 			if text_fade_dir == 1 then	
-				if text_opacity > text_fade_speed then
-				   text_opacity = text_opacity - text_fade_speed
+				if text_opacity > real_fade_speed then
+				   text_opacity = text_opacity - real_fade_speed
 				else
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 0  -- set to 0%
 				   update_lyrics_display()
 				end   
 			else
-				if text_opacity < 100 - text_fade_speed then
-				   text_opacity = text_opacity + text_fade_speed
+				if text_opacity < 100 - real_fade_speed then
+				   text_opacity = text_opacity + real_fade_speed
 				else
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
@@ -754,7 +755,7 @@ function script_properties()
 	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
 	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
-	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 20, 1)
+	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
