@@ -796,7 +796,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian"
+	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian."
 end
 
 -- A function named script_update will be called when settings are changed
@@ -1072,8 +1072,7 @@ function loadSong(source, preview)
 		if obs.obs_data_get_bool(settings, "autoHome") then
 		    home_prepared(true)
 		end
-		update_lyrics_display()
---		fade_lyrics_display()
+		fade_lyrics_display()    
 	end
 	obs.obs_data_release(settings)
 end
