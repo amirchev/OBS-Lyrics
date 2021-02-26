@@ -499,15 +499,12 @@ function prepare_lyrics(name)
 		if comment_index ~= nil then
 			commentBlock = true
 			line = line:sub(1, comment_index - 1)
-			new_lines = 0	
-			print("comments on")
 		end
 		comment_index = line:find("//]")			-- Look for comment block Clear
 		if comment_index ~= nil then
 			commentBlock = false
 			line = line:sub(1, comment_index - 1)
 			new_lines = 0	
-			print("comments off")
 		end	
 		if not commentBlock then
 			if line:find("###") ~= nil then             -- Look for single line
