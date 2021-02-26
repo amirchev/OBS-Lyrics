@@ -492,6 +492,9 @@ function prepare_lyrics(name)
 	lyrics = {}
 	alternate = {}
 	local adjusted_display_lines = display_lines
+	local refrain_display_lines = display_lines
+	local alternate_display_lines = display_lines
+	local displaySize = display_lines
 	for _, line in ipairs(song_lines) do
 		local new_lines = 1
 		local single_line = false
@@ -519,7 +522,14 @@ function prepare_lyrics(name)
 			local newcount_index = line:find("#L:")
 			if newcount_index ~= nil then
 				local iS,iE = line:find("%d+",newcount_index+3)
-				adjusted_display_lines = tonumber(line:sub(iS,iE))
+				local newLines = tonumber(line:sub(iS,iE))
+				if useAlternate then
+					alternate_display_lines = newLines
+				elseif recordRefrainn then
+					refrain_display_lines = newLines
+				else				
+					adjusted_display_lines = newLines
+				end
 				line = line:sub(1, newcount_index - 1)
 				new_lines = 0							--ignore line
 			end		
@@ -603,6 +613,7 @@ function prepare_lyrics(name)
 				line = line:sub(1, phantom_index - 1)
 			end
 			if useAlternate then
+				displaySize = alternate_display_lines
 				if new_lines > 0 then 		
 					while (new_lines > 0) do
 						if showText and line ~= nil then
@@ -613,9 +624,9 @@ function prepare_lyrics(name)
 							end
 						end
 						cur_aline = cur_aline + 1
-						if single_line or cur_aline > adjusted_display_lines then
+						if single_line or cur_aline > displaySize then
 							if ensure_lines then
-								for i = cur_aline, display_lines, 1 do
+								for i = cur_aline, displaySize, 1 do
 									cur_aline = i
 									if showText and alternate[#alternate] ~= nil then
 										alternate[#alternate] = alternate[#alternate] .. "\n"
@@ -628,7 +639,12 @@ function prepare_lyrics(name)
 					end
 				end
 			else
-				if new_lines > 0 then 		
+				if recordRefrain then 
+					displaySize = refrain_display_lines 
+				else 
+					displaySize = adjusted_display_lines 
+				end
+				if new_lines > 0 then 	
 					while (new_lines > 0) do
 						if recordRefrain then 
 							if (cur_line == 1) then
@@ -636,6 +652,7 @@ function prepare_lyrics(name)
 							else
 								refrain[#refrain] = refrain[#refrain] .. "\n" .. line
 							end
+							displaySize = refrain_display_lines
 						end
 						if showText and line ~= nil then
 							if (cur_line == 1) then
@@ -645,9 +662,9 @@ function prepare_lyrics(name)
 							end
 						end
 						cur_line = cur_line + 1
-						if single_line or cur_line > adjusted_display_lines then
+						if single_line or cur_line > displaySize then
 							if ensure_lines then
-								for i = cur_line, display_lines, 1 do
+								for i = cur_line, displaySize, 1 do
 									cur_line = i
 									if showText and lyrics[#lyrics] ~= nil then
 										lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
@@ -671,7 +688,7 @@ function prepare_lyrics(name)
 		end
 	end
 	if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then
-		for i = cur_line, display_lines, 1 do
+		for i = cur_line, displaySize, 1 do
 			cur_line = i
 			if useAlternate then
 				if showText and alternate[#alternate] ~= nil then
