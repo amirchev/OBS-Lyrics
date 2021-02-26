@@ -490,7 +490,9 @@ function prepare_lyrics(name)
 	refrain = {}
 	lyrics = {}
 	alternate = {}
-	local adjusted_display_lines = display_lines
+	local adjusted_display_lines = display_lines  -- initialize in-line displaylines overrides
+	local alternate_display_lines = 0 
+	local refrain_display_lines = 0 
 	for _, line in ipairs(song_lines) do
 		local new_lines = 1
 		local single_line = false
