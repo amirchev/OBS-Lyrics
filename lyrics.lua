@@ -487,6 +487,7 @@ function prepare_lyrics(name)
 	local recordRefrain = false
 	local playRefrain = false
 	local showText = true
+	local commentBlock = false
 	refrain = {}
 	lyrics = {}
 	alternate = {}
@@ -494,165 +495,181 @@ function prepare_lyrics(name)
 	for _, line in ipairs(song_lines) do
 		local new_lines = 1
 		local single_line = false
-		if line:find("###") ~= nil then
-			line = line:gsub("%s*###%s*", "")
-			single_line = true
-		end
-		local comment_index = line:find("%s*//")
+		local comment_index = line:find("//%[")		-- Look for comment block Set
 		if comment_index ~= nil then
+			commentBlock = true
 			line = line:sub(1, comment_index - 1)
-			new_lines = 0							--ignore line
+			new_lines = 0	
+			print("comments on")
 		end
-		local newcount_index = line:find("#L:")
-		if newcount_index ~= nil then
-			local iS,iE = line:find("%d+",newcount_index+3)
-			adjusted_display_lines = tonumber(line:sub(iS,iE))
-			line = line:sub(1, newcount_index - 1)
-			new_lines = 0							--ignore line
-		end		
-		local newcount_index = line:find("#D:")
-		if newcount_index ~= nil then 
-			local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
-			new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
-			_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
-			line = line:sub(newcount_indexEnd + 1)	
-		end			
-		local refrain_index = line:find("#R%[")
-		if refrain_index ~= nil then
-			if next(refrain) ~= nil then
-				for i, _ in ipairs(refrain) do refrain[i] = nil end
+		comment_index = line:find("//]")			-- Look for comment block Clear
+		if comment_index ~= nil then
+			commentBlock = false
+			line = line:sub(1, comment_index - 1)
+			new_lines = 0	
+			print("comments off")
+		end	
+		if not commentBlock then
+			if line:find("###") ~= nil then             -- Look for single line
+				line = line:gsub("%s*###%s*", "")
+				single_line = true
+			end		
+			local comment_index = line:find("%s*//")
+			if comment_index ~= nil then
+				line = line:sub(1, comment_index - 1)
+				new_lines = 0							--ignore line
 			end
-			recordRefrain = true
-			showText = true
-			line = line:sub(1, refrain_index - 1)
-			new_lines = 0	
-		end
-		local refrain_index = line:find("#r%[")
-		if refrain_index ~= nil then
-			if next(refrain) ~= nil then
-				for i, _ in ipairs(refrain) do refrain[i] = nil end
+			local newcount_index = line:find("#L:")
+			if newcount_index ~= nil then
+				local iS,iE = line:find("%d+",newcount_index+3)
+				adjusted_display_lines = tonumber(line:sub(iS,iE))
+				line = line:sub(1, newcount_index - 1)
+				new_lines = 0							--ignore line
+			end		
+			local newcount_index = line:find("#D:")
+			if newcount_index ~= nil then 
+				local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
+				new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
+				_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
+				line = line:sub(newcount_indexEnd + 1)	
+			end			
+			local refrain_index = line:find("#R%[")
+			if refrain_index ~= nil then
+				if next(refrain) ~= nil then
+					for i, _ in ipairs(refrain) do refrain[i] = nil end
+				end
+				recordRefrain = true
+				showText = true
+				line = line:sub(1, refrain_index - 1)
+				new_lines = 0	
 			end
-			recordRefrain = true
-			showText = false
-			line = line:sub(1, refrain_index - 1)
-			new_lines = 0	
-		end
-		refrain_index = line:find("#R]")
-		if refrain_index ~= nil then
-			recordRefrain = false
-			showText = true
-			line = line:sub(1, refrain_index - 1)
-			new_lines = 0	
-		end	
-		refrain_index = line:find("#r]")
-		if refrain_index ~= nil then
-			recordRefrain = false
-			showText = true
-			line = line:sub(1, refrain_index - 1)
-			new_lines = 0	
-		end	
-		refrain_index = line:find("##R")
-		if refrain_index ~= nil then
-			playRefrain = true
-			line = line:sub(1, refrain_index - 1)
-			new_lines = 0	
-		else
-			playRefrain = false
-		end
-		local alternate_index = line:find("#A%[")
-		if alternate_index ~= nil then
-			useAlternate = true
-			line = line:sub(1, alternate_index - 1)
-			new_lines = 0	
-		end
-		alternate_index = line:find("#A]")
-		if alternate_index ~= nil then
-			useAlternate = false
-			line = line:sub(1, alternate_index - 1)
-			new_lines = 0	
-		end			
-		local newcount_index = line:find("#P:")
-		if newcount_index ~= nil then
-			new_lines = tonumber(line:sub(newcount_index+3))
-			line = line:sub(1, newcount_index - 1)	
-		end	
-		local newcount_index = line:find("#B:")
-		if newcount_index ~= nil then
-			new_lines = tonumber(line:sub(newcount_index+3))
-			line = line:sub(1, newcount_index - 1)
-		end			
-		local phantom_index = line:find("##P")
-		if phantom_index ~= nil then
-			line = line:sub(1, phantom_index - 1)
-		end	
-		local phantom_index = line:find("##B")
-		if phantom_index ~= nil then
-			line = line:sub(1, phantom_index - 1)
-		end
-		if useAlternate then
-			if new_lines > 0 then 		
-				while (new_lines > 0) do
-					if showText and line ~= nil then
-						if (cur_aline == 1) then
-							alternate[#alternate + 1] = line
-						else
-							alternate[#alternate] = alternate[#alternate] .. "\n" .. line
-						end
-					end
-					cur_aline = cur_aline + 1
-					if single_line or cur_aline > adjusted_display_lines then
-						if ensure_lines then
-							for i = cur_aline, display_lines, 1 do
-								cur_aline = i
-								if showText and alternate[#alternate] ~= nil then
-									alternate[#alternate] = alternate[#alternate] .. "\n"
-								end
+			local refrain_index = line:find("#r%[")
+			if refrain_index ~= nil then
+				if next(refrain) ~= nil then
+					for i, _ in ipairs(refrain) do refrain[i] = nil end
+				end
+				recordRefrain = true
+				showText = false
+				line = line:sub(1, refrain_index - 1)
+				new_lines = 0	
+			end
+			refrain_index = line:find("#R]")
+			if refrain_index ~= nil then
+				recordRefrain = false
+				showText = true
+				line = line:sub(1, refrain_index - 1)
+				new_lines = 0	
+			end	
+			refrain_index = line:find("#r]")
+			if refrain_index ~= nil then
+				recordRefrain = false
+				showText = true
+				line = line:sub(1, refrain_index - 1)
+				new_lines = 0	
+			end	
+			refrain_index = line:find("##R")
+			if refrain_index ~= nil then
+				playRefrain = true
+				line = line:sub(1, refrain_index - 1)
+				new_lines = 0	
+			else
+				playRefrain = false
+			end
+			local alternate_index = line:find("#A%[")
+			if alternate_index ~= nil then
+				useAlternate = true
+				line = line:sub(1, alternate_index - 1)
+				new_lines = 0	
+			end
+			alternate_index = line:find("#A]")
+			if alternate_index ~= nil then
+				useAlternate = false
+				line = line:sub(1, alternate_index - 1)
+				new_lines = 0	
+			end			
+			local newcount_index = line:find("#P:")
+			if newcount_index ~= nil then
+				new_lines = tonumber(line:sub(newcount_index+3))
+				line = line:sub(1, newcount_index - 1)	
+			end	
+			local newcount_index = line:find("#B:")
+			if newcount_index ~= nil then
+				new_lines = tonumber(line:sub(newcount_index+3))
+				line = line:sub(1, newcount_index - 1)
+			end			
+			local phantom_index = line:find("##P")
+			if phantom_index ~= nil then
+				line = line:sub(1, phantom_index - 1)
+			end	
+			local phantom_index = line:find("##B")
+			if phantom_index ~= nil then
+				line = line:sub(1, phantom_index - 1)
+			end
+			if useAlternate then
+				if new_lines > 0 then 		
+					while (new_lines > 0) do
+						if showText and line ~= nil then
+							if (cur_aline == 1) then
+								alternate[#alternate + 1] = line
+							else
+								alternate[#alternate] = alternate[#alternate] .. "\n" .. line
 							end
 						end
-						cur_aline = 1
-					end
-					new_lines = new_lines - 1
-				end
-			end
-		else
-			if new_lines > 0 then 		
-				while (new_lines > 0) do
-					if recordRefrain then 
-						if (cur_line == 1) then
-							refrain[#refrain + 1] = line
-						else
-							refrain[#refrain] = refrain[#refrain] .. "\n" .. line
-						end
-					end
-					if showText and line ~= nil then
-						if (cur_line == 1) then
-							lyrics[#lyrics + 1] = line
-						else
-							lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
-						end
-					end
-					cur_line = cur_line + 1
-					if single_line or cur_line > adjusted_display_lines then
-						if ensure_lines then
-							for i = cur_line, display_lines, 1 do
-								cur_line = i
-								if showText and lyrics[#lyrics] ~= nil then
-									lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
-								end
-								if recordRefrain then
-									refrain[#refrain] = refrain[#refrain] .. "\n"
+						cur_aline = cur_aline + 1
+						if single_line or cur_aline > adjusted_display_lines then
+							if ensure_lines then
+								for i = cur_aline, display_lines, 1 do
+									cur_aline = i
+									if showText and alternate[#alternate] ~= nil then
+										alternate[#alternate] = alternate[#alternate] .. "\n"
+									end
 								end
 							end
+							cur_aline = 1
 						end
-						cur_line = 1
+						new_lines = new_lines - 1
 					end
-					new_lines = new_lines - 1
+				end
+			else
+				if new_lines > 0 then 		
+					while (new_lines > 0) do
+						if recordRefrain then 
+							if (cur_line == 1) then
+								refrain[#refrain + 1] = line
+							else
+								refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+							end
+						end
+						if showText and line ~= nil then
+							if (cur_line == 1) then
+								lyrics[#lyrics + 1] = line
+							else
+								lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+							end
+						end
+						cur_line = cur_line + 1
+						if single_line or cur_line > adjusted_display_lines then
+							if ensure_lines then
+								for i = cur_line, display_lines, 1 do
+									cur_line = i
+									if showText and lyrics[#lyrics] ~= nil then
+										lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+									end
+									if recordRefrain then
+										refrain[#refrain] = refrain[#refrain] .. "\n"
+									end
+								end
+							end
+							cur_line = 1
+						end
+						new_lines = new_lines - 1
+					end
 				end
 			end
-		end
-		if playRefrain == true then
-			for _, refrain_line in ipairs(refrain) do
-				lyrics[#lyrics + 1] = refrain_line
+			if playRefrain == true then
+				for _, refrain_line in ipairs(refrain) do
+					lyrics[#lyrics + 1] = refrain_line
+				end
 			end
 		end
 	end
