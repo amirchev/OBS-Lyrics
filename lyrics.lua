@@ -510,6 +510,18 @@ function prepare_lyrics(name)
 			new_lines = 0	
 		end	
 		if not commentBlock then
+			local alternate_index = line:find("#A%[")
+			if alternate_index ~= nil then
+				useAlternate = true
+				line = line:sub(1, alternate_index - 1)
+				new_lines = 0	
+			end
+			alternate_index = line:find("#A]")
+			if alternate_index ~= nil then
+				useAlternate = false
+				line = line:sub(1, alternate_index - 1)
+				new_lines = 0	
+			end		
 			if line:find("###") ~= nil then             -- Look for single line
 				line = line:gsub("%s*###%s*", "")
 				single_line = true
@@ -582,18 +594,6 @@ function prepare_lyrics(name)
 			else
 				playRefrain = false
 			end
-			local alternate_index = line:find("#A%[")
-			if alternate_index ~= nil then
-				useAlternate = true
-				line = line:sub(1, alternate_index - 1)
-				new_lines = 0	
-			end
-			alternate_index = line:find("#A]")
-			if alternate_index ~= nil then
-				useAlternate = false
-				line = line:sub(1, alternate_index - 1)
-				new_lines = 0	
-			end			
 			local newcount_index = line:find("#P:")
 			if newcount_index ~= nil then
 				new_lines = tonumber(line:sub(newcount_index+3))
@@ -613,9 +613,20 @@ function prepare_lyrics(name)
 				line = line:sub(1, phantom_index - 1)
 			end
 			if useAlternate then
-				displaySize = alternate_display_lines
+				if recordRefrain then 
+					displaySize = refrain_display_lines 
+				else 
+					displaySize = alternate_display_lines 
+				end
 				if new_lines > 0 then 		
 					while (new_lines > 0) do
+						if recordRefrain then 
+							if (cur_line == 1) then
+								refrain[#refrain + 1] = line
+							else
+								refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+							end
+						end					
 						if showText and line ~= nil then
 							if (cur_aline == 1) then
 								alternate[#alternate + 1] = line
@@ -631,6 +642,9 @@ function prepare_lyrics(name)
 									if showText and alternate[#alternate] ~= nil then
 										alternate[#alternate] = alternate[#alternate] .. "\n"
 									end
+									if recordRefrain then
+										refrain[#refrain] = refrain[#refrain] .. "\n"
+									end									
 								end
 							end
 							cur_aline = 1
@@ -652,7 +666,6 @@ function prepare_lyrics(name)
 							else
 								refrain[#refrain] = refrain[#refrain] .. "\n" .. line
 							end
-							displaySize = refrain_display_lines
 						end
 						if showText and line ~= nil then
 							if (cur_line == 1) then
@@ -680,7 +693,7 @@ function prepare_lyrics(name)
 					end
 				end
 			end
-			if playRefrain == true then
+			if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
 				for _, refrain_line in ipairs(refrain) do
 					lyrics[#lyrics + 1] = refrain_line
 				end
