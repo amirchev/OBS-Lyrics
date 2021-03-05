@@ -889,6 +889,9 @@ function script_properties()
 			end
 		end
 		table.sort(n)
+		obs.obs_property_list_add_string(source_prop, "", "")
+		obs.obs_property_list_add_string(title_source_prop, "", "")	
+		obs.obs_property_list_add_string(alternate_source_prop, "", "")	
 		for _, name in ipairs(n) do
 			obs.obs_property_list_add_string(source_prop, name, name)
 			obs.obs_property_list_add_string(title_source_prop, name, name)	
