@@ -36,11 +36,17 @@ This is line 1
 This is line 4!!
 ```
 ### Display line alone (`###`)
-Append `###` to the end of any line to display it alone
-Try it: `This line will show by itself ###`
+Append `###` to the end of any line to display it alone.
+Try it: 
+```
+This line will show by itself ###
+```
 ### Repeat line (`#D:3`)
 Duplicate a line multiple times.
-Try it: `#D3: Sing this line 3 times!!!`
+Try it: 
+```
+#D3: Sing this line 3 times!!!
+```
 ### Set number of lines to be displayed (`#L:3`)
 Change the amount of lines displayed at one time throughout the same song.
 Try it:
@@ -54,7 +60,11 @@ it needs to show
 all three!
 ```
 ### Comment out text (`//`)
-Use `//` to write a comment that will not display to your viewers, e.g., `We sing to you God //long pause/guitar solo after this`
+Use `//` to write a comment that will not display to your viewers.
+Try it:
+```
+We sing to you God //long pause/guitar solo after this
+```
 ### Define refrain and show it right away (`#R[` and `#R]`)
 Use this notation to define a refrain that will be displayed right away as well. 
 Try it:
@@ -77,7 +87,7 @@ Now hit the refrain again!
 ### Play refrain (`##R`)
 Use this annotation to show where a refrain should be inserted. See above.
 ### Define refrain but DON'T show it right away (`#r[` and `#r]`)
-Used in the same way as `#R[` and `#R]`, but the refrain is not show in the beginning. It will only be displayed when `##R` is called.
+Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` is called.
 
 
 ## That's it
