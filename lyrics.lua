@@ -46,6 +46,12 @@
 -- Added new button/hot-key to allow for both Home and Reset functions.
 -- Allow Comment after #L:n markup in Lyrics
 
+-- Source update by W. Zaggle (DCSTRATO) 3/6/21
+-- Added Alternate Text Source that syncs with Lyrics marked with #A[ and #A]
+-- Added Static Source that loads once with #S[ and #S]
+
+
+
 obs = obslua
 bit = require("bit")
 
@@ -58,6 +64,8 @@ source_def.output_flags = bit.bor(obs.OBS_SOURCE_CUSTOM_DRAW )
 obs = obslua
 source_name = ""
 alternate_source_name = ""
+static_source_name = ""
+static_text = ""
 current_scene = ""
 preview_scene = ""
 title_source_name = ""
@@ -68,6 +76,7 @@ in_Load = false
 in_directory = false
 pause_timer = false
 useAlternate = false
+useStatic = false
 display_lines = 1
 ensure_lines = true
 visible = false
@@ -392,7 +401,7 @@ function update_lyrics_display()
 	if visible and #lyrics > 0 then
 		text = lyrics[display_index]
 	else
-		tex= ""
+		text = ""
 	end
 	if visible and #alternate > 0 then
 		alttext = alternate[display_index]
@@ -418,7 +427,15 @@ function update_lyrics_display()
 		obs.obs_source_update(alt_source, settings)
 		obs.obs_data_release(settings)
 	end
-	obs.obs_source_release(alt_source)	
+	obs.obs_source_release(alt_source)
+	local stat_source = obs.obs_get_source_by_name(static_source_name)
+	if stat_source ~= nil then
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_string(settings, "text", static_text)
+		obs.obs_source_update(stat_source, settings)
+		obs.obs_data_release(settings)
+	end
+	obs.obs_source_release(stat_source)		
 	local title_source = obs.obs_get_source_by_name(title_source_name)
 	if title_source ~= nil then
 		local settings = obs.obs_data_create()
@@ -491,6 +508,7 @@ function prepare_lyrics(name)
 	refrain = {}
 	lyrics = {}
 	alternate = {}
+	static_text = ""
 	local adjusted_display_lines = display_lines
 	local refrain_display_lines = display_lines
 	local alternate_display_lines = display_lines
@@ -521,7 +539,19 @@ function prepare_lyrics(name)
 				useAlternate = false
 				line = line:sub(1, alternate_index - 1)
 				new_lines = 0	
-			end		
+			end	
+			local static_index = line:find("#S%[")
+			if static_index ~= nil then
+				useStatic = true
+				line = line:sub(1, static_index - 1)
+				new_lines = 0	
+			end
+			static_index = line:find("#S]")
+			if static_index ~= nil then
+				useStatic = false
+				line = line:sub(1, static_index - 1)
+				new_lines = 0	
+			end					
 			if line:find("###") ~= nil then             -- Look for single line
 				line = line:gsub("%s*###%s*", "")
 				single_line = true
@@ -612,84 +642,92 @@ function prepare_lyrics(name)
 			if phantom_index ~= nil then
 				line = line:sub(1, phantom_index - 1)
 			end
-			if useAlternate then
-				if recordRefrain then 
-					displaySize = refrain_display_lines 
+			if useStatic then
+				if static_text == "" then 
+					static_text = line 
 				else 
-					displaySize = alternate_display_lines 
-				end
-				if new_lines > 0 then 		
-					while (new_lines > 0) do
-						if recordRefrain then 
-							if (cur_line == 1) then
-								refrain[#refrain + 1] = line
-							else
-								refrain[#refrain] = refrain[#refrain] .. "\n" .. line
-							end
-						end					
-						if showText and line ~= nil then
-							if (cur_aline == 1) then
-								alternate[#alternate + 1] = line
-							else
-								alternate[#alternate] = alternate[#alternate] .. "\n" .. line
-							end
-						end
-						cur_aline = cur_aline + 1
-						if single_line or cur_aline > displaySize then
-							if ensure_lines then
-								for i = cur_aline, displaySize, 1 do
-									cur_aline = i
-									if showText and alternate[#alternate] ~= nil then
-										alternate[#alternate] = alternate[#alternate] .. "\n"
-									end
-									if recordRefrain then
-										refrain[#refrain] = refrain[#refrain] .. "\n"
-									end									
-								end
-							end
-							cur_aline = 1
-						end
-						new_lines = new_lines - 1
-					end
+					static_text = static_text .. "\n" .. line
 				end
 			else
-				if recordRefrain then 
-					displaySize = refrain_display_lines 
-				else 
-					displaySize = adjusted_display_lines 
-				end
-				if new_lines > 0 then 	
-					while (new_lines > 0) do
-						if recordRefrain then 
-							if (cur_line == 1) then
-								refrain[#refrain + 1] = line
-							else
-								refrain[#refrain] = refrain[#refrain] .. "\n" .. line
-							end
-						end
-						if showText and line ~= nil then
-							if (cur_line == 1) then
-								lyrics[#lyrics + 1] = line
-							else
-								lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
-							end
-						end
-						cur_line = cur_line + 1
-						if single_line or cur_line > displaySize then
-							if ensure_lines then
-								for i = cur_line, displaySize, 1 do
-									cur_line = i
-									if showText and lyrics[#lyrics] ~= nil then
-										lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
-									end
-									if recordRefrain then
-										refrain[#refrain] = refrain[#refrain] .. "\n"
-									end
+				if useAlternate then
+					if recordRefrain then 
+						displaySize = refrain_display_lines 
+					else 
+						displaySize = alternate_display_lines 
+					end
+					if new_lines > 0 then 		
+						while (new_lines > 0) do
+							if recordRefrain then 
+								if (cur_line == 1) then
+									refrain[#refrain + 1] = line
+								else
+									refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+								end
+							end					
+							if showText and line ~= nil then
+								if (cur_aline == 1) then
+									alternate[#alternate + 1] = line
+								else
+									alternate[#alternate] = alternate[#alternate] .. "\n" .. line
 								end
 							end
-							cur_line = 1
+							cur_aline = cur_aline + 1
+							if single_line or cur_aline > displaySize then
+								if ensure_lines then
+									for i = cur_aline, displaySize, 1 do
+										cur_aline = i
+										if showText and alternate[#alternate] ~= nil then
+											alternate[#alternate] = alternate[#alternate] .. "\n"
+										end
+										if recordRefrain then
+											refrain[#refrain] = refrain[#refrain] .. "\n"
+										end									
+									end
+								end
+								cur_aline = 1
+							end
+							new_lines = new_lines - 1
 						end
-						new_lines = new_lines - 1
+					end
+				else
+					if recordRefrain then 
+						displaySize = refrain_display_lines 
+					else 
+						displaySize = adjusted_display_lines 
+					end
+					if new_lines > 0 then 	
+						while (new_lines > 0) do
+							if recordRefrain then 
+								if (cur_line == 1) then
+									refrain[#refrain + 1] = line
+								else
+									refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+								end
+							end
+							if showText and line ~= nil then
+								if (cur_line == 1) then
+									lyrics[#lyrics + 1] = line
+								else
+									lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+								end
+							end
+							cur_line = cur_line + 1
+							if single_line or cur_line > displaySize then
+								if ensure_lines then
+									for i = cur_line, displaySize, 1 do
+										cur_line = i
+										if showText and lyrics[#lyrics] ~= nil then
+											lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+										end
+										if recordRefrain then
+											refrain[#refrain] = refrain[#refrain] .. "\n"
+										end
+									end
+								end
+								cur_line = 1
+							end
+							new_lines = new_lines - 1
+						end
 					end
 				end
 			end
@@ -879,6 +917,7 @@ function script_properties()
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	local alternate_source_prop = obs.obs_properties_add_list(script_props, "prop_alternate_list", "Alternate Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	local static_source_prop = obs.obs_properties_add_list(script_props, "prop_static_list", "Static Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)	
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		local n = {}
@@ -892,10 +931,12 @@ function script_properties()
 		obs.obs_property_list_add_string(source_prop, "", "")
 		obs.obs_property_list_add_string(title_source_prop, "", "")	
 		obs.obs_property_list_add_string(alternate_source_prop, "", "")	
+		obs.obs_property_list_add_string(static_source_prop, "", "")			
 		for _, name in ipairs(n) do
 			obs.obs_property_list_add_string(source_prop, name, name)
 			obs.obs_property_list_add_string(title_source_prop, name, name)	
 			obs.obs_property_list_add_string(alternate_source_prop, name, name)	
+			obs.obs_property_list_add_string(static_source_prop, name, name)				
 		end
 	end
 	obs.source_list_release(sources)
@@ -921,7 +962,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian. Alt-Text Test V1.0"
+	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian. Static Text Test"
 end
 
 -- A function named script_update will be called when settings are changed
@@ -942,6 +983,11 @@ function script_update(settings)
 	local alt_source_name = obs.obs_data_get_string(settings, "prop_alternate_list")
 	if alternate_source_name ~= alt_source_name then
 		alternate_source_name = alt_source_name	
+		reload = true
+	end		
+	local stat_source_name = obs.obs_data_get_string(settings, "prop_static_list")
+	if static_source_name ~= stat_source_name then
+		static_source_name = stat_source_name	
 		reload = true
 	end		
 	local cur_title_source = obs.obs_data_get_string(settings, "prop_title_list")
