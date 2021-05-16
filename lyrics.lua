@@ -50,6 +50,9 @@
 -- Added Alternate Text Source that syncs with Lyrics marked with #A[ and #A]
 -- Added Static Source that loads once with #S[ and #S]
 
+-- Source update by W. Zaggle (DCSTRATO) 5/15/21
+-- Added lyric index update on Alternate if number of lyrics is zero, Text Source is not in Scene or Undefined
+
 
 
 obs = obslua
@@ -116,6 +119,16 @@ function sourceShowing()
 	return showing
 end
 
+function alternateShowing()
+	local source = obs.obs_get_source_by_name(alternate_source_name)
+	local showing = false
+	if source ~= nil then
+		showing = obs.obs_source_showing(source)
+	end
+	obs.obs_source_release(source)	
+	return showing
+end
+
 function sourceActive()
 
 	local source = obs.obs_get_source_by_name(source_name)
@@ -129,33 +142,75 @@ function sourceActive()
 	return active
 end
 
+function alternateActive()
+
+	local source = obs.obs_get_source_by_name(alternate_source_name)
+	local active = false
+	if source ~= nil then
+		--if preview_scene ~= current_scene then
+			active = obs.obs_source_active(source)
+		--end
+		obs.obs_source_release(source)
+    end		
+	return active
+end
+
 function next_lyric(pressed)
-	if not pressed or not sourceShowing() then
+	if not pressed then
 		return
 	end
-	if display_index + 1 <= #lyrics then
+	if #lyrics > 0 and sourceShowing() then  -- Lyrics is driving paging
+	  if display_index + 1 <= #lyrics then
 		display_index = display_index + 1
-	else
+	  else
 		next_prepared(true) 
+	  end
+	  fade_lyrics_display()
+	elseif #alternate>0 and alternateShowing() then -- Alternate is driving paging
+	  if display_index + 1 <= #alternate then
+		display_index = display_index + 1
+	  else
+		next_prepared(true) 
+	  end
+	  fade_lyrics_display()
+	else
+	  return
 	end
-	fade_lyrics_display()
+
 end
 
 function prev_lyric(pressed)
-	if not pressed or not sourceShowing() then
+	if not pressed then
 		return
 	end
-	if display_index > 1 then
+	if #lyrics > 0 and sourceShowing() then  -- Lyrics is driving paging
+	  if display_index > 1 then
 		display_index = display_index - 1
+	  else
+		next_prepared(true) 
+	  end
+	  fade_lyrics_display()
+	elseif #alternate>0 and alternateShowing() then -- Alternate is driving paging
+	  if display_index > 1 then
+		display_index = display_index - 1
+	  else
+		next_prepared(true) 
+	  end
+	  fade_lyrics_display()
 	else
-		prev_prepared(true) 
+	  return
 	end
-	fade_lyrics_display()
 end
 
 function clear_lyric(pressed)
-	if not pressed or not sourceShowing() then
+	if not pressed then
 		return
+	end
+	if #lyrics>0 and not sourceShowing() then
+		return
+	end
+	if #alternate>0 and not alternateShowing() then
+	    return
 	end
 	visible = not visible
 	update_lyrics_display()
@@ -409,6 +464,15 @@ function update_lyrics_display()
 		alttext = ""
 	end		
 	local source = obs.obs_get_source_by_name(source_name)
+	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
+	if alt_source ~= nil then
+		local Asettings = obs.obs_data_create()
+		obs.obs_data_set_string(Asettings, "text", alttext)
+		obs.obs_data_set_int(Asettings, "opacity", 0)    
+		obs.obs_data_set_int(Asettings, "outline_opacity", 0)    
+		obs.obs_source_update(alt_source, Asettings)
+		obs.obs_data_release(Asettings)
+	end
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
@@ -418,30 +482,21 @@ function update_lyrics_display()
 		obs.obs_data_release(settings)
 	end
 	obs.obs_source_release(source)
-	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
-	if source ~= nil then
-		local settings = obs.obs_data_create()
-		obs.obs_data_set_string(settings, "text", alttext)
-		obs.obs_data_set_int(settings, "opacity", 0)    
-		obs.obs_data_set_int(settings, "outline_opacity", 0)    
-		obs.obs_source_update(alt_source, settings)
-		obs.obs_data_release(settings)
-	end
 	obs.obs_source_release(alt_source)
 	local stat_source = obs.obs_get_source_by_name(static_source_name)
 	if stat_source ~= nil then
-		local settings = obs.obs_data_create()
-		obs.obs_data_set_string(settings, "text", static_text)
-		obs.obs_source_update(stat_source, settings)
-		obs.obs_data_release(settings)
+		local Xsettings = obs.obs_data_create()
+		obs.obs_data_set_string(Xsettings, "text", static_text)
+		obs.obs_source_update(stat_source, Xsettings)
+		obs.obs_data_release(Xsettings)
 	end
 	obs.obs_source_release(stat_source)		
 	local title_source = obs.obs_get_source_by_name(title_source_name)
 	if title_source ~= nil then
-		local settings = obs.obs_data_create()
-		obs.obs_data_set_string(settings, "text", displayed_song)
-		obs.obs_source_update(title_source, settings)
-		obs.obs_data_release(settings)
+		local Tsettings = obs.obs_data_create()
+		obs.obs_data_set_string(Tsettings, "text", displayed_song)
+		obs.obs_source_update(title_source, Tsettings)
+		obs.obs_data_release(Tsettings)
 	end
 	obs.obs_source_release(title_source)	
 	if visible then
@@ -481,12 +536,12 @@ function timer_callback()
 			end
 			obs.obs_source_release(source)
 			local alt_source = obs.obs_get_source_by_name(alternate_source_name)
-			if source ~= nil then
-				local settings = obs.obs_data_create()
-				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
-				obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
-				obs.obs_source_update(alt_source, settings)
-				obs.obs_data_release(settings)
+			if alt_source ~= nil then
+				local Asettings = obs.obs_data_create()
+				obs.obs_data_set_int(Asettings, "opacity", text_opacity)  -- Set new text opacity to zero
+				obs.obs_data_set_int(Asettings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+				obs.obs_source_update(alt_source, Asettings)
+				obs.obs_data_release(Asettings)
 			end
 			obs.obs_source_release(alt_source)				
 		end
