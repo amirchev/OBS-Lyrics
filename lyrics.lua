@@ -952,7 +952,8 @@ function script_properties()
 	script_props = obs.obs_properties_create()
 	
 	obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title", obs.OBS_TEXT_DEFAULT)
-	obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
+	local lyric_prop = obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
+	obs.obs_property_set_long_description(lyric_prop,"Lyric Text with Markup")
 	obs.obs_properties_add_button(script_props, "prop_save_button", "Save Song", save_song_clicked)
 	
 	local prop_dir_list = obs.obs_properties_add_list(script_props, "prop_directory_list", "Song Directory", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
@@ -965,14 +966,19 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "prop_delete_button", "Delete Song", delete_song_clicked)
 	obs.obs_properties_add_button(script_props, "prop_open_button", "Open Songs Folder", open_button_clicked)
 
-	obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
+	local lines_prop = obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
+	obs.obs_property_set_long_description(lines_prop,"Sets default lines per page of lyric, overwritten by Markup: #L:n")	
 	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
 	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
 	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_set_long_description(source_prop,"Shows main lyric text")
 	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_set_long_description(title_source_prop,"Shows text from Song Title")
 	local alternate_source_prop = obs.obs_properties_add_list(script_props, "prop_alternate_list", "Alternate Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
+	obs.obs_property_set_long_description(alternate_source_prop,"Shows text annotated with #A[ and #A]")
 	local static_source_prop = obs.obs_properties_add_list(script_props, "prop_static_list", "Static Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)	
+	obs.obs_property_set_long_description(static_source_prop,"Shows text annotated with #S[ and #S]")
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		local n = {}
@@ -1009,6 +1015,7 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "prop_home_button", "Reset to Song Start", home_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_reset_button", "Reset to First Song", reset_button_clicked)	
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
+
 	obs.obs_properties_apply_settings(script_props, script_sets)
 	
 	return script_props
@@ -1017,7 +1024,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles -  author: amirchev & DC Strato; with significant contributions from taxilian. Static Text Test"
+	return "Manage song lyrics to be displayed as subtitles (Version: May 2021) -  author: amirchev & DC Strato; with significant contributions from taxilian. "
 end
 
 -- A function named script_update will be called when settings are changed
