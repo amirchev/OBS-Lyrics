@@ -99,7 +99,7 @@ The song Amazing Grace was written by John Newton who was a former Slave Trader
 '''
 
 ### Alternate Text Block ('#A[' and '#A]')
-Use this annotation to mark additional verses or text to show and page in the selected Alternat Source.
+Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
 Note: The page length will be governed by text in the main block if it exists and its Text Source exists in the scene.
       The alternate block should have the same number of lines per page as the main block if both are used.
 
