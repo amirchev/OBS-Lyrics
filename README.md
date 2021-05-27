@@ -89,16 +89,16 @@ Use this annotation to show where a refrain should be inserted. See above.
 ### Define refrain but DON'T show it right away (`#r[` and `#r]`)
 Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` is called.
 
-### Static Text ('#S[' and '#S]')
+### Static Text (`#S[` and `#S]`)
 Use this anotation to define a block of text shown in the selected Static Source and remain constant during the scene (no paging).
 Try it:
-'''
+```
 #S[
 The song Amazing Grace was written by John Newton who was a former Slave Trader
 #S]
-'''
+```
 
-### Alternate Text Block ('#A[' and '#A]')
+### Alternate Text Block (`#A[` and `#A]`)
 Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
 Note: The page length will be governed by text in the main block if it exists and its Text Source exists in the scene.
       The alternate block should have the same number of lines per page as the main block if both are used.
