@@ -109,5 +109,5 @@ Please post any bugs or feature requests here or to the OBS forum.
 
 Feel free to make pull requests for any features you implement yourself, I'll be happy to take a look at them.
 
-amirchev
-with significant contributions from taxilian and DC Strato
+amirchev and DC Strato
+with significant contributions from taxilian
