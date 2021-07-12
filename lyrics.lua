@@ -53,10 +53,15 @@
 -- Source update by W. Zaggle (DCSTRATO) 5/15/21
 -- Added lyric index update on Alternate if number of lyrics is zero, Text Source is not in Scene or Undefined
 
+-- Source update by W. Zaggle (DCSTRATO) 7/11/2021
+-- Added encoding/decoding of song titles that are invalid file names. Files are encoded and saved as .enc files instead -- .txt files to maintain compatibility with prior versions.  Invalid includes Unicoded titles and characters 
+--  /:*?\"<>| which allows for a song title to include prior invalid characters and support other languages. 
+--  For example a song title can now be "What Child is This?" or "Ơn lạ lùng" (Vietnamese for Amazing Grace)  
 
 
 obs = obslua
 bit = require("bit")
+
 
 source_data = {}
 source_def = {}
@@ -320,8 +325,6 @@ function reset_button_clicked(props, p)
 	home_prepared(true)
 	return true
 end
-
-
 
 function save_song_clicked(props, p)
 	local name = obs.obs_data_get_string(script_sets, "prop_edit_song_title")
@@ -824,10 +827,14 @@ function load_song_directory()
 	local songTitle
 	repeat
 	  entry = obs.os_readdir(dir)
-	  if entry and not entry.directory and obs.os_get_path_extension(entry.d_name)==".txt" then
+	  if entry and not entry.directory and (obs.os_get_path_extension(entry.d_name) == ".enc" or obs.os_get_path_extension(entry.d_name) == ".txt") then
 		songExt = obs.os_get_path_extension(entry.d_name)
 		songTitle=string.sub(entry.d_name, 0, string.len(entry.d_name) - string.len(songExt))
-		song_directory[#song_directory + 1] = songTitle
+		if songExt == ".enc" then
+		  song_directory[#song_directory + 1] = dec(songTitle)
+		else
+		  song_directory[#song_directory + 1] = songTitle	
+		end
 	  end
 	until not entry
 	obs.os_closedir(dir)
@@ -841,9 +848,56 @@ function delete_song(name)
 	load_song_directory()
 end
 
+local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-' -- encoding alphabet
+
+-- encoding
+function enc(data)
+    return ((data:gsub('.', function(x) 
+        local r,b='',x:byte()
+        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c=0
+        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+        return b:sub(c+1,c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
+end
+
+function dec(data)
+    data = string.gsub(data, '[^'..b..'=]', '')
+    return (data:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r,f='',(b:find(x)-1)
+        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+        if (#x ~= 8) then return '' end
+        local c=0
+        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+            return string.char(c)
+    end))
+end
+
+function testValid(filename)
+   if string.find(filename,'[\128-\255]') ~= nil then 
+      return false 
+   end
+   if string.find(filename,'[\\\\/:*?\"<>|]') ~= nil then 
+      return false 
+   end   
+   return true
+end
+
 -- saves previewed song, return true if new song
 function save_song(name, text)
-	local file = io.open(get_song_file_path(name), "w")
+	local path = {}
+	if testValid(name) then
+		path = get_song_file_path(name,".txt")
+	else	
+		path = get_song_file_path(enc(name),".enc")
+	end
+	local file = io.open(path, "w")
 	if file ~= nil then
 		for line in text:gmatch("([^\n]+)") do
 			local trimmed = line:match("%s*(%S-.*%S+)%s*")
@@ -895,9 +949,9 @@ end
 ----------------------------------------------------------------- FILE FUNCTIONS
 
 -- returns path of the given song name
-function get_song_file_path(name)
+function get_song_file_path(name, suffix)
 	if name == nil then return nil end
-    return get_songs_folder_path() .. "/" .. name .. ".txt"
+    return get_songs_folder_path() .. "/" .. name .. suffix
 end
 
 -- returns path of the lyrics songs folder
@@ -915,7 +969,13 @@ end
 -- gets the text of a song
 function get_song_text(name)
 	local song_lines = {}
-	local file = io.open(get_song_file_path(name), "r")
+	local path = {}
+	if testValid(name) then
+		path = get_song_file_path(name,".txt")
+	else	
+		path = get_song_file_path(enc(name),".enc")
+	end
+	local file = io.open(path, "r")
 	if file ~= nil then
 		pause_timer = true
 		for line in file:lines() do
@@ -948,6 +1008,8 @@ end
 
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
+
+
 function script_properties()
 	script_props = obs.obs_properties_create()
 	
@@ -971,6 +1033,7 @@ function script_properties()
 	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
 	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
 	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
+
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	obs.obs_property_set_long_description(source_prop,"Shows main lyric text")
 	local title_source_prop = obs.obs_properties_add_list(script_props, "prop_title_list", "Title Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
