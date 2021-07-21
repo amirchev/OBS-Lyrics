@@ -843,7 +843,12 @@ end
 
 -- delete previewed song
 function delete_song(name)
-	os.remove(get_song_file_path(name))
+	if testValid(name) then
+		path = get_song_file_path(name,".txt")
+	else	
+		path = get_song_file_path(enc(name),".enc")
+	end
+	os.remove(path)
 	table.remove(song_directory, get_index_in_list(song_directory, name))
 	load_song_directory()
 end
