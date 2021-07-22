@@ -111,7 +111,7 @@ script_props = nil
 text_opacity = 100
 text_fade_dir = 0
 text_fade_speed = 1
-text_fade_enabled = true
+text_fade_enabled = false
 
 ------------------------------------------------------------------------- EVENTS
 function sourceShowing()
@@ -192,14 +192,14 @@ function prev_lyric(pressed)
 	  if display_index > 1 then
 		display_index = display_index - 1
 	  else
-		next_prepared(true) 
+		prev_prepared(true) 
 	  end
 	  fade_lyrics_display()
 	elseif #alternate>0 and alternateShowing() then -- Alternate is driving paging
 	  if display_index > 1 then
 		display_index = display_index - 1
 	  else
-		next_prepared(true) 
+		prev_prepared(true) 
 	  end
 	  fade_lyrics_display()
 	else
@@ -218,13 +218,17 @@ function clear_lyric(pressed)
 	    return
 	end
 	visible = not visible
-	update_lyrics_display()
+	fade_lyrics_display()
 end
 
 
 function fade_lyrics_display() 
-	if text_fade_enabled then
-		if text_opacity == 100 then 
+	if not text_fade_enabled then
+		text_opacity = 100
+		text_fade_dir = 2
+		update_lyrics_display()
+	else
+	    if text_opacity == 100 then 
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
 		end
@@ -232,10 +236,6 @@ function fade_lyrics_display()
 			text_opacity = 1
 			text_fade_dir = 2  -- fade in
 		end
-	else
-		text_opacity = 100
-		text_fade_dir = 2
-		update_lyrics_display()
 	end
 end
 
@@ -280,24 +280,20 @@ end
 
 function home_prepared(pressed)
 	if not pressed then return false end
-	text_opacity = 0
-	text_fade_dir = 2
 	visible = true
 	display_index = 1
 	prepared_index = 1
 	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
-	update_lyrics_display() 
+	fade_lyrics_display() 
 	return true
 end
 
 function home_song(pressed)
 	if not pressed then return false end
-	text_opacity = 0
-	text_fade_dir = 2
 	visible = true
 	display_index = 1
 	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
-	update_lyrics_display() 
+	fade_lyrics_display() 
 	return true
 end
 
@@ -336,7 +332,7 @@ function save_song_clicked(props, p)
 		obs.obs_properties_apply_settings(props, script_sets)
 	elseif displayed_song == name then
 		prepare_lyrics(name)
-		update_lyrics_display()
+		fade_lyrics_display()
 	end
 	return true
 end
@@ -400,14 +396,12 @@ function prepare_selected(name)
 	if name == "" then return end
 	if name == displayed_song then return end
 	prepare_lyrics(name)
-	text_opacity = 0
-	text_fade_dir = 2
 	if displayed_song ~= name then
 		display_index = 1
 		visible = true   
 	end
 	displayed_song = name
-	update_lyrics_display()
+	fade_lyrics_display()
 	return true
 end
 
@@ -435,7 +429,7 @@ end
 function clear_prepared_clicked(props, p)
 	prepared_songs = {}
 	lyrics = {}
-	update_lyrics_display()
+	fade_lyrics_display()
 	local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
 	obs.obs_property_list_clear(prep_prop)
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
@@ -455,32 +449,37 @@ end
 
 -- updates the displayed lyrics
 function update_lyrics_display()
+
 	local text = ""
-	if visible and #lyrics > 0 then
-		text = lyrics[display_index]
-	else
-		text = ""
-	end
-	if visible and #alternate > 0 then
-		alttext = alternate[display_index]
-	else
-		alttext = ""
-	end		
+	init_opacity = 0;
+	if visible then
+	    init_opacity = 100
+		if #lyrics > 0 then
+			text = lyrics[display_index]
+		else
+			text = ""
+		end
+		if  #alternate > 0 then
+		   alttext = alternate[display_index]
+		else
+			alttext = ""
+		end	
+    end		
 	local source = obs.obs_get_source_by_name(source_name)
 	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
 	if alt_source ~= nil then
 		local Asettings = obs.obs_data_create()
 		obs.obs_data_set_string(Asettings, "text", alttext)
-		obs.obs_data_set_int(Asettings, "opacity", 0)    
-		obs.obs_data_set_int(Asettings, "outline_opacity", 0)    
+		obs.obs_data_set_int(Asettings, "opacity", init_opacity)    
+		obs.obs_data_set_int(Asettings, "outline_opacity", init_opacity)    
 		obs.obs_source_update(alt_source, Asettings)
 		obs.obs_data_release(Asettings)
 	end
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
-		obs.obs_data_set_int(settings, "opacity", 0)    
-		obs.obs_data_set_int(settings, "outline_opacity", 0)    
+		obs.obs_data_set_int(settings, "opacity", init_opacity)    
+		obs.obs_data_set_int(settings, "outline_opacity", init_opacity)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 	end
@@ -512,7 +511,7 @@ function timer_callback()
 	if not in_timer and not pause_timer then
 		in_timer = true
 		if text_fade_dir > 0 then 
-			local real_fade_speed = 10 + (text_fade_speed * 3)
+			local real_fade_speed = 1 + (text_fade_speed * 2)
 			if text_fade_dir == 1 then	
 				if text_opacity > real_fade_speed then
 				   text_opacity = text_opacity - real_fade_speed
@@ -1017,7 +1016,6 @@ end
 
 function script_properties()
 	script_props = obs.obs_properties_create()
-	
 	obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title", obs.OBS_TEXT_DEFAULT)
 	local lyric_prop = obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
 	obs.obs_property_set_long_description(lyric_prop,"Lyric Text with Markup")
@@ -1076,9 +1074,8 @@ function script_properties()
 	end
 	obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
 	obs.obs_properties_add_button(script_props, "prop_clear_button", "Clear Prepared Songs", clear_prepared_clicked)
-
-	obs.obs_properties_add_button(script_props, "prop_next_button", "Next Lyric", next_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
+	obs.obs_properties_add_button(script_props, "prop_next_button", "Next Lyric", next_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/Hide Lyrics", clear_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_home_button", "Reset to Song Start", home_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_reset_button", "Reset to First Song", reset_button_clicked)	
@@ -1095,6 +1092,8 @@ function script_description()
 	return "Manage song lyrics to be displayed as subtitles (Version: May 2021) -  author: amirchev & DC Strato; with significant contributions from taxilian. "
 end
 
+
+	
 -- A function named script_update will be called when settings are changed
 function script_update(settings)
     text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled")   -- 	Fade Enable (WZ)
@@ -1133,7 +1132,7 @@ function script_update(settings)
 	if reload then
 		prepare_lyrics(displayed_song)
 		display_index = 1
-		--update_lyrics_display()
+		update_lyrics_display()
 	end
 end
 
@@ -1230,7 +1229,6 @@ function script_load(settings)
 	obs.obs_hotkey_load(hotkey_reset_id, hotkey_save_array)
 	obs.obs_data_array_release(hotkey_save_array)
 
-	--obs.obs_data_addref(settings)
 	script_sets = settings
 	source_name = obs.obs_data_get_string(settings, "prop_source_list")
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
@@ -1239,7 +1237,6 @@ function script_load(settings)
 	if #prepared_songs ~= 0 then
 	  prepare_selected(prepared_songs[1])
 	end
-
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
@@ -1370,7 +1367,6 @@ function loadSong(source, preview)
 	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
 		local song = obs.obs_data_get_string(settings, "songs")
 		if song ~= displayed_song then 
-		    --prepared_songs[1] = song
 			prepare_selected(song)
 			prepared_index = 1
 			displayed_song = song
