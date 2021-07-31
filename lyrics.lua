@@ -85,6 +85,7 @@ in_directory = false
 pause_timer = false
 useAlternate = false
 useStatic = false
+link_text = false
 display_lines = 1
 ensure_lines = true
 visible = false
@@ -451,20 +452,27 @@ end
 function update_lyrics_display()
 
 	local text = ""
+	local alttext = "" 
+	local static = static_text
+	local title = displayed_song
 	init_opacity = 0;
 	if visible then
+--		static = static_text
+--		title = displayed_song
 	    init_opacity = 100
-		if #lyrics > 0 then
+		if #lyrics > 0 and sourceShowing() then
 			text = lyrics[display_index]
-		else
-			text = ""
 		end
-		if  #alternate > 0 then
+		if  #alternate > 0 and alternateShowing() then
 		   alttext = alternate[display_index]
-		else
-			alttext = ""
 		end	
     end		
+	if link_text then
+		if string.len(text) == 0 and string.len(alttext) == 0 then
+			static = ""
+			title = ""
+		end
+	end
 	local source = obs.obs_get_source_by_name(source_name)
 	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
 	if alt_source ~= nil then
@@ -488,7 +496,7 @@ function update_lyrics_display()
 	local stat_source = obs.obs_get_source_by_name(static_source_name)
 	if stat_source ~= nil then
 		local Xsettings = obs.obs_data_create()
-		obs.obs_data_set_string(Xsettings, "text", static_text)
+		obs.obs_data_set_string(Xsettings, "text", static)
 		obs.obs_source_update(stat_source, Xsettings)
 		obs.obs_data_release(Xsettings)
 	end
@@ -496,14 +504,11 @@ function update_lyrics_display()
 	local title_source = obs.obs_get_source_by_name(title_source_name)
 	if title_source ~= nil then
 		local Tsettings = obs.obs_data_create()
-		obs.obs_data_set_string(Tsettings, "text", displayed_song)
+		obs.obs_data_set_string(Tsettings, "text", title)
 		obs.obs_source_update(title_source, Tsettings)
 		obs.obs_data_release(Tsettings)
 	end
 	obs.obs_source_release(title_source)	
-	if visible then
-		text_fade_dir = 2   -- new text so just fade up if not already
-	end
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
@@ -1033,7 +1038,13 @@ function script_properties()
 
 	local lines_prop = obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_property_set_long_description(lines_prop,"Sets default lines per page of lyric, overwritten by Markup: #L:n")	
-	obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
+
+	local prop_lines = obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
+	obs.obs_property_set_long_description(prop_lines,"Guarantees fixed number of lines per page")
+		
+	local link_prop = obs.obs_properties_add_bool(script_props, "link_text", "Only show title and static text with lyrics")
+	obs.obs_property_set_long_description(link_prop,"Hides Title and Static Text at end of Lyrics")
+	
 	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
 	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
 
@@ -1089,7 +1100,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles (Version: May 2021) -  author: amirchev & DC Strato; with significant contributions from taxilian. "
+	return "Manage song lyrics to be displayed as subtitles (Version: August 2021) <br> Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:n</td><td></td><td>Single Line (End Page)</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:n or #P:n</td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R</td><td></td><td>Duplicate Line n times</td><td>&nbsp;&nbsp;</td><td>#D:n Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
 end
 
 
@@ -1129,6 +1140,11 @@ function script_update(settings)
 		ensure_lines = cur_ensure_lines
 		reload = true
 	end
+	local cur_link_text = obs.obs_data_get_bool(settings, "link_text")
+	if cur_link_text ~= link_text then
+		link_text = cur_link_text
+		reload = true
+	end	
 	if reload then
 		prepare_lyrics(displayed_song)
 		display_index = 1
