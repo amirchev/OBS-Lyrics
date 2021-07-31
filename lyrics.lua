@@ -56,7 +56,10 @@
 -- Source update by W. Zaggle (DCSTRATO) 7/11/2021
 -- Added encoding/decoding of song titles that are invalid file names. Files are encoded and saved as .enc files instead -- .txt files to maintain compatibility with prior versions.  Invalid includes Unicoded titles and characters 
 --  /:*?\"<>| which allows for a song title to include prior invalid characters and support other languages. 
---  For example a song title can now be "What Child is This?" or "Ơn lạ lùng" (Vietnamese for Amazing Grace)  
+--  For example a song title can now be "What Child is This?" or "Ơn lạ lùng" (Vietnamese for Amazing Grace)
+
+-- Source update by W. Zaggle (DCSTRATO) 7/31/2021
+-- Added ablility to elect to link Title and Static text to blank with Lyrics at end of song (Requested Feature)  
 
 
 obs = obslua
