@@ -624,7 +624,7 @@ function prepare_lyrics(name)
 				local newLines = tonumber(line:sub(iS,iE))
 				if useAlternate then
 					alternate_display_lines = newLines
-				elseif recordRefrainn then
+				elseif recordRefrain then
 					refrain_display_lines = newLines
 				else				
 					adjusted_display_lines = newLines
