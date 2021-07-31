@@ -460,8 +460,7 @@ function update_lyrics_display()
 	local title = displayed_song
 	init_opacity = 0;
 	if visible then
---		static = static_text
---		title = displayed_song
+		text_fade_dir = 2
 	    init_opacity = 100
 		if #lyrics > 0 and sourceShowing() then
 			text = lyrics[display_index]
