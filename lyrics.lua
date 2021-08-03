@@ -463,10 +463,14 @@ function update_lyrics_display()
 		text_fade_dir = 2
 	    init_opacity = 100
 		if #lyrics > 0 and sourceShowing() then
-			text = lyrics[display_index]
+			if lyrics[display_index] ~= nil then
+				text = lyrics[display_index]
+			end
 		end
 		if  #alternate > 0 and alternateShowing() then
-		   alttext = alternate[display_index]
+			if alternate[display_index] ~= nil then
+				alttext = alternate[display_index]
+			end
 		end	
     end		
 	if link_text then
