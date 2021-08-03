@@ -426,6 +426,7 @@ function prepare_song_clicked(props, p)
 	end
 	obs.obs_properties_apply_settings(props, script_sets)
 	save_prepared()
+	update_lyrics_display()
 	return true
 end
 
