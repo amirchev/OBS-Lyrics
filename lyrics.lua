@@ -339,25 +339,25 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	text = text .. "</head>"
 	text = text .. "<body style='background-color:black;'>"
 	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: orangered; width: 95px; text-align: right;'>Current Song:</td>"
+	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; color: orangered; width: 95px; text-align: center;'>Current Song:</td>"
 	text = text .. "<td style='color: white;'><div class=scrollable>" .. song .. "</div></td></tr>"
 	if lyric ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: lime; width: 95px; text-align: right;'>Current Lyric:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; color: lime; width: 95px; text-align: center;'>Current Lyric:</td>"
 		text = text .. "<td style='color: white;'><div class=scrollable>" .. lyric .. "</div></td></tr>"
 	end
 	if nextlyric ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: lime; width: 95px; text-align: right;'>Next Lyric:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; color: lime; width: 95px; text-align: center;'>Next Lyric:</td>"
 		text = text .. "<td style='color: white;'><div class=scrollable>" .. nextlyric .. "</div></td></tr>"	
 	end
 	if alt ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: gold; width: 95px; text-align: right;'>Alt. Lyric:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; color: gold; width: 95px; text-align: center;'>Alt. Lyric:</td>"
 		text = text .. "<td style='color: white;'><div class=scrollable>" .. alt .. "</div></td></tr>"
 	end
 	if nextalt ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: gold; width: 95px; text-align: right;'>Next Alt:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; color: gold; width: 95px; text-align: center;'>Next Alt:</td>"
 		text = text .. "<td style='color: white;'><div class=scrollable>" .. nextalt .. "</div></td></tr>"	
 	end
-	text = text .. "<tr><td style='border-right: 1px solid #ccc; color: orangered; width: 95px; text-align: right;'>Next Song:</td>"
+	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; color: orangered; width: 95px; text-align: center;'>Next Song:</td>"
 	text = text .. "<td style='color: white;'><div class=scrollable>" .. nextsong .. "</div></td></tr>"	
 	text = text .. "</table></body></html>"
 	
