@@ -326,7 +326,7 @@ function reset_button_clicked(props, p)
 	return true
 end
 
-function update_monitor(song, lyric, nextlyric, nextsong)
+function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	local text = ""
 	text = text .. "<!DOCTYPE html><html>"
 	text = text .. "<head>"
@@ -339,13 +339,25 @@ function update_monitor(song, lyric, nextlyric, nextsong)
 	text = text .. "</head>"
 	text = text .. "<body style='background-color:black;'>"
 	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='color: orange; width: 95px; text-align: right;'>Current Song:</td>"
+	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: orangered; width: 95px; text-align: right;'>Current Song:</td>"
 	text = text .. "<td style='color: white;'><div class=scrollable>" .. song .. "</div></td></tr>"
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='color: lime; width: 95px; text-align: right;'>Current Lyric:</td>"
-	text = text .. "<td style='color: white;'><div class=scrollable>" .. lyric .. "</div></td></tr>"
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='color: lime; width: 95px; text-align: right;'>Next Lyric:</td>"
-	text = text .. "<td style='color: white;'><div class=scrollable>" .. nextlyric .. "</div></td></tr>"	
-	text = text .. "<tr><td style='color: orange; width: 95px; text-align: right;'>Next Song:</td>"
+	if lyric ~= "" then
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: lime; width: 95px; text-align: right;'>Current Lyric:</td>"
+		text = text .. "<td style='color: white;'><div class=scrollable>" .. lyric .. "</div></td></tr>"
+	end
+	if nextlyric ~= "" then
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: lime; width: 95px; text-align: right;'>Next Lyric:</td>"
+		text = text .. "<td style='color: white;'><div class=scrollable>" .. nextlyric .. "</div></td></tr>"	
+	end
+	if alt ~= "" then
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: gold; width: 95px; text-align: right;'>Alt. Lyric:</td>"
+		text = text .. "<td style='color: white;'><div class=scrollable>" .. alt .. "</div></td></tr>"
+	end
+	if nextalt ~= "" then
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td style='border-right: 1px solid #ccc; color: gold; width: 95px; text-align: right;'>Next Alt:</td>"
+		text = text .. "<td style='color: white;'><div class=scrollable>" .. nextalt .. "</div></td></tr>"	
+	end
+	text = text .. "<tr><td style='border-right: 1px solid #ccc; color: orangered; width: 95px; text-align: right;'>Next Song:</td>"
 	text = text .. "<td style='color: white;'><div class=scrollable>" .. nextsong .. "</div></td></tr>"	
 	text = text .. "</table></body></html>"
 	
@@ -485,6 +497,8 @@ function update_lyrics_display()
 
 	local text = ""
 	local alttext = "" 
+	local next_lyric = ""
+	local next_alternate = ""
 	local static = static_text
 	local title = displayed_song
 
@@ -518,6 +532,11 @@ function update_lyrics_display()
 		obs.obs_data_set_int(Asettings, "outline_opacity", init_opacity)    
 		obs.obs_source_update(alt_source, Asettings)
 		obs.obs_data_release(Asettings)
+		
+		next_alternate = alternate[display_index+1]
+	    if (next_alternate == nil) then 
+	       next_alternate = ""
+		end
 	end
 	if source ~= nil then
 		local settings = obs.obs_data_create()
@@ -526,6 +545,11 @@ function update_lyrics_display()
 		obs.obs_data_set_int(settings, "outline_opacity", init_opacity)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
+		
+		next_lyric = lyrics[display_index+1]
+		if (next_lyric == nil) then 
+			next_lyric = ""
+		end
 	end
 	obs.obs_source_release(source)
 	obs.obs_source_release(alt_source)
@@ -545,15 +569,13 @@ function update_lyrics_display()
 		obs.obs_data_release(Tsettings)
 	end
 	obs.obs_source_release(title_source)
-	local next_lyric = lyrics[display_index+1]
-	if (next_lyric == nil) then 
-	   next_lyric = ""
-	end
+
+
 	local next_prepared = prepared_songs[prepared_index+1]
 	if (next_prepared == nil) then 
 	   next_prepared = ""
 	end
-	update_monitor(displayed_song, text:gsub("\n","<br>"), next_lyric:gsub("\n","<br>"), next_prepared)
+	update_monitor(displayed_song, text:gsub("\n","<br>"), next_lyric:gsub("\n","<br>"), alttext:gsub("\n","<br>"), next_alternate:gsub("\n","<br>"), next_prepared)
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
