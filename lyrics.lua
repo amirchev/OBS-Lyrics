@@ -326,6 +326,35 @@ function reset_button_clicked(props, p)
 	return true
 end
 
+function update_monitor(song, lyric, nextlyric, nextsong)
+	local text = ""
+	text = text .. "<!DOCTYPE html><html>"
+	text = text .. "<head>"
+	text = text .. "<meta http-equiv='cache-control' content='no-cache, must-revalidate, post-check=0, pre-check=0' />"
+    text = text .. "<meta http-equiv='cache-control' content='max-age=0' />"
+    text = text .. "<meta http-equiv='expires' content='0' />"
+    text = text .. "<meta http-equiv='expires' content='Tue, 01 Jan 1980 1:00:00 GMT' />"
+    text = text .. "<meta http-equiv='pragma' content='no-cache' />"
+	text = text .. "<meta http-equiv='refresh' content='1'>"
+	text = text .. "</head>"
+	text = text .. "<body style='background-color:black;'>"
+	text = text .. "<table cellpadding='0' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
+	text = text .. "<tr style='border-bottom: 1px solid #ccc;'><td style='color: orange; width: 100px;'>Current Song:</td>"
+	text = text .. "<td style='color: white;'>" .. song .. "</td></tr>"
+	text = text .. "<tr style='border-bottom: 1px solid #ccc;'><td style='color: orange; width: 100px;'>Current Lyric:</td>"
+	text = text .. "<td style='color: white;'>" .. lyric .. "</td></tr>"
+	text = text .. "<tr style='border-bottom: 1px solid #ccc;'><td style='color: orange; width: 100px;'>Next Lyric:</td>"
+	text = text .. "<td style='color: white;'>" .. nextlyric .. "</td></tr>"	
+	text = text .. "<tr style='border-bottom: 1px solid #ccc;'><td style='color: orange; width: 100px;'>Next Song:</td>"
+	text = text .. "<td style='color: white;'>" .. nextsong .. "</td></tr>"	
+	text = text .. "</table></body></html>"
+	
+	local file = io.open(get_songs_folder_path() .. "/" .. "Monitor.htm", "w")
+		file:write(text)
+	file:close()
+	return true
+end
+
 function save_song_clicked(props, p)
 	local name = obs.obs_data_get_string(script_sets, "prop_edit_song_title")
 	local text = obs.obs_data_get_string(script_sets, "prop_edit_song_text")
@@ -458,6 +487,7 @@ function update_lyrics_display()
 	local alttext = "" 
 	local static = static_text
 	local title = displayed_song
+
 	init_opacity = 0;
 	if visible then
 		text_fade_dir = 2
@@ -514,7 +544,16 @@ function update_lyrics_display()
 		obs.obs_source_update(title_source, Tsettings)
 		obs.obs_data_release(Tsettings)
 	end
-	obs.obs_source_release(title_source)	
+	obs.obs_source_release(title_source)
+	local next_lyric = lyrics[display_index+1]
+	if (next_lyric == nil) then 
+	   next_lyric = ""
+	end
+	local next_prepared = prepared_songs[prepared_index+1]
+	if (next_prepared == nil) then 
+	   next_prepared = ""
+	end
+	update_monitor(displayed_song, text:gsub("\n","<br>"), next_lyric:gsub("\n","<br>"), next_prepared)
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
@@ -1041,7 +1080,7 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "prop_prepare_button", "Prepare Song", prepare_song_clicked)
 	obs.obs_properties_add_button(script_props, "prop_delete_button", "Delete Song", delete_song_clicked)
 	obs.obs_properties_add_button(script_props, "prop_open_button", "Open Songs Folder", open_button_clicked)
-
+	
 	local lines_prop = obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_property_set_long_description(lines_prop,"Sets default lines per page of lyric, overwritten by Markup: #L:n")	
 
