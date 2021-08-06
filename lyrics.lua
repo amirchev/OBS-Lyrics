@@ -15,7 +15,7 @@
 
 
 --TODO: refresh properties after next prepared selection
---TODO: add text formatting guide
+--TODO: add text formatting guide (Done 7/31/21)
 
 -- Source updates by W. Zaggle (DCSTRATO) 12/3/2020
 -- Fading Text Out/In with transition option 12/8/2020
@@ -59,8 +59,15 @@
 --  For example a song title can now be "What Child is This?" or "Ơn lạ lùng" (Vietnamese for Amazing Grace)
 
 -- Source update by W. Zaggle (DCSTRATO) 7/31/2021
--- Added ablility to elect to link Title and Static text to blank with Lyrics at end of song (Requested Feature)  
+-- Added ablility to elect to link Title and Static text to blank with Lyrics at end of song (Requested Feature) 
+-- Added html quick guide table to Script Page (Text Formatting Guide TODO)
 
+-- Source update by W. Zaggle (DCSTRATO) 8/6/2021
+-- Added html Monitor Page for use in Browser Dock
+-- Added ##r with same funcation as ##R 
+-- Added #A:n Line Where n is number of pages to apply line to in Alternate Text Block
+-- Added #S: Line that adds a single Static Line to the static block
+-- #L:n now sets Lyrics, Refrain and Alternate Text block default number of lines per page (If in Alternate block or Refrain block it will override those lines per page)
 
 obs = obslua
 bit = require("bit")
@@ -117,6 +124,8 @@ text_fade_dir = 0
 text_fade_speed = 1
 text_fade_enabled = false
 
+
+
 ------------------------------------------------------------------------- EVENTS
 function sourceShowing()
 	local source = obs.obs_get_source_by_name(source_name)
@@ -130,6 +139,27 @@ end
 
 function alternateShowing()
 	local source = obs.obs_get_source_by_name(alternate_source_name)
+	local showing = false
+	if source ~= nil then
+		showing = obs.obs_source_showing(source)
+	end
+	obs.obs_source_release(source)	
+	return showing
+end
+
+function titleShowing()
+	local source = obs.obs_get_source_by_name(title_source_name)
+	local showing = false
+	if source ~= nil then
+		showing = obs.obs_source_showing(source)
+	end
+	obs.obs_source_release(source)	
+	return showing
+end
+
+function staticShowing()
+print(static_source_name)
+	local source = obs.obs_get_source_by_name(static_source_name)
 	local showing = false
 	if source ~= nil then
 		showing = obs.obs_source_showing(source)
@@ -154,6 +184,32 @@ end
 function alternateActive()
 
 	local source = obs.obs_get_source_by_name(alternate_source_name)
+	local active = false
+	if source ~= nil then
+		--if preview_scene ~= current_scene then
+			active = obs.obs_source_active(source)
+		--end
+		obs.obs_source_release(source)
+    end		
+	return active
+end
+
+function titleActive()
+
+	local source = obs.obs_get_source_by_name(title_source_name)
+	local active = false
+	if source ~= nil then
+		--if preview_scene ~= current_scene then
+			active = obs.obs_source_active(source)
+		--end
+		obs.obs_source_release(source)
+    end		
+	return active
+end
+
+function staticActive()
+
+	local source = obs.obs_get_source_by_name(static_source_name)
 	local active = false
 	if source ~= nil then
 		--if preview_scene ~= current_scene then
@@ -338,11 +394,13 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	text = text .. "<meta http-equiv='refresh' content='1'>"
 	text = text .. "</head>"
 	text = text .. "<body style='background-color:black;'>"
-	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-	text = text .. "<tr bgcolor=#000000><td style='white-space: nowrap; width: 200px; color: PowderBlue; '>Prepared Song: <b style='color: LightSalmon;'>" .. prepared_index .. " of " .. #prepared_songs .."</b></td>"
-	text = text .. "<td  style='white-space: nowrap; color: PowderBlue;'>Lyric Page: <b style='color: LightSalmon;'>" .. display_index .. " of " .. #lyrics-1 .."</b></td></tr></table>"	
-	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: White; width: 95px; text-align: center;'>Song Title:</td>"
+	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'><tr bgcolor=#000000>"
+	text = text .. "<td style='white-space: nowrap; width: 200px; color: #B0E0E6; '>Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index 
+	text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></td>"
+	text = text .. "<td style='white-space: nowrap; width: 200px; color: #B0E0E6;'>Lyric Page: <B style='color: #FFEF00;'>" .. display_index
+    text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics-1 .."</b></td></tr></table>"	
+	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'><tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: LightSkyBlue;'>"
+	text = text .. "<td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: White; width: 95px; text-align: center;'>Song Title:</td>"
 	text = text .. "<td style='color: White;'><Strong>" .. song .. "</strong></td></tr>"
 	if lyric ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: PaleGreen; width: 95px; text-align: center;'>Current Page:</td>"
@@ -505,7 +563,6 @@ function update_lyrics_display()
 	local next_alternate = ""
 	local static = static_text
 	local title = displayed_song
-
 	init_opacity = 0;
 	if visible then
 		text_fade_dir = 2
@@ -654,7 +711,7 @@ function prepare_lyrics(name)
 		local comment_index = line:find("//%[")		-- Look for comment block Set
 		if comment_index ~= nil then
 			commentBlock = true
-			line = line:sub(1, comment_index - 1)
+			line = line:sub(comment_index + 3)
 		end
 		comment_index = line:find("//]")			-- Look for comment block Clear
 		if comment_index ~= nil then
@@ -703,6 +760,8 @@ function prepare_lyrics(name)
 					refrain_display_lines = newLines
 				else				
 					adjusted_display_lines = newLines
+					refrain_display_lines = newLines
+					alternate_display_lines = newLines					
 				end
 				line = line:sub(1, newcount_index - 1)
 				new_lines = 0							--ignore line
@@ -731,7 +790,7 @@ function prepare_lyrics(name)
 				local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
 				new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
 				_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
-				line = line:sub(newcount_indexEnd + 1)	
+				line = line:sub(newcount_indexEnd + 1)
 			end			
 			local refrain_index = line:find("#R%[")
 			if refrain_index ~= nil then
@@ -793,104 +852,105 @@ function prepare_lyrics(name)
 			if phantom_index ~= nil then
 				line = line:sub(1, phantom_index - 1)
 			end
-		
-			if useStatic then
-				if static_text == "" then 
-					static_text = line 
-				else 
-					static_text = static_text .. "\n" .. line
-				end
-			else
-				if useAlternate or singleAlternate then
-					if recordRefrain then 
-						displaySize = refrain_display_lines 
+		    if line ~= nil then 
+				if useStatic then
+					if static_text == "" then 
+						static_text = line 
 					else 
-						displaySize = alternate_display_lines 
+						static_text = static_text .. "\n" .. line
 					end
-					if new_lines > 0 then 		
-						while (new_lines > 0) do
-							if recordRefrain then 
-								if (cur_line == 1) then
-									arefrain[#refrain + 1] = line
-								else
-									arefrain[#refrain] = arefrain[#refrain] .. "\n" .. line
-								end
-							end		
-							if showText and line ~= nil then
-								if (cur_aline == 1) then
-									alternate[#alternate + 1] = line
-								else
-									alternate[#alternate] = alternate[#alternate] .. "\n" .. line
-								end
-							end
-							cur_aline = cur_aline + 1
-							if single_line or singleAlternate or cur_aline > displaySize then
-								if ensure_lines then
-									for i = cur_aline, displaySize, 1 do
-										cur_aline = i
-										if showText and alternate[#alternate] ~= nil then
-											alternate[#alternate] = alternate[#alternate] .. "\n"
-										end
-										if recordRefrain then
-											arefrain[#refrain] = arefrain[#refrain] .. "\n"
-										end									
+				else
+					if useAlternate or singleAlternate then
+						if recordRefrain then 
+							displaySize = refrain_display_lines 
+						else 
+							displaySize = alternate_display_lines 
+						end
+						if new_lines > 0 then 	
+							while (new_lines > 0) do
+								if recordRefrain then 
+									if (cur_line == 1) then
+										arefrain[#refrain + 1] = line
+									else
+										arefrain[#refrain] = arefrain[#refrain] .. "\n" .. line
+									end
+								end		
+								if showText and line ~= nil then
+									if (cur_aline == 1) then
+										alternate[#alternate + 1] = line
+									else
+										alternate[#alternate] = alternate[#alternate] .. "\n" .. line
 									end
 								end
-								cur_aline = 1
+								cur_aline = cur_aline + 1
+								if single_line or singleAlternate or cur_aline > displaySize then
+									if ensure_lines then
+										for i = cur_aline, displaySize, 1 do
+											cur_aline = i
+											if showText and alternate[#alternate] ~= nil then
+												alternate[#alternate] = alternate[#alternate] .. "\n"
+											end
+											if recordRefrain then
+												arefrain[#refrain] = arefrain[#refrain] .. "\n"
+											end									
+										end
+									end
+									cur_aline = 1
+								end
+								new_lines = new_lines - 1
 							end
-							new_lines = new_lines - 1
+						end
+						if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
+							for _, refrain_line in ipairs(arefrain) do
+								alternate[#alternate + 1] = refrain_line
+							end
+						end
+						singleAlternate = false
+					else
+						if recordRefrain then 
+							displaySize = refrain_display_lines 
+						else 
+							displaySize = adjusted_display_lines 
+						end
+						if new_lines > 0 then 	
+							while (new_lines > 0) do
+								if recordRefrain then 
+									if (#refrain == 0) then
+										refrain[#refrain + 1] = line
+									else
+										refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+									end
+								end
+								if showText and line ~= nil then
+									if (cur_line == 1) then
+										lyrics[#lyrics + 1] = line
+									else
+										lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+									end
+								end
+								cur_line = cur_line + 1
+								if single_line or cur_line > displaySize then
+									if ensure_lines then
+										for i = cur_line, displaySize, 1 do
+											cur_line = i
+											if showText and lyrics[#lyrics] ~= nil then
+												lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+											end
+											if recordRefrain then
+												refrain[#refrain] = refrain[#refrain] .. "\n"
+											end
+										end
+									end
+									cur_line = 1
+								end
+								new_lines = new_lines - 1
+							end
 						end
 					end
 					if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
-						for _, refrain_line in ipairs(arefrain) do
-							alternate[#alternate + 1] = refrain_line
+						for _, refrain_line in ipairs(refrain) do
+							lyrics[#lyrics + 1] = refrain_line
 						end
-					end
-					singleAlternate = false
-				else
-					if recordRefrain then 
-						displaySize = refrain_display_lines 
-					else 
-						displaySize = adjusted_display_lines 
-					end
-					if new_lines > 0 then 	
-						while (new_lines > 0) do
-							if recordRefrain then 
-								if (cur_line == 1) then
-									refrain[#refrain + 1] = line
-								else
-									refrain[#refrain] = refrain[#refrain] .. "\n" .. line
-								end
-							end
-							if showText and line ~= nil then
-								if (cur_line == 1) then
-									lyrics[#lyrics + 1] = line
-								else
-									lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
-								end
-							end
-							cur_line = cur_line + 1
-							if single_line or cur_line > displaySize then
-								if ensure_lines then
-									for i = cur_line, displaySize, 1 do
-										cur_line = i
-										if showText and lyrics[#lyrics] ~= nil then
-											lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
-										end
-										if recordRefrain then
-											refrain[#refrain] = refrain[#refrain] .. "\n"
-										end
-									end
-								end
-								cur_line = 1
-							end
-							new_lines = new_lines - 1
-						end
-					end
-				end
-				if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
-					for _, refrain_line in ipairs(refrain) do
-						lyrics[#lyrics + 1] = refrain_line
 					end
 				end
 			end
@@ -1196,7 +1256,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles (Version: August 2021 (w/web dock monitor) <br> Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:n</td><td></td><td>Single Line (End Page)</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:n or #P:n</td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R</td><td></td><td>Duplicate Line n times</td><td>&nbsp;&nbsp;</td><td>#D:n Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Simple Alt Repeat</td><td>&nbsp;&nbsp;</td><td>#A:n Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
+	return "Manage song lyrics to be displayed as subtitles (Version: August 2021 (Beta Release w/web dock monitor) <br> Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>Single Line (End Page)</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
 end
 
 
@@ -1350,6 +1410,7 @@ function script_load(settings)
 	  prepare_selected(prepared_songs[1])
 	end
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
+	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
 
