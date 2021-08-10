@@ -15,7 +15,7 @@
 
 
 --TODO: refresh properties after next prepared selection
---TODO: add text formatting guide
+--TODO: add text formatting guide (Done 7/31/21)
 
 -- Source updates by W. Zaggle (DCSTRATO) 12/3/2020
 -- Fading Text Out/In with transition option 12/8/2020
@@ -59,8 +59,15 @@
 --  For example a song title can now be "What Child is This?" or "Ơn lạ lùng" (Vietnamese for Amazing Grace)
 
 -- Source update by W. Zaggle (DCSTRATO) 7/31/2021
--- Added ablility to elect to link Title and Static text to blank with Lyrics at end of song (Requested Feature)  
+-- Added ablility to elect to link Title and Static text to blank with Lyrics at end of song (Requested Feature) 
+-- Added html quick guide table to Script Page (Text Formatting Guide TODO)
 
+-- Source update by W. Zaggle (DCSTRATO) 8/6/2021
+-- Added html Monitor Page for use in Browser Dock
+-- Added ##r with same funcation as ##R 
+-- Added #A:n Line Where n is number of pages to apply line to in Alternate Text Block
+-- Added #S: Line that adds a single Static Line to the static block
+-- #L:n now sets Lyrics, Refrain and Alternate Text block default number of lines per page (If in Alternate block or Refrain block it will override those lines per page)
 
 obs = obslua
 bit = require("bit")
@@ -89,15 +96,15 @@ pause_timer = false
 useAlternate = false
 useStatic = false
 link_text = false
-display_lines = 1
+display_lines = 0
 ensure_lines = true
 visible = false
 displayed_song = ""
 lyrics = {}
 refrain = {}
 alternate = {}
-display_index = 1
-prepared_index = 1---
+display_index = 0
+prepared_index = 0
 song_directory = {}
 prepared_songs = {}
 TextSources = {}
@@ -116,6 +123,9 @@ text_opacity = 100
 text_fade_dir = 0
 text_fade_speed = 1
 text_fade_enabled = false
+scene_load_complete = false
+load_scene = ""
+
 
 ------------------------------------------------------------------------- EVENTS
 function sourceShowing()
@@ -132,6 +142,29 @@ function alternateShowing()
 	local source = obs.obs_get_source_by_name(alternate_source_name)
 	local showing = false
 	if source ~= nil then
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		showing = obs.obs_source_showing(source)
+	end
+	obs.obs_source_release(source)	
+	return showing
+end
+
+function titleShowing()
+	local source = obs.obs_get_source_by_name(title_source_name)
+	local showing = false
+	if source ~= nil then
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		showing = obs.obs_source_showing(source)
+	end
+	obs.obs_source_release(source)	
+	return showing
+end
+
+function staticShowing()
+	local source = obs.obs_get_source_by_name(static_source_name)
+	local showing = false
+	if source ~= nil then
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
 		showing = obs.obs_source_showing(source)
 	end
 	obs.obs_source_release(source)	
@@ -143,9 +176,8 @@ function sourceActive()
 	local source = obs.obs_get_source_by_name(source_name)
 	local active = false
 	if source ~= nil then
-		--if preview_scene ~= current_scene then
-			active = obs.obs_source_active(source)
-		--end
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		active = obs.obs_source_active(source)
 		obs.obs_source_release(source)
     end		
 	return active
@@ -156,9 +188,32 @@ function alternateActive()
 	local source = obs.obs_get_source_by_name(alternate_source_name)
 	local active = false
 	if source ~= nil then
-		--if preview_scene ~= current_scene then
-			active = obs.obs_source_active(source)
-		--end
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		active = obs.obs_source_active(source)
+		obs.obs_source_release(source)
+    end		
+	return active
+end
+
+function titleActive()
+
+	local source = obs.obs_get_source_by_name(title_source_name)
+	local active = false
+	if source ~= nil then
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		active = obs.obs_source_active(source)
+		obs.obs_source_release(source)
+    end		
+	return active
+end
+
+function staticActive()
+
+	local source = obs.obs_get_source_by_name(static_source_name)
+	local active = false
+	if source ~= nil then
+	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		active = obs.obs_source_active(source)
 		obs.obs_source_release(source)
     end		
 	return active
@@ -232,11 +287,10 @@ function fade_lyrics_display()
 		text_fade_dir = 2
 		update_lyrics_display()
 	else
-	    if text_opacity == 100 then 
+		if not visible then
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
-		end
-   	    if text_opacity == 0 then 
+		else
 			text_opacity = 1
 			text_fade_dir = 2  -- fade in
 		end
@@ -258,6 +312,7 @@ function prev_prepared(pressed)
 	if prepared_index == 1 then 
 	   return false
 	end
+	
 	prepared_index = prepared_index - 1
 	prepare_selected(prepared_songs[prepared_index])
 	return true
@@ -285,9 +340,13 @@ end
 function home_prepared(pressed)
 	if not pressed then return false end
 	visible = true
-	display_index = 1
-	prepared_index = 1
-	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
+	display_index = 0
+	prepared_index = 0
+	if #prepared_songs > 0 then 
+	   display_index = 1
+	   prepared_index = 1
+	   prepare_selected(prepared_songs[prepared_index])   -- redundant from above
+	end
 	fade_lyrics_display() 
 	return true
 end
@@ -295,10 +354,18 @@ end
 function home_song(pressed)
 	if not pressed then return false end
 	visible = true
-	display_index = 1
+	if #prepared_songs > 0 then
+	   display_index = 1
+	end
 	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
 	fade_lyrics_display() 
 	return true
+end
+
+function set_current_scene_name()
+	local scene = obs.obs_frontend_get_current_scene()
+	current_scene = obs.obs_source_get_name(scene)
+	obs.obs_source_release(scene);
 end
 
 function next_button_clicked(props, p)
@@ -327,6 +394,7 @@ function reset_button_clicked(props, p)
 end
 
 function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
+    local tableback = "#000000"
 	local text = ""
 	text = text .. "<!DOCTYPE html><html>"
 	text = text .. "<head>"
@@ -337,30 +405,43 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
     text = text .. "<meta http-equiv='pragma' content='no-cache' />"
 	text = text .. "<meta http-equiv='refresh' content='1'>"
 	text = text .. "</head>"
-	text = text .. "<body style='background-color:black;'>"
-	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-	text = text .. "<tr bgcolor=#000000><td style='white-space: nowrap; width: 200px; color: PowderBlue; '>Prepared Song: <b style='color: LightSalmon;'>" .. prepared_index .. " of " .. #prepared_songs .."</b></td>"
-	text = text .. "<td  style='white-space: nowrap; color: PowderBlue;'>Lyric Page: <b style='color: LightSalmon;'>" .. display_index .. " of " .. #lyrics-1 .."</b></td></tr></table>"	
-	text = text .. "<table cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: White; width: 95px; text-align: center;'>Song Title:</td>"
+	text = text .. "<body style='background-color:black;'><hr style = 'background-color: #98AFC7; height:2px; border:0px; margin: 0px;'><button onclick='HelpFunction()'>Show Syntax</button>"
+	text = text .. "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; width: 160px; margin: 2px; '>Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index 
+	text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
+	text = text .. "<div style = 'color: #B0E0E6; float: left; width: 145px; margin: 2px; '>Lyric Page: <B style='color: #FFEF00;'>" .. display_index
+    text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .."</b></div>"
+	text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
+	if sourceActive() or alternateActive() or titleActive() or staticActive() then 
+	    text = text .. "Active from: <B style = 'color: #FFEF00;'> "
+		if scene_load_complete and prepared_index == 1 then 
+			 text = text .. load_scene .. "</B></div>"
+		else 
+			 text = text .. "Prepared Lyric </B></div>"	
+		end	
+	else 
+		 tableback = "#440000"
+		 text = text .. "<B style = 'color: #FFA07A;'>Not Active in Program</B></div></div>"
+    end		
+	text = text .. "</tr></table><table bgcolor=" .. tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'><tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'>"
+	text = text .. "<td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 95px; text-align: center;'>Song Title:</td>"
 	text = text .. "<td style='color: White;'><Strong>" .. song .. "</strong></td></tr>"
 	if lyric ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: PaleGreen; width: 95px; text-align: center;'>Current Page:</td>"
-		text = text .. "<td style='color: PaleGreen;'>" .. lyric .. "</td></tr>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: PaleGreen; width: 95px; text-align: center;'>Current Page:</td>"
+		text = text .. "<td style='color: PaleGreen;'> &bull; " .. lyric .. "</td></tr>"
 	end
 	if nextlyric ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: Lavender; width: 95px; text-align: center;'>Next Page:</td>"
-		text = text .. "<td  style='color: Lavender;'>" .. nextlyric .. "</td></tr>"	
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Lavender; width: 95px; text-align: center;'>Next Page:</td>"
+		text = text .. "<td  style='color: Lavender;'> &bull; " .. nextlyric .. "</td></tr>"	
 	end
 	if alt ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: SpringGreen; width: 95px; text-align: center;'>Alt. Lyric:</td>"
-		text = text .. "<td  style='color: SpringGreen;'>" .. alt .. "</td></tr>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: SpringGreen; width: 95px; text-align: center;'>Alt. Lyric:</td>"
+		text = text .. "<td  style='color: SpringGreen;'> &bull; " .. alt .. "</td></tr>"
 	end
 	if nextalt ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: Plum; width: 95px; text-align: center;'>Next Alt:</td>"
-		text = text .. "<td style='color: Plum;'>" .. nextalt .. "</td></tr>"	
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Plum; width: 95px; text-align: center;'>Next Alt:</td>"
+		text = text .. "<td style='color: Plum;'> &bull; " .. nextalt .. "</td></tr>"	
 	end
-	text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: LightSkyBlue;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: LightSkyBlue; color: Gold; width: 95px; text-align: center;'>Next Song:</td>"
+	text = text .. "<tr style='border-bottom: 2px solid #ccc; border-color: #98AFC7;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Gold; width: 95px; text-align: center;'>Next Song:</td>"
 	text = text .. "<td style='color: Gold;'>" .. nextsong .. "</td></tr>"	
 	text = text .. "</table></body></html>"
 	
@@ -419,13 +500,38 @@ function delete_song_clicked(props, p)
 	return true
 end
 
+function scene_prepare_selected(name)
+	if name == nil then return end
+	if name == "" then return end
+	if name == displayed_song then return end
+	if name == prepared_songs[1] then return end
+	local prop_prep_list = obs.obs_properties_get(script_props, "prop_prepared_list")
+	if scene_load_complete then
+		obs.obs_property_list_item_remove(prop_prep_list, 0)
+	    table.remove(prepared_songs,1)  -- clear older scene loaded song	
+	end
+    obs.obs_property_list_insert_string(prop_prep_list,0, name,name)
+	table.insert(prepared_songs,1,name)
+	scene_load_complete = true
+	obs.obs_data_set_string(script_sets, "prop_prepared_list", name)
+	obs.obs_properties_apply_settings(script_props, script_sets)
+	prepare_lyrics(name)
+	save_prepared()
+	displayed_song = name
+	display_index = 1
+	visible = true  
+	fade_lyrics_display()
+	return true
+end
+
 -- prepare song button clicked
 function prepare_song_clicked(props, p)
-	prepared_songs[#prepared_songs + 1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
+	prepared_songs[#prepared_songs+1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
 	local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
 	obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
 	if #prepared_songs == 1 then 
 		obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
+		prepared_index = 1
 	end
 	obs.obs_properties_apply_settings(props, script_sets)
 	save_prepared()
@@ -454,6 +560,7 @@ function prepare_selected(name)
 	return true
 end
 
+
 -- called when selection is made from directory list
 function preview_selection_made(props, prop, settings)
 	local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
@@ -476,14 +583,20 @@ end
 
 -- removes prepared songs
 function clear_prepared_clicked(props, p)
+    scene_load_complete = false
 	prepared_songs = {}
 	lyrics = {}
+	alternate = {}
+	static = ""
 	fade_lyrics_display()
 	local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
 	obs.obs_property_list_clear(prep_prop)
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
 	obs.obs_properties_apply_settings(props, script_sets)
 	save_prepared()
+	display_index = 0
+	prepared_index = 0
+	displayed_song = ""
 	return true
 end
 
@@ -505,7 +618,6 @@ function update_lyrics_display()
 	local next_alternate = ""
 	local static = static_text
 	local title = displayed_song
-
 	init_opacity = 0;
 	if visible then
 		text_fade_dir = 2
@@ -579,7 +691,7 @@ function update_lyrics_display()
 	if (next_prepared == nil) then 
 	   next_prepared = ""
 	end
-	update_monitor(displayed_song, text:gsub("\n","<br>"), next_lyric:gsub("\n","<br>"), alttext:gsub("\n","<br>"), next_alternate:gsub("\n","<br>"), next_prepared)
+	update_monitor(displayed_song, text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
@@ -592,14 +704,15 @@ function timer_callback()
 				if text_opacity > real_fade_speed then
 				   text_opacity = text_opacity - real_fade_speed
 				else
+				   update_lyrics_display()
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 0  -- set to 0%
-				   update_lyrics_display()
 				end   
 			else
 				if text_opacity < 100 - real_fade_speed then
 				   text_opacity = text_opacity + real_fade_speed
 				else
+				   update_lyrics_display()
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
 				end 
@@ -654,7 +767,7 @@ function prepare_lyrics(name)
 		local comment_index = line:find("//%[")		-- Look for comment block Set
 		if comment_index ~= nil then
 			commentBlock = true
-			line = line:sub(1, comment_index - 1)
+			line = line:sub(comment_index + 3)
 		end
 		comment_index = line:find("//]")			-- Look for comment block Clear
 		if comment_index ~= nil then
@@ -703,6 +816,8 @@ function prepare_lyrics(name)
 					refrain_display_lines = newLines
 				else				
 					adjusted_display_lines = newLines
+					refrain_display_lines = newLines
+					alternate_display_lines = newLines					
 				end
 				line = line:sub(1, newcount_index - 1)
 				new_lines = 0							--ignore line
@@ -731,7 +846,7 @@ function prepare_lyrics(name)
 				local newcount_indexStart,newcount_indexEnd = line:find("%d+",newcount_index+3)		
 				new_lines = tonumber(line:sub(newcount_indexStart,newcount_indexEnd))
 				_, newcount_indexEnd = line:find("%s+",newcount_indexEnd+1)
-				line = line:sub(newcount_indexEnd + 1)	
+				line = line:sub(newcount_indexEnd + 1)
 			end			
 			local refrain_index = line:find("#R%[")
 			if refrain_index ~= nil then
@@ -782,7 +897,6 @@ function prepare_lyrics(name)
 			end	
 			local newcount_index = line:find("#B:")
 			if newcount_index ~= nil then
-				new_lines = tonumber(line:sub(newcount_index+3))
 				line = line:sub(1, newcount_index - 1)
 			end			
 			local phantom_index = line:find("##P")
@@ -791,106 +905,108 @@ function prepare_lyrics(name)
 			end	
 			local phantom_index = line:find("##B")
 			if phantom_index ~= nil then
-				line = line:sub(1, phantom_index - 1)
+				line = line:gsub("%s*##B%s*", "") .. "\n"
+				--line = line:sub(1, phantom_index - 1)
 			end
-		
-			if useStatic then
-				if static_text == "" then 
-					static_text = line 
-				else 
-					static_text = static_text .. "\n" .. line
-				end
-			else
-				if useAlternate or singleAlternate then
-					if recordRefrain then 
-						displaySize = refrain_display_lines 
+		    if line ~= nil then 
+				if useStatic then
+					if static_text == "" then 
+						static_text = line 
 					else 
-						displaySize = alternate_display_lines 
+						static_text = static_text .. "\n" .. line
 					end
-					if new_lines > 0 then 		
-						while (new_lines > 0) do
-							if recordRefrain then 
-								if (cur_line == 1) then
-									arefrain[#refrain + 1] = line
-								else
-									arefrain[#refrain] = arefrain[#refrain] .. "\n" .. line
-								end
-							end		
-							if showText and line ~= nil then
-								if (cur_aline == 1) then
-									alternate[#alternate + 1] = line
-								else
-									alternate[#alternate] = alternate[#alternate] .. "\n" .. line
-								end
-							end
-							cur_aline = cur_aline + 1
-							if single_line or singleAlternate or cur_aline > displaySize then
-								if ensure_lines then
-									for i = cur_aline, displaySize, 1 do
-										cur_aline = i
-										if showText and alternate[#alternate] ~= nil then
-											alternate[#alternate] = alternate[#alternate] .. "\n"
-										end
-										if recordRefrain then
-											arefrain[#refrain] = arefrain[#refrain] .. "\n"
-										end									
+				else
+					if useAlternate or singleAlternate then
+						if recordRefrain then 
+							displaySize = refrain_display_lines 
+						else 
+							displaySize = alternate_display_lines 
+						end
+						if new_lines > 0 then 	
+							while (new_lines > 0) do
+								if recordRefrain then 
+									if (cur_line == 1) then
+										arefrain[#refrain + 1] = line
+									else
+										arefrain[#refrain] = arefrain[#refrain] .. "\n" .. line
+									end
+								end		
+								if showText and line ~= nil then
+									if (cur_aline == 1) then
+										alternate[#alternate + 1] = line
+									else
+										alternate[#alternate] = alternate[#alternate] .. "\n" .. line
 									end
 								end
-								cur_aline = 1
+								cur_aline = cur_aline + 1
+								if single_line or singleAlternate or cur_aline > displaySize then
+									if ensure_lines then
+										for i = cur_aline, displaySize, 1 do
+											cur_aline = i
+											if showText and alternate[#alternate] ~= nil then
+												alternate[#alternate] = alternate[#alternate] .. "\n"
+											end
+											if recordRefrain then
+												arefrain[#refrain] = arefrain[#refrain] .. "\n"
+											end									
+										end
+									end
+									cur_aline = 1
+								end
+								new_lines = new_lines - 1
 							end
-							new_lines = new_lines - 1
+						end
+						if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
+							for _, refrain_line in ipairs(arefrain) do
+								alternate[#alternate + 1] = refrain_line
+							end
+						end
+						singleAlternate = false
+					else
+						if recordRefrain then 
+							displaySize = refrain_display_lines 
+						else 
+							displaySize = adjusted_display_lines 
+						end
+						if new_lines > 0 then 	
+							while (new_lines > 0) do
+								if recordRefrain then 
+									if (#refrain == 0) then
+										refrain[#refrain + 1] = line
+									else
+										refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+									end
+								end
+								if showText and line ~= nil then
+									if (cur_line == 1) then
+										lyrics[#lyrics + 1] = line
+									else
+										lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+									end
+								end
+								cur_line = cur_line + 1
+								if single_line or cur_line > displaySize then
+									if ensure_lines then
+										for i = cur_line, displaySize, 1 do
+											cur_line = i
+											if showText and lyrics[#lyrics] ~= nil then
+												lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+											end
+											if recordRefrain then
+												refrain[#refrain] = refrain[#refrain] .. "\n"
+											end
+										end
+									end
+									cur_line = 1
+								end
+								new_lines = new_lines - 1
+							end
 						end
 					end
 					if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
-						for _, refrain_line in ipairs(arefrain) do
-							alternate[#alternate + 1] = refrain_line
+						for _, refrain_line in ipairs(refrain) do
+							lyrics[#lyrics + 1] = refrain_line
 						end
-					end
-					singleAlternate = false
-				else
-					if recordRefrain then 
-						displaySize = refrain_display_lines 
-					else 
-						displaySize = adjusted_display_lines 
-					end
-					if new_lines > 0 then 	
-						while (new_lines > 0) do
-							if recordRefrain then 
-								if (cur_line == 1) then
-									refrain[#refrain + 1] = line
-								else
-									refrain[#refrain] = refrain[#refrain] .. "\n" .. line
-								end
-							end
-							if showText and line ~= nil then
-								if (cur_line == 1) then
-									lyrics[#lyrics + 1] = line
-								else
-									lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
-								end
-							end
-							cur_line = cur_line + 1
-							if single_line or cur_line > displaySize then
-								if ensure_lines then
-									for i = cur_line, displaySize, 1 do
-										cur_line = i
-										if showText and lyrics[#lyrics] ~= nil then
-											lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
-										end
-										if recordRefrain then
-											refrain[#refrain] = refrain[#refrain] .. "\n"
-										end
-									end
-								end
-								cur_line = 1
-							end
-							new_lines = new_lines - 1
-						end
-					end
-				end
-				if playRefrain == true and not recordRefrain then  -- no recursive call of Refrain within Refrain Record
-					for _, refrain_line in ipairs(refrain) do
-						lyrics[#lyrics + 1] = refrain_line
 					end
 				end
 			end
@@ -913,7 +1029,7 @@ function prepare_lyrics(name)
 			end
 		end
 	end
-	lyrics[#lyrics + 1] = ""
+	--lyrics[#lyrics + 1] = ""
 end
 
 -- loads the song directory
@@ -1023,7 +1139,9 @@ end
 function save_prepared()
 	local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
     for i, name in ipairs(prepared_songs) do
-		file:write(name, "\n")
+		if not scene_load_complete or i > 1 then  --don't save scene prepared songs
+		   file:write(name, "\n")
+		end
 	end
 	file:close()
 	return true
@@ -1036,7 +1154,7 @@ function load_prepared()
 		for line in file:lines() do
 			prepared_songs[#prepared_songs + 1] = line
 		end
-		
+		prepared_index = 1
 		file:close()
 	end
 	pause_timer = false
@@ -1196,7 +1314,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles (Version: August 2021) <br> Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:n</td><td></td><td>Single Line (End Page)</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:n or #P:n</td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R</td><td></td><td>Duplicate Line n times</td><td>&nbsp;&nbsp;</td><td>#D:n Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Simple Alt Repeat</td><td>&nbsp;&nbsp;</td><td>#A:n Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
+	return " Rectangle {width: 200 height: 100 color: '#090F2A' Text {anchors.centerIn: parent text: 'Hello, World!'     color: '#fff'}}Manage song lyrics to be displayed as subtitles (Version: August 2021 (Beta Release w/web dock monitor) <br> Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
 end
 
 
@@ -1242,9 +1360,11 @@ function script_update(settings)
 		reload = true
 	end	
 	if reload then
-		prepare_lyrics(displayed_song)
-		display_index = 1
-		update_lyrics_display()
+		if #prepared_songs > 0 and displayed_song ~= "" then 
+		   prepare_lyrics(displayed_song)
+		   display_index = 1
+		   update_lyrics_display()
+		end
 	end
 end
 
@@ -1254,6 +1374,7 @@ function script_defaults(settings)
 	obs.obs_data_set_default_string(settings, "prop_source_list", prepared_songs[1] )
 	if #prepared_songs ~= 0 then 
 	    displayed_song = prepared_songs[1]
+		prepared_index = 1
 	else
 		displayed_song = ""
 	end
@@ -1350,6 +1471,7 @@ function script_load(settings)
 	  prepare_selected(prepared_songs[1])
 	end
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
+	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
 
@@ -1470,8 +1592,12 @@ end
 
 function on_event(event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-		rename_prepareLyric()  	
+	    set_current_scene_name()
+	    update_lyrics_display()  
+		rename_prepareLyric()  
 	end
+
+		
 end
 
 function loadSong(source, preview)
@@ -1479,9 +1605,11 @@ function loadSong(source, preview)
 	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
 		local song = obs.obs_data_get_string(settings, "songs")
 		if song ~= displayed_song then 
-			prepare_selected(song)
+			scene_prepare_selected(song)
 			prepared_index = 1
 			displayed_song = song
+			set_current_scene_name()
+			load_scene = current_scene
 		end
 		if obs.obs_data_get_bool(settings, "autoHome") then
 		    home_prepared(true)

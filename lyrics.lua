@@ -126,7 +126,6 @@ text_fade_enabled = false
 scene_load_complete = false
 load_scene = ""
 
-
 ------------------------------------------------------------------------- EVENTS
 function sourceShowing()
 	local source = obs.obs_get_source_by_name(source_name)
@@ -277,6 +276,7 @@ function clear_lyric(pressed)
 	    return
 	end
 	visible = not visible
+	showHelp = not showHelp
 	fade_lyrics_display()
 end
 
@@ -412,36 +412,36 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
     text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .."</b></div>"
 	text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
 	if sourceActive() or alternateActive() or titleActive() or staticActive() then 
-	    text = text .. "Active from: <B style = 'color: #FFEF00;'> "
+	    text = text .. "From: <B style = 'color: #FFEF00;'> "
 		if scene_load_complete and prepared_index == 1 then 
 			 text = text .. load_scene .. "</B></div>"
 		else 
-			 text = text .. "Prepared Lyric </B></div>"	
+			 text = text .. "Prepared</B></div>"	
 		end	
 	else 
 		 tableback = "#440000"
-		 text = text .. "<B style = 'color: #FFA07A;'>Not Active in Program</B></div></div>"
+		 text = text .. "</div></div>"
     end		
 	text = text .. "</tr></table><table bgcolor=" .. tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'><tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'>"
-	text = text .. "<td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 95px; text-align: center;'>Song Title:</td>"
+	text = text .. "<td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 50px; text-align: center;'>Song<br>Title</td>"
 	text = text .. "<td style='color: White;'><Strong>" .. song .. "</strong></td></tr>"
 	if lyric ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: PaleGreen; width: 95px; text-align: center;'>Current Page:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: PaleGreen;  text-align: center;'>Current<br>Page</td>"
 		text = text .. "<td style='color: PaleGreen;'> &bull; " .. lyric .. "</td></tr>"
 	end
 	if nextlyric ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Lavender; width: 95px; text-align: center;'>Next Page:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Lavender;  text-align: center;'>Next<br>Page</td>"
 		text = text .. "<td  style='color: Lavender;'> &bull; " .. nextlyric .. "</td></tr>"	
 	end
 	if alt ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: SpringGreen; width: 95px; text-align: center;'>Alt. Lyric:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: SpringGreen; text-align: center;'>Alt<br>Lyric</td>"
 		text = text .. "<td  style='color: SpringGreen;'> &bull; " .. alt .. "</td></tr>"
 	end
 	if nextalt ~= "" then
-		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Plum; width: 95px; text-align: center;'>Next Alt:</td>"
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Plum; text-align: center;'>Next<br>Alt</td>"
 		text = text .. "<td style='color: Plum;'> &bull; " .. nextalt .. "</td></tr>"	
 	end
-	text = text .. "<tr style='border-bottom: 2px solid #ccc; border-color: #98AFC7;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Gold; width: 95px; text-align: center;'>Next Song:</td>"
+	text = text .. "<tr style='border-bottom: 2px solid #ccc; border-color: #98AFC7;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Gold; text-align: center;'>Next<br>Song:</td>"
 	text = text .. "<td style='color: Gold;'>" .. nextsong .. "</td></tr>"	
 	text = text .. "</table></body></html>"
 	
@@ -1292,7 +1292,6 @@ function script_properties()
 		end
 	end
 	obs.source_list_release(sources)
-	
 	local prep_prop = obs.obs_properties_add_list(script_props, "prop_prepared_list", "Prepared Songs", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	for _, name in ipairs(prepared_songs) do
 		obs.obs_property_list_add_string(prep_prop, name, name)
@@ -1314,7 +1313,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles (Version: August 2021 (Beta Release w/web dock monitor) <br> Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
+	return "Manage song lyrics to be displayed as subtitles (Version: August 2021 (Beta Release w/web dock monitor) Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
 end
 
 
