@@ -363,7 +363,7 @@ function home_song(pressed)
 end
 
 function set_current_scene_name()
-	local scene = obs.obs_frontend_get_current_scene()
+	local scene = obs.obs_frontend_get_current_preview_scene()
 	current_scene = obs.obs_source_get_name(scene)
 	obs.obs_source_release(scene);
 end
