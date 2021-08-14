@@ -126,6 +126,7 @@ text_fade_enabled = false
 scene_load_complete = false
 load_scene = ""
 
+FirstTransition = false
 ------------------------------------------------------------------------- EVENTS
 function sourceShowing()
 	local source = obs.obs_get_source_by_name(source_name)
@@ -226,6 +227,14 @@ function next_lyric(pressed)
 	if not pressed then
 		return
 	end
+	if obs.obs_data_get_bool(script_sets, "transition_enabled") then 
+	  if not FirstTransition then
+		obs.obs_frontend_preview_program_trigger_transition()
+		FirstTransition = true	
+		return
+	  end
+	end
+
 	if #lyrics > 0 and sourceShowing() then  -- Lyrics is driving paging
 	  if display_index + 1 <= #lyrics then
 		display_index = display_index + 1
@@ -702,9 +711,10 @@ function update_lyrics_display()
 	   next_prepared = ""
 	end
 	update_monitor(displayed_song, text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
-	
 	if obs.obs_data_get_bool(script_sets, "transition_enabled") then 
+	  if FirstTransition then
 		obs.obs_frontend_preview_program_trigger_transition()
+	  end
 	end
 end
 
@@ -757,6 +767,7 @@ end
 -- prepares lyrics of the song
 function prepare_lyrics(name)
 	if name == nil then return end
+	FirstTransition = false
 	local song_lines = get_song_text(name)
 	local cur_line = 1
 	local cur_aline = 1
@@ -1504,7 +1515,7 @@ function script_load(settings)
 	end
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
-	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
+	--obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
@@ -1651,6 +1662,7 @@ function loadSong(source, preview)
 				home_prepared(true)
 			end
 			fade_lyrics_display()  
+
 		end
 	end
 	obs.obs_data_release(settings)
