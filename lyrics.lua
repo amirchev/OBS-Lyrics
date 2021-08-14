@@ -170,6 +170,10 @@ function staticShowing()
 	return showing
 end
 
+function anythingActive()
+	return sourceActive() or alternateActive() or titleActive() or staticActive()
+end
+
 function sourceActive()
 
 	local source = obs.obs_get_source_by_name(source_name)
@@ -287,14 +291,16 @@ function fade_lyrics_display()
 		text_fade_dir = 2
 		update_lyrics_display()
 	else
-		if not visible then
+	    if text_opacity == 100 then 
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
-		else
+		end
+   	    if text_opacity == 0 then 
 			text_opacity = 1
 			text_fade_dir = 2  -- fade in
 		end
 	end
+
 end
 
 function next_prepared(pressed)
@@ -347,7 +353,6 @@ function home_prepared(pressed)
 	   prepared_index = 1
 	   prepare_selected(prepared_songs[prepared_index])   -- redundant from above
 	end
-	fade_lyrics_display() 
 	return true
 end
 
@@ -358,7 +363,6 @@ function home_song(pressed)
 	   display_index = 1
 	end
 	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
-	fade_lyrics_display() 
 	return true
 end
 
@@ -554,9 +558,9 @@ function prepare_selected(name)
 	if displayed_song ~= name then
 		display_index = 1
 		visible = true   
+		displayed_song = name
+		update_lyrics_display()
 	end
-	displayed_song = name
-	fade_lyrics_display()
 	return true
 end
 
@@ -619,6 +623,10 @@ function update_lyrics_display()
 	local static = static_text
 	local title = displayed_song
 	init_opacity = 0;
+	
+	local source = obs.obs_get_source_by_name(source_name)
+	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
+	
 	if visible then
 		text_fade_dir = 2
 	    init_opacity = 100
@@ -632,15 +640,17 @@ function update_lyrics_display()
 				alttext = alternate[display_index]
 			end
 		end	
-    end		
+
+    end	
+	
 	if link_text then
 		if string.len(text) == 0 and string.len(alttext) == 0 then
 			static = ""
 			title = ""
 		end
 	end
-	local source = obs.obs_get_source_by_name(source_name)
-	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
+	
+	
 	if alt_source ~= nil then
 		local Asettings = obs.obs_data_create()
 		obs.obs_data_set_string(Asettings, "text", alttext)
@@ -692,6 +702,10 @@ function update_lyrics_display()
 	   next_prepared = ""
 	end
 	update_monitor(displayed_song, text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
+	
+	if obs.obs_data_get_bool(script_sets, "transition_enabled") then 
+		obs.obs_frontend_preview_program_trigger_transition()
+	end
 end
 
 -- text_fade_dir = 1 to fade out and 2 to fade in
@@ -700,19 +714,18 @@ function timer_callback()
 		in_timer = true
 		if text_fade_dir > 0 then 
 			local real_fade_speed = 1 + (text_fade_speed * 2)
-			if text_fade_dir == 1 then	
+			if text_fade_dir == 1 then
 				if text_opacity > real_fade_speed then
 				   text_opacity = text_opacity - real_fade_speed
 				else
-				   update_lyrics_display()
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 0  -- set to 0%
+				   update_lyrics_display()				   
 				end   
 			else
 				if text_opacity < 100 - real_fade_speed then
 				   text_opacity = text_opacity + real_fade_speed
 				else
-				   update_lyrics_display()
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 100 -- set to 100%  (TODO: REad initial text/outline opacity and scale it from there to zero instead)
 				end 
@@ -1259,7 +1272,12 @@ function script_properties()
 	local link_prop = obs.obs_properties_add_bool(script_props, "link_text", "Only show title and static text with lyrics")
 	obs.obs_property_set_long_description(link_prop,"Hides Title and Static Text at end of Lyrics")
 	
-	obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
+	local transition_prop = obs.obs_properties_add_bool(script_props, "transition_enabled", "Transition Preview to Program on Lyric Change")
+	obs.obs_property_set_modified_callback(transition_prop, changeTransitionProperty)
+	obs.obs_property_set_long_description(transition_prop,"Use with Studio Mode,Duplicate Sources, and OBS source transitions")	
+	
+	local fade_prop = obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Fade Text Out/In for Next Lyric")	-- Fade Enable (WZ)
+		obs.obs_property_set_modified_callback(fade_prop, changeFadeProperty)
 	obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
 
 	local source_prop = obs.obs_properties_add_list(script_props, "prop_source_list", "Text Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
@@ -1316,12 +1334,25 @@ function script_description()
 	return "Manage song lyrics to be displayed as subtitles (Version: August 2021 (Beta Release w/web dock monitor) Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
 end
 
+function changeFadeProperty(props, prop, settings)
+	local text_fade_set = obs.obs_data_get_bool(settings, "text_fade_enabled")   
+	local transitionProp = obs.obs_properties_get(props, "transition_enabled")
+	obs.obs_property_set_enabled(transitionProp,not text_fade_set)
+	return true;
+end
 
-	
+function changeTransitionProperty(props, prop, settings)
+	local transition_set = obs.obs_data_get_bool(settings, "transition_enabled")   
+	local fadeProp = obs.obs_properties_get(props, "text_fade_enabled")
+	local fadeSpeedProp = obs.obs_properties_get(props, "text_fade_speed")
+	obs.obs_property_set_enabled(fadeProp,not transition_set)
+	obs.obs_property_set_enabled(fadeSpeedProp,not transition_set)	
+	return true;
+end	
 -- A function named script_update will be called when settings are changed
 function script_update(settings)
     text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled")   -- 	Fade Enable (WZ)
-	text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")   -- 	Fade Speed (WZ)	
+	text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")   -- 	Fade Speed (WZ)	 
 	reload = false
 	local cur_display_lines = obs.obs_data_get_int(settings, "prop_lines_counter")
 	if display_lines ~= cur_display_lines then
@@ -1358,6 +1389,8 @@ function script_update(settings)
 		link_text = cur_link_text
 		reload = true
 	end	
+	print("update")
+
 	if reload then
 		if #prepared_songs > 0 and displayed_song ~= "" then 
 		   prepare_lyrics(displayed_song)
@@ -1592,8 +1625,10 @@ end
 function on_event(event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
 	    set_current_scene_name()
-	    update_lyrics_display()  
 		rename_prepareLyric()  
+--	    update_lyrics_display()
+--		text_opacity = 100
+--		text_fade_dir = 2
 	end
 
 		
@@ -1609,11 +1644,14 @@ function loadSong(source, preview)
 			displayed_song = song
 			set_current_scene_name()
 			load_scene = current_scene
+			update_lyrics_display()
+			text_opacity = 99
+			text_fade_dir = 2
+			if obs.obs_data_get_bool(settings, "autoHome") then
+				home_prepared(true)
+			end
+			fade_lyrics_display()  
 		end
-		if obs.obs_data_get_bool(settings, "autoHome") then
-		    home_prepared(true)
-		end
-		fade_lyrics_display()    
 	end
 	obs.obs_data_release(settings)
 end
