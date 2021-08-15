@@ -1400,7 +1400,6 @@ function script_update(settings)
 		link_text = cur_link_text
 		reload = true
 	end	
-	print("update")
 
 	if reload then
 		if #prepared_songs > 0 and displayed_song ~= "" then 
