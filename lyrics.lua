@@ -69,6 +69,9 @@
 -- Added #S: Line that adds a single Static Line to the static block
 -- #L:n now sets Lyrics, Refrain and Alternate Text block default number of lines per page (If in Alternate block or Refrain block it will override those lines per page)
 
+-- Source update by W. Zaggle (DCSTRATO) 8/16/2021
+-- Added HTM monitor page and limited support for duplicate sources in Studio Mode
+
 obs = obslua
 bit = require("bit")
 
@@ -425,21 +428,22 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
     text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .."</b></div>"
 	text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
 	if sourceActive() or alternateActive() or titleActive() or staticActive() then 
-	    text = text .. "From: <B style = 'color: #FFEF00;'> "
-		if scene_load_complete and prepared_index == 1 then 
+		if scene_load_complete and (prepared_index == 1) then 
+	        text = text .. "From: <B style = 'color: #FFEF00;'> "		
 		    if load_scene ~= nil then
-				 text = text .. load_scene .. "</B></div>"
+				 text = text .. load_scene .. "</B>"
 			else 
-				 text = text .. "Prepared</B></div>"	
+				 text = text .. "Prepared</B>"	
 			end
-		end	
+		end
 	else 
 		 tableback = "#440000"
-		 text = text .. "</div></div>"
     end		
-	text = text .. "</tr></table><table bgcolor=" .. tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'><tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'>"
-	text = text .. "<td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 50px; text-align: center;'>Song<br>Title</td>"
-	text = text .. "<td style='color: White;'><Strong>" .. song .. "</strong></td></tr>"
+	text = text .. "</div><table bgcolor=" .. tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
+	if song ~= "" then
+		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 50px; text-align: center;'>Song<br>Title</td>"
+		text = text .. "<td style='color: White;'><Strong>" .. song .. "</strong></td></tr>"
+	end
 	if lyric ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: PaleGreen;  text-align: center;'>Current<br>Page</td>"
 		text = text .. "<td style='color: PaleGreen;'> &bull; " .. lyric .. "</td></tr>"
@@ -456,10 +460,11 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Plum; text-align: center;'>Next<br>Alt</td>"
 		text = text .. "<td style='color: Plum;'> &bull; " .. nextalt .. "</td></tr>"	
 	end
-	text = text .. "<tr style='border-bottom: 2px solid #ccc; border-color: #98AFC7;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Gold; text-align: center;'>Next<br>Song:</td>"
-	text = text .. "<td style='color: Gold;'>" .. nextsong .. "</td></tr>"	
+	if nextsong ~= "" then	
+		text = text .. "<tr style='border-bottom: 2px solid #ccc; border-color: #98AFC7;' ><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Gold; text-align: center;'>Next<br>Song:</td>"
+		text = text .. "<td style='color: Gold;'>" .. nextsong .. "</td></tr>"	
+	end
 	text = text .. "</table></body></html>"
-	
 	local file = io.open(get_songs_folder_path() .. "/" .. "Monitor.htm", "w")
 		file:write(text)
 	file:close()
