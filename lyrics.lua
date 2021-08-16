@@ -427,9 +427,11 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	if sourceActive() or alternateActive() or titleActive() or staticActive() then 
 	    text = text .. "From: <B style = 'color: #FFEF00;'> "
 		if scene_load_complete and prepared_index == 1 then 
-			 text = text .. load_scene .. "</B></div>"
-		else 
-			 text = text .. "Prepared</B></div>"	
+		    if load_scene ~= nil then
+				 text = text .. load_scene .. "</B></div>"
+			else 
+				 text = text .. "Prepared</B></div>"	
+			end
 		end	
 	else 
 		 tableback = "#440000"
@@ -1657,12 +1659,11 @@ function loadSong(source, preview)
 			update_lyrics_display()
 			text_opacity = 99
 			text_fade_dir = 2
-			if obs.obs_data_get_bool(settings, "autoHome") then
-				home_prepared(true)
-			end
 			fade_lyrics_display()  
-
 		end
+		if obs.obs_data_get_bool(settings, "autoHome") then
+			home_prepared(true)
+		end		
 	end
 	obs.obs_data_release(settings)
 end
