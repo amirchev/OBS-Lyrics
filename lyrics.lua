@@ -1638,9 +1638,7 @@ function on_event(event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
 	    set_current_scene_name()
 		rename_prepareLyric()  
---	    update_lyrics_display()
---		text_opacity = 100
---		text_fade_dir = 2
+	    update_lyrics_display()
 	end
 
 		
