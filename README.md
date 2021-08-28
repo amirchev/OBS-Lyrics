@@ -35,11 +35,13 @@ This is line 1
 #B:2
 This is line 4!!
 ```
-### Display line alone (`###`)
-Append `###` to the end of any line to display it alone.
+### End the current page (`###`)
+Append `###` to the end of any line to end the current page with this line.
 Try it: 
 ```
-This line will show by itself ###
+This line will show first
+This line will be the last one regardless of page size ###
+This line will be the only one on the 2nd page ###
 ```
 ### Repeat line (`#D:3`)
 Duplicate a line multiple times.
@@ -47,7 +49,7 @@ Try it:
 ```
 #D3: Sing this line 3 times!!!
 ```
-### Set number of lines to be displayed (`#L:3`)
+### Set number of lines to be displayed per page (`#L:3`)
 Change the amount of lines displayed at one time throughout the same song.
 Try it:
 ```
@@ -59,21 +61,40 @@ But in the chorus,
 it needs to show
 all three!
 ```
+### Another way would be to use a page break
+Try it:
+```
+#L:3
+For the verse,
+I only want to see two lines.###
+But in the chorus,
+it needs to show
+all three!
+```
 ### Comment out text (`//`)
 Use `//` to write a comment that will not display to your viewers.
 Try it:
 ```
 We sing to you God //long pause/guitar solo after this
 ```
+### Comment out text (`//`)
+Use `//` to write a comment that will not display to your viewers.
+Try it:
+```
+//[ 
+    This is an example of using Block Text to add user documentations to a song
+    Note 3rd verse of this song is not Public Domain
+//]
+```
 ### Define refrain and show it right away (`#R[` and `#R]`)
 Use this notation to define a refrain that will be displayed right away as well. 
 Try it:
 ```
-#R[
+#R[ optional comment
 #L:2
 This song starts with this refrain!
 It will only show these two lines!!!
-#R]
+#R] optional comment
 #L:3
 Now the verse begins,
 after the refrain.
@@ -87,22 +108,37 @@ Now hit the refrain again!
 ### Play refrain (`##R`)
 Use this annotation to show where a refrain should be inserted. See above.
 ### Define refrain but DON'T show it right away (`#r[` and `#r]`)
-Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` is called.
+Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` or `##r` is called.
 
 ### Static Text (`#S[` and `#S]`)
-Use this anotation to define a block of text shown in the selected Static Source and remain constant during the scene (no paging).
+Use this anotation to define a block of text lines shown in the selected Static Source that remain constant during the scene (no paging).
 Try it:
 ```
 #S[
-The song Amazing Grace was written by John Newton who was a former Slave Trader
+The song Amazing Grace was written by John Newton 
+who was a former Slave Trader
 #S]
 ```
-
+### Single static text line (`#S: line`)
+Use this to define a simple single line of Static text
+Try it:
+```
+#S: The song Amazing Grace was written by John Newton who was a former Slave Trader
+```
 ### Alternate Text Block (`#A[` and `#A]`)
 Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
 Note: The page length will be governed by text in the main block if it exists and its Text Source exists in the scene.
       The alternate block should have the same number of lines per page as the main block if both are used.
-
+```
+### Single Line Alternate Text repeated for n pages (`#A:n line`)
+Use this annotation to include a simple single line of Alternate Text to be used for n pages.
+Try it:
+```
+#A:2 Verse 1 Shows for the next two pages of Lyrics.  
+```
+### A Lyrics Monitor Page updated in HTML is available in the Songs Folder as Monitor.htm. Press the Open Songs Folder to find the file and open it in a browser.  It is also possible to add this url as a dockable window in OBS/View/Docks/Custom Browser Docks. The page shows Prepared Song x of n, Lyric Page x of n, Scene if current lyric is loaded from a source, The Song Title, Current Lyrics Page, Next Lyrics Page, Current Alternate Lyrics Page, Next Alternate Lyrics Page, and the Next Prepared Song.  
+...
+Note: Lyrics loaded by a source in a scene are always prepared to the first prepared lyric location, and existing prepared lyrics are shifted up. Scene prepared lyrics are NOT saved in the prepared lyrics list.    
 
 ## That's it
 Please post any bugs or feature requests here or to the OBS forum. 
