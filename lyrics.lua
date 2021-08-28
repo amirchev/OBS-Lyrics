@@ -70,7 +70,11 @@
 -- #L:n now sets Lyrics, Refrain and Alternate Text block default number of lines per page (If in Alternate block or Refrain block it will override those lines per page)
 
 -- Source update by W. Zaggle (DCSTRATO) 8/16/2021
--- Added HTM monitor page and limited support for duplicate sources in Studio Mode
+-- UPdated HTM monitor page and limited support for duplicate sources in Studio Mode
+
+-- Source update by W. Zaggle (DCSTRATO) 8/28/2021
+-- minor bug fix to show/hide lyrics
+-- added Refresh Sources button to update script with new sources as they are added.  (Can't find Callback for new/removed sources to replace button)
 
 obs = obslua
 bit = require("bit")
@@ -306,8 +310,7 @@ function fade_lyrics_display()
 	    if text_opacity == 100 then 
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
-		end
-   	    if text_opacity == 0 then 
+		elseif text_opacity == 0 then 
 			text_opacity = 1
 			text_fade_dir = 2  -- fade in
 		end
@@ -559,6 +562,40 @@ function prepare_song_clicked(props, p)
 	return true
 end
 
+function refresh_button_clicked(props, p)
+	local source_prop = obs.obs_properties_get(props,"prop_source_list")
+	local alternate_source_prop = obs.obs_properties_get(props,"prop_alternate_list")
+	local static_source_prop = obs.obs_properties_get(props,"prop_static_list")
+	local title_source_prop = obs.obs_properties_get(props,"prop_title_list")		
+    obs.obs_property_list_clear(source_prop)        -- clear current properties list
+	obs.obs_property_list_clear(alternate_source_prop)        -- clear current properties list
+	obs.obs_property_list_clear(static_source_prop)        -- clear current properties list
+	obs.obs_property_list_clear(title_source_prop)        -- clear current properties list
+				
+	local sources = obs.obs_enum_sources()
+	if sources ~= nil then
+		local n = {}
+		for _, source in ipairs(sources) do
+			source_id = obs.obs_source_get_unversioned_id(source)
+			if source_id == "text_gdiplus" or source_id == "text_ft2_source" then
+				n[#n+1] = obs.obs_source_get_name(source)
+			end
+		end
+		table.sort(n)
+		obs.obs_property_list_add_string(source_prop, "", "")
+		obs.obs_property_list_add_string(title_source_prop, "", "")	
+		obs.obs_property_list_add_string(alternate_source_prop, "", "")	
+		obs.obs_property_list_add_string(static_source_prop, "", "")			
+		for _, name in ipairs(n) do
+			obs.obs_property_list_add_string(source_prop, name, name)
+			obs.obs_property_list_add_string(title_source_prop, name, name)	
+			obs.obs_property_list_add_string(alternate_source_prop, name, name)	
+			obs.obs_property_list_add_string(static_source_prop, name, name)				
+		end
+	end
+	obs.source_list_release(sources)
+	return true
+end
 
 function prepare_selection_made(props, prop, settings)
 	local name = obs.obs_data_get_string(settings, "prop_prepared_list")
@@ -737,7 +774,7 @@ function timer_callback()
 				else
 				   text_fade_dir = 0  -- stop fading
 				   text_opacity = 0  -- set to 0%
-				   update_lyrics_display()				   
+				  -- update_lyrics_display()				   
 				end   
 			else
 				if text_opacity < 100 - real_fade_speed then
@@ -1328,6 +1365,7 @@ function script_properties()
 		end
 	end
 	obs.source_list_release(sources)
+	obs.obs_properties_add_button(script_props, "prop_refresh", "Refresh Sources", refresh_button_clicked)
 	local prep_prop = obs.obs_properties_add_list(script_props, "prop_prepared_list", "Prepared Songs", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	for _, name in ipairs(prepared_songs) do
 		obs.obs_property_list_add_string(prep_prop, name, name)
