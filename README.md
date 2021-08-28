@@ -148,8 +148,9 @@ Try it:
 ```
 #A:2 This alaternate line shows for the next two pages of Lyrics.  
 ```
-### A Lyrics Monitor Page updated in HTML is available in the Songs Folder as Monitor.htm. Press the Open Songs Folder to find the file and open it in a browser.  It is also possible to add this url as a dockable window in OBS/View/Docks/Custom Browser Docks. The page shows Prepared Song x of n, Lyric Page x of n, Scene if current lyric is loaded from a source, The Song Title, Current Lyrics Page, Next Lyrics Page, Current Alternate Lyrics Page, Next Alternate Lyrics Page, and the Next Prepared Song.  
-...
+### Lyrics Monitor Browser Dock
+A Lyrics Monitor Page updated in HTML is available in the Songs Folder as Monitor.htm. Press the Open Songs Folder to find the file and open it in a browser.  It is also possible to add this url as a dockable window in OBS/View/Docks/Custom Browser Docks. The page shows Prepared Song x of n, Lyric Page x of n, Scene if current lyric is loaded from a source, The Song Title, Current Lyrics Page, Next Lyrics Page, Current Alternate Lyrics Page, Next Alternate Lyrics Page, and the Next Prepared Song.
+
 Note: Lyrics loaded by a source in a scene are always prepared to the first prepared lyric location, and existing prepared lyrics are shifted up. Scene prepared lyrics are NOT saved in the prepared lyrics list.    
 
 ## That's it
