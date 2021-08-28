@@ -17,6 +17,7 @@ There is a much more in-depth guide [here](https://obsproject.com/forum/resource
 - Use "Home" hotkey to return to the beginning of your prepared songs, perhaps after practicing the songs.
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
 - Ensure a constant number of lines displayed using the checkbox, e.g., if the song ends and only one line is left, lyrics will be padded with blank lines to ensure you hava a minimum number of lines.
+- A Monitor.htm file is created with current/next song, lyrics and alternate lyrics that can be docked in OBS with custom browser docks. Use Open Songs Folder button, open Monitor.htm with browser, copy url and paste it into an OBS custom browser dock.
 
 ## Notation
 ### Single blank line/padding (`##P` or `##B`)
@@ -129,12 +130,23 @@ Try it:
 Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
 Note: The page length will be governed by text in the main block if it exists and its Text Source exists in the scene.
       The alternate block should have the same number of lines per page as the main block if both are used.
-```
+ ```
+Amazing grace! How sweet the sound
+That saved a wretch like me!
+I once was lost, but now am found;
+Was blind, but now I see.
+#A[
+Sublime gracia cuán dulce el sonido
+Que salvo a un desgraciado como yo
+Alguna vez estuve perdido, pero ahora me he encontrado
+Estuve ciego pero ahora veo
+#A]
+``` 
 ### Single Line Alternate Text repeated for n pages (`#A:n line`)
 Use this annotation to include a simple single line of Alternate Text to be used for n pages.
 Try it:
 ```
-#A:2 Verse 1 Shows for the next two pages of Lyrics.  
+#A:2 This alaternate line shows for the next two pages of Lyrics.  
 ```
 ### A Lyrics Monitor Page updated in HTML is available in the Songs Folder as Monitor.htm. Press the Open Songs Folder to find the file and open it in a browser.  It is also possible to add this url as a dockable window in OBS/View/Docks/Custom Browser Docks. The page shows Prepared Song x of n, Lyric Page x of n, Scene if current lyric is loaded from a source, The Song Title, Current Lyrics Page, Next Lyrics Page, Current Alternate Lyrics Page, Next Alternate Lyrics Page, and the Next Prepared Song.  
 ...
