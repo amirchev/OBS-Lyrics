@@ -131,6 +131,7 @@ text_fade_dir = 0
 text_fade_speed = 1
 text_fade_enabled = false
 scene_load_complete = false
+update_lyrics_in_fade = false
 load_scene = ""
 
 FirstTransition = false
@@ -307,13 +308,9 @@ function fade_lyrics_display()
 		text_fade_dir = 2
 		update_lyrics_display()
 	else
-	    if text_opacity == 100 then 
+			update_lyrics_in_fade = true;
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
-		elseif text_opacity == 0 then 
-			text_opacity = 1
-			text_fade_dir = 2  -- fade in
-		end
 	end
 
 end
@@ -770,11 +767,14 @@ function timer_callback()
 			local real_fade_speed = 1 + (text_fade_speed * 2)
 			if text_fade_dir == 1 then
 				if text_opacity > real_fade_speed then
-				   text_opacity = text_opacity - real_fade_speed
+				    text_opacity = text_opacity - real_fade_speed
 				else
-				   text_fade_dir = 0  -- stop fading
-				   text_opacity = 0  -- set to 0%
-				  -- update_lyrics_display()				   
+				    text_fade_dir = 0  -- stop fading
+				    text_opacity = 0  -- set to 0%
+					if  update_lyrics_in_fade then
+						update_lyrics_display()	
+						update_lyrics_in_fade = false
+					end	
 				end   
 			else
 				if text_opacity < 100 - real_fade_speed then
@@ -801,7 +801,7 @@ function timer_callback()
 				obs.obs_source_update(alt_source, Asettings)
 				obs.obs_data_release(Asettings)
 			end
-			obs.obs_source_release(alt_source)				
+			obs.obs_source_release(alt_source)	
 		end
 		in_timer = false
 	end
@@ -810,6 +810,7 @@ end
 
 -- prepares lyrics of the song
 function prepare_lyrics(name)
+	pause_timer = true
 	if name == nil then return end
 	FirstTransition = false
 	local song_lines = get_song_text(name)
@@ -1039,7 +1040,7 @@ function prepare_lyrics(name)
 						if new_lines > 0 then 	
 							while (new_lines > 0) do
 								if recordRefrain then 
-									if (#refrain == 0) then
+									if (cur_line == 1) then
 										refrain[#refrain + 1] = line
 									else
 										refrain[#refrain] = refrain[#refrain] .. "\n" .. line
@@ -1098,6 +1099,7 @@ function prepare_lyrics(name)
 		end
 	end
 	--lyrics[#lyrics + 1] = ""
+	pause_timer = false
 end
 
 -- loads the song directory
@@ -1268,12 +1270,10 @@ function get_song_text(name)
 	end
 	local file = io.open(path, "r")
 	if file ~= nil then
-		pause_timer = true
 		for line in file:lines() do
 			song_lines[#song_lines + 1] = line
 		end
 		file:close()
-		pause_timer = false
 	end
 
 	return song_lines
