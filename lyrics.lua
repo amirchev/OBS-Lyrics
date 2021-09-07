@@ -70,7 +70,19 @@
 -- #L:n now sets Lyrics, Refrain and Alternate Text block default number of lines per page (If in Alternate block or Refrain block it will override those lines per page)
 
 -- Source update by W. Zaggle (DCSTRATO) 8/16/2021
--- Added HTM monitor page and limited support for duplicate sources in Studio Mode
+-- UPdated HTM monitor page and limited support for duplicate sources in Studio Mode
+
+-- Source update by W. Zaggle (DCSTRATO) 8/28/2021
+-- minor bug fix to show/hide lyrics
+-- added Refresh Sources button to update script with new sources as they are added.  (Can't find Callback for new/removed sources to replace button)
+
+-- Source update by W. Zaggle (DCSTRATO) 9/6/2021
+-- more work on show/hide and fade to be more compatible
+-- corrected Refrain to honor page size
+-- restored blank page at end of song
+-- added refresh song directory to refresh sources button (songs are sources of a sort)
+-- added button to edit song text in default system editor for .txt or .enc file types.
+
 
 obs = obslua
 bit = require("bit")
@@ -127,6 +139,7 @@ text_fade_dir = 0
 text_fade_speed = 1
 text_fade_enabled = false
 scene_load_complete = false
+update_lyrics_in_fade = false
 load_scene = ""
 
 FirstTransition = false
@@ -303,14 +316,9 @@ function fade_lyrics_display()
 		text_fade_dir = 2
 		update_lyrics_display()
 	else
-	    if text_opacity == 100 then 
+			update_lyrics_in_fade = true;
 			text_opacity = 99
 			text_fade_dir = 1  -- fade out
-		end
-   	    if text_opacity == 0 then 
-			text_opacity = 1
-			text_fade_dir = 2  -- fade in
-		end
 	end
 
 end
@@ -559,6 +567,41 @@ function prepare_song_clicked(props, p)
 	return true
 end
 
+function refresh_button_clicked(props, p)
+	local source_prop = obs.obs_properties_get(props,"prop_source_list")
+	local alternate_source_prop = obs.obs_properties_get(props,"prop_alternate_list")
+	local static_source_prop = obs.obs_properties_get(props,"prop_static_list")
+	local title_source_prop = obs.obs_properties_get(props,"prop_title_list")		
+    obs.obs_property_list_clear(source_prop)        -- clear current properties list
+	obs.obs_property_list_clear(alternate_source_prop)        -- clear current properties list
+	obs.obs_property_list_clear(static_source_prop)        -- clear current properties list
+	obs.obs_property_list_clear(title_source_prop)        -- clear current properties list
+				
+	local sources = obs.obs_enum_sources()
+	if sources ~= nil then
+		local n = {}
+		for _, source in ipairs(sources) do
+			source_id = obs.obs_source_get_unversioned_id(source)
+			if source_id == "text_gdiplus" or source_id == "text_ft2_source" then
+				n[#n+1] = obs.obs_source_get_name(source)
+			end
+		end
+		table.sort(n)
+		obs.obs_property_list_add_string(source_prop, "", "")
+		obs.obs_property_list_add_string(title_source_prop, "", "")	
+		obs.obs_property_list_add_string(alternate_source_prop, "", "")	
+		obs.obs_property_list_add_string(static_source_prop, "", "")			
+		for _, name in ipairs(n) do
+			obs.obs_property_list_add_string(source_prop, name, name)
+			obs.obs_property_list_add_string(title_source_prop, name, name)	
+			obs.obs_property_list_add_string(alternate_source_prop, name, name)	
+			obs.obs_property_list_add_string(static_source_prop, name, name)				
+		end
+	end
+	obs.source_list_release(sources)
+	load_song_directory()
+	return true
+end
 
 function prepare_selection_made(props, prop, settings)
 	local name = obs.obs_data_get_string(settings, "prop_prepared_list")
@@ -620,11 +663,28 @@ function clear_prepared_clicked(props, p)
 	return true
 end
 
-function open_button_clicked(props, p)
+function open_song_clicked(props, p)
+	local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
+	if testValid(name) then
+		path = get_song_file_path(name,".txt")
+	else	
+		path = get_song_file_path(enc(name),".enc")
+	end
+	print (path)
 	if windows_os then
-		os.execute("explorer \"" .. get_songs_folder_path() .. "\"")
+		os.execute("explorer \"" .. path .. "\"")
 	else
-		os.execute("xdg-open \"" .. get_songs_folder_path() .. "\"")
+		os.execute("xdg-open \"" .. path .. "\"")
+	end
+	return true
+end
+
+function open_button_clicked(props, p)
+	local path = get_songs_folder_path() 
+	if windows_os then
+		os.execute("explorer \"" .. path .. "\"")
+	else
+		os.execute("xdg-open \"" .. path .. "\"")
 	end
 end
 -------------------------------------------------------------- PROGRAM FUNCTIONS
@@ -733,11 +793,14 @@ function timer_callback()
 			local real_fade_speed = 1 + (text_fade_speed * 2)
 			if text_fade_dir == 1 then
 				if text_opacity > real_fade_speed then
-				   text_opacity = text_opacity - real_fade_speed
+				    text_opacity = text_opacity - real_fade_speed
 				else
-				   text_fade_dir = 0  -- stop fading
-				   text_opacity = 0  -- set to 0%
-				   update_lyrics_display()				   
+				    text_fade_dir = 0  -- stop fading
+				    text_opacity = 0  -- set to 0%
+					if  update_lyrics_in_fade then
+						update_lyrics_display()	
+						update_lyrics_in_fade = false
+					end	
 				end   
 			else
 				if text_opacity < 100 - real_fade_speed then
@@ -764,7 +827,7 @@ function timer_callback()
 				obs.obs_source_update(alt_source, Asettings)
 				obs.obs_data_release(Asettings)
 			end
-			obs.obs_source_release(alt_source)				
+			obs.obs_source_release(alt_source)	
 		end
 		in_timer = false
 	end
@@ -773,6 +836,7 @@ end
 
 -- prepares lyrics of the song
 function prepare_lyrics(name)
+	pause_timer = true
 	if name == nil then return end
 	FirstTransition = false
 	local song_lines = get_song_text(name)
@@ -1002,7 +1066,7 @@ function prepare_lyrics(name)
 						if new_lines > 0 then 	
 							while (new_lines > 0) do
 								if recordRefrain then 
-									if (#refrain == 0) then
+									if (cur_line == 1) then
 										refrain[#refrain + 1] = line
 									else
 										refrain[#refrain] = refrain[#refrain] .. "\n" .. line
@@ -1060,7 +1124,8 @@ function prepare_lyrics(name)
 			end
 		end
 	end
-	--lyrics[#lyrics + 1] = ""
+	lyrics[#lyrics + 1] = ""
+	pause_timer = false
 end
 
 -- loads the song directory
@@ -1205,7 +1270,7 @@ end
 -- returns path of the given song name
 function get_song_file_path(name, suffix)
 	if name == nil then return nil end
-    return get_songs_folder_path() .. "/" .. name .. suffix
+    return get_songs_folder_path() .. "\\" .. name .. suffix
 end
 
 -- returns path of the lyrics songs folder
@@ -1231,12 +1296,10 @@ function get_song_text(name)
 	end
 	local file = io.open(path, "r")
 	if file ~= nil then
-		pause_timer = true
 		for line in file:lines() do
 			song_lines[#song_lines + 1] = line
 		end
 		file:close()
-		pause_timer = false
 	end
 
 	return song_lines
@@ -1270,17 +1333,17 @@ function script_properties()
 	local lyric_prop = obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
 	obs.obs_property_set_long_description(lyric_prop,"Lyric Text with Markup")
 	obs.obs_properties_add_button(script_props, "prop_save_button", "Save Song", save_song_clicked)
-	
 	local prop_dir_list = obs.obs_properties_add_list(script_props, "prop_directory_list", "Song Directory", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 	table.sort(song_directory)
 	for _, name in ipairs(song_directory) do
 		obs.obs_property_list_add_string(prop_dir_list, name, name)
 	end
 	obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
+	
 	obs.obs_properties_add_button(script_props, "prop_prepare_button", "Prepare Song", prepare_song_clicked)
 	obs.obs_properties_add_button(script_props, "prop_delete_button", "Delete Song", delete_song_clicked)
+	obs.obs_properties_add_button(script_props, "prop_opensong_button", "Edit Song with System Editor", open_song_clicked)	
 	obs.obs_properties_add_button(script_props, "prop_open_button", "Open Songs Folder", open_button_clicked)
-	
 	local lines_prop = obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
 	obs.obs_property_set_long_description(lines_prop,"Sets default lines per page of lyric, overwritten by Markup: #L:n")	
 
@@ -1328,6 +1391,7 @@ function script_properties()
 		end
 	end
 	obs.source_list_release(sources)
+	obs.obs_properties_add_button(script_props, "prop_refresh", "Refresh Sources", refresh_button_clicked)
 	local prep_prop = obs.obs_properties_add_list(script_props, "prop_prepared_list", "Prepared Songs", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	for _, name in ipairs(prepared_songs) do
 		obs.obs_property_list_add_string(prep_prop, name, name)
@@ -1349,7 +1413,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-	return "Manage song lyrics to be displayed as subtitles (Version: August 2021 (Beta Release w/web dock monitor) Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
+	return "Manage song lyrics to be displayed as subtitles (Version: September 2021 (beta2)  Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
 end
 
 function changeFadeProperty(props, prop, settings)
