@@ -1585,7 +1585,6 @@ function script_load(settings)
 	end
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
-	--obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
 end
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
@@ -1673,7 +1672,6 @@ source_def.update = function (data, settings)
 end
 
 source_def.get_properties = function (data)
-	rename_prepareLyric()  
 	load_song_directory()
 	local props = obs.obs_properties_create()
 	local source_dir_list = obs.obs_properties_add_list(props, "songs", "Song Directory", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
