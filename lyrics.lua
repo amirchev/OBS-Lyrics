@@ -272,12 +272,10 @@ function next_lyric(pressed)
     end
     dbg_method("next_lyric")
     -- check if transition enabled
-    if transition_enabled then
-        if not transition_completed then
-            obs.obs_frontend_preview_program_trigger_transition()
-            transition_completed = true
-            return
-        end
+    if transition_enabled and not transition_completed then
+		obs.obs_frontend_preview_program_trigger_transition()
+		transition_completed = true
+		return
     end
 
     if #lyrics > 0 or #alternate > 0 then -- and sourceShowing() then  -- Lyrics is driving paging
