@@ -86,42 +86,50 @@
 obs = obslua
 bit = require("bit")
 
-
+--source definitions
 source_data = {}
 source_def = {}
 source_def.id = "Prepare_Lyrics"
 source_def.type = OBS_SOURCE_TYPE_INPUT;
-source_def.output_flags = bit.bor(obs.OBS_SOURCE_CUSTOM_DRAW )
+source_def.output_flags = bit.bor(obs.OBS_SOURCE_CUSTOM_DRAW)
 
-obs = obslua
+--text sources
 source_name = ""
 alternate_source_name = ""
 static_source_name = ""
 static_text = ""
-current_scene = ""
-preview_scene = ""
+--current_scene = ""
+--preview_scene = ""
 title_source_name = ""
+
+--settings
 windows_os = false
 first_open = true
-in_timer = false
-in_Load = false
-in_directory = false
-pause_timer = false
-useAlternate = false
-useStatic = false
-link_text = false
+--in_timer = false
+--in_Load = false
+--in_directory = false
+--pause_timer = false
 display_lines = 0
 ensure_lines = true
 --visible = false
-displayed_song = ""
+
+--lyrics status
+--TODO: removed displayed_song and use prepared_songs[prepared_index]
+--displayed_song = ""
 lyrics = {}
-refrain = {}
+--refrain = {}
 alternate = {}
-display_index = 0
-prepared_index = 0
+page_index = 0
+prepared_index = 0 --TODO: avoid setting prepared_index directly, use prepare_song_by_index
 song_directory = {}
 prepared_songs = {}
-TextSources = {}
+link_text = false
+source_song_title = ""
+using_source = false
+
+timer_exists = false
+
+--hotkeys
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_p_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_c_id = obs.OBS_INVALID_HOTKEY_ID
@@ -130,9 +138,11 @@ hotkey_p_p_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_home_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_reset_id = obs.OBS_INVALID_HOTKEY_ID
 
+--script placeholders
 script_sets = nil
 script_props = nil
 
+--text status & fade
 TEXT_VISIBLE = 0	--text is visible
 TEXT_HIDDEN = 1		--text is hidden
 TEXT_SHOWING = 3	--going from hidden -> visible
@@ -143,11 +153,18 @@ text_status = TEXT_VISIBLE
 text_opacity = 100
 text_fade_speed = 1
 text_fade_enabled = false
-scene_load_complete = false
---update_lyrics_in_fade = false
-load_scene = ""
 
-FirstTransition = false
+--scene_load_complete = false
+--update_lyrics_in_fade = false
+--load_scene = ""
+
+first_transition = false
+
+--simple debugging/print mechanism
+DEBUG = true --on/off switch for entire debugging mechanism
+DEBUG_METHODS = true --print method names
+DEBUG_INNER = true --print inner method breakpoints
+DEBUG_CUSTOM = true --print custom debugging messages
 
 --------
 ----------------
@@ -155,194 +172,176 @@ FirstTransition = false
 ----------------
 --------
 
-function sourceShowing()
-	local source = obs.obs_get_source_by_name(source_name)
-	local showing = false
-	if source ~= nil then
-		showing = obs.obs_source_showing(source)
-	end
-	obs.obs_source_release(source)	
-	return showing
-end
+-- function sourceShowing()
+	-- local source = obs.obs_get_source_by_name(source_name)
+	-- local showing = false
+	-- if source ~= nil then
+		-- showing = obs.obs_source_showing(source)
+	-- end
+	-- obs.obs_source_release(source)	
+	-- return showing
+-- end
 
-function alternateShowing()
-	local source = obs.obs_get_source_by_name(alternate_source_name)
-	local showing = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		showing = obs.obs_source_showing(source)
-	end
-	obs.obs_source_release(source)	
-	return showing
-end
+-- function alternateShowing()
+	-- local source = obs.obs_get_source_by_name(alternate_source_name)
+	-- local showing = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- showing = obs.obs_source_showing(source)
+	-- end
+	-- obs.obs_source_release(source)	
+	-- return showing
+-- end
 
-function titleShowing()
-	local source = obs.obs_get_source_by_name(title_source_name)
-	local showing = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		showing = obs.obs_source_showing(source)
-	end
-	obs.obs_source_release(source)	
-	return showing
-end
+-- function titleShowing()
+	-- local source = obs.obs_get_source_by_name(title_source_name)
+	-- local showing = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- showing = obs.obs_source_showing(source)
+	-- end
+	-- obs.obs_source_release(source)	
+	-- return showing
+-- end
 
-function staticShowing()
-	local source = obs.obs_get_source_by_name(static_source_name)
-	local showing = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		showing = obs.obs_source_showing(source)
-	end
-	obs.obs_source_release(source)	
-	return showing
-end
+-- function staticShowing()
+	-- local source = obs.obs_get_source_by_name(static_source_name)
+	-- local showing = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- showing = obs.obs_source_showing(source)
+	-- end
+	-- obs.obs_source_release(source)	
+	-- return showing
+-- end
 
-function anythingActive()
-	return sourceActive() or alternateActive() or titleActive() or staticActive()
-end
+-- function anythingActive()
+	-- return sourceActive() or alternateActive() or titleActive() or staticActive()
+-- end
 
-function sourceActive()
+-- function sourceActive()
 
-	local source = obs.obs_get_source_by_name(source_name)
-	local active = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		active = obs.obs_source_active(source)
-		obs.obs_source_release(source)
-    end		
-	return active
-end
+	-- local source = obs.obs_get_source_by_name(source_name)
+	-- local active = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- active = obs.obs_source_active(source)
+		-- obs.obs_source_release(source)
+    -- end		
+	-- return active
+-- end
 
-function alternateActive()
+-- function alternateActive()
 
-	local source = obs.obs_get_source_by_name(alternate_source_name)
-	local active = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		active = obs.obs_source_active(source)
-		obs.obs_source_release(source)
-    end		
-	return active
-end
+	-- local source = obs.obs_get_source_by_name(alternate_source_name)
+	-- local active = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- active = obs.obs_source_active(source)
+		-- obs.obs_source_release(source)
+    -- end		
+	-- return active
+-- end
 
-function titleActive()
+-- function titleActive()
 
-	local source = obs.obs_get_source_by_name(title_source_name)
-	local active = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		active = obs.obs_source_active(source)
-		obs.obs_source_release(source)
-    end		
-	return active
-end
+	-- local source = obs.obs_get_source_by_name(title_source_name)
+	-- local active = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- active = obs.obs_source_active(source)
+		-- obs.obs_source_release(source)
+    -- end		
+	-- return active
+-- end
 
-function staticActive()
+-- function staticActive()
 
-	local source = obs.obs_get_source_by_name(static_source_name)
-	local active = false
-	if source ~= nil then
-	    obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
-		active = obs.obs_source_active(source)
-		obs.obs_source_release(source)
-    end		
-	return active
-end
+	-- local source = obs.obs_get_source_by_name(static_source_name)
+	-- local active = false
+	-- if source ~= nil then
+	    -- obs.os_sleep_ms(10)   -- Workaround Timing Bug in OBS Lua that delays correctly reporting source status
+		-- active = obs.obs_source_active(source)
+		-- obs.obs_source_release(source)
+    -- end		
+	-- return active
+-- end
 
 function next_lyric(pressed)
 	if not pressed then
 		return
 	end
+	dbg_method("next_lyric")
+	--check if transition enabled
 	if obs.obs_data_get_bool(script_sets, "transition_enabled") then 
-	  if not FirstTransition then
+	  if not first_transition then
 		obs.obs_frontend_preview_program_trigger_transition()
-		FirstTransition = true	
+		first_transition = true	
 		return
 	  end
 	end
 
-	if #lyrics > 0 and sourceShowing() then  -- Lyrics is driving paging
-	  if display_index + 1 <= #lyrics then
-		display_index = display_index + 1
-	  else
-		next_prepared(true) 
-	  end
-	  transition_lyric_text(false)
-	elseif #alternate>0 and alternateShowing() then -- Alternate is driving paging
-	  if display_index + 1 <= #alternate then
-		display_index = display_index + 1
-	  else
-		next_prepared(true) 
-	  end
-	  transition_lyric_text(false)
-	else
-	  return
+	if #lyrics > 0 or #alternate > 0 then--and sourceShowing() then  -- Lyrics is driving paging
+		if page_index < #lyrics then
+			page_index = page_index + 1
+			dbg_inner("page_index: " .. page_index)
+			transition_lyric_text(false)
+		else
+			next_prepared(true) 
+		end
 	end
-
 end
 
 function prev_lyric(pressed)
-	if not pressed then
-		return
-	end
-	if #lyrics > 0 and sourceShowing() then  -- Lyrics is driving paging
-	  if display_index > 1 then
-		display_index = display_index - 1
-	  else
-		prev_prepared(true) 
-	  end
-	  transition_lyric_text(false)
-	elseif #alternate > 0 and alternateShowing() then -- Alternate is driving paging
-	  if display_index > 1 then
-		display_index = display_index - 1
-	  else
-		prev_prepared(true) 
-	  end
-	  transition_lyric_text(false)
-	else
-	  return
+	if not pressed then return end
+	dbg_method("prev_lyric")
+	if #lyrics > 0 or #alternate > 0 then --and sourceShowing() then  -- Lyrics is driving paging
+		if page_index > 1 then
+			page_index = page_index - 1
+			dbg_inner("page_index: " .. page_index)
+			transition_lyric_text(false)
+		  else
+			prev_prepared(true)
+		end
 	end
 end
 
-function toggle_lyrics_visibility(pressed)
-	if not pressed then
-		return
-	end
-	if #lyrics > 0 and not sourceShowing() then
-		return
-	end
-	if #alternate > 0 and not alternateShowing() then
-	    return
-	end
-	--visible = not visible
-	showHelp = not showHelp
-	if text_status ~= TEXT_HIDDEN then
-		set_text_visiblity(TEXT_HIDDEN)
-	else
-		set_text_visiblity(TEXT_VISIBLE)
+function prev_prepared(pressed)
+	if not pressed then return end
+	if prepared_index > 1 then
+		using_source = false
+		prepare_selected(prepared_songs[prepared_index - 1])
 	end
 end
 
 function next_prepared(pressed)
-	if not pressed then return false end
-	if prepared_index >= #prepared_songs then
-	   return false
+	if not pressed then return end
+	if prepared_index < #prepared_songs then
+		using_source = false
+		prepare_selected(prepared_songs[prepared_index + 1])
 	end
-   prepared_index = prepared_index + 1
-   prepare_selected(prepared_songs[prepared_index])
-   return true
 end
-                
-function prev_prepared(pressed)
-	if not pressed then return false end
-	if prepared_index == 1 then 
-	   return false
+
+function toggle_lyrics_visibility(pressed)
+	dbg_method("toggle_lyrics_visibility")
+	if not pressed then
+		return
 	end
-	
-	prepared_index = prepared_index - 1
-	prepare_selected(prepared_songs[prepared_index])
-	return true
+	-- if #lyrics > 0 and not sourceShowing() then
+		-- return
+	-- end
+	-- if #alternate > 0 and not alternateShowing() then
+	    -- return
+	-- end
+	--visible = not visible
+	--showHelp = not showHelp
+	if text_status ~= TEXT_HIDDEN then
+		dbg_inner("hiding")
+		set_text_visiblity(TEXT_HIDDEN)
+	else
+		dbg_inner("showing")
+		set_text_visiblity(TEXT_VISIBLE)
+	end
 end
 
 function get_load_lyric_song()
@@ -366,34 +365,42 @@ end
 
 function home_prepared(pressed)
 	if not pressed then return false end
+	dbg_method("home_prepared")
 	--visible = true
-	set_text_visiblity(TEXT_VISIBLE)
-	display_index = 0
-	prepared_index = 0
+	--set_text_visiblity(TEXT_VISIBLE)
+	--page_index = 0
+	--prepared_index = 0
+	   using_source = false
 	if #prepared_songs > 0 then 
-	   display_index = 1
-	   prepared_index = 1
-	   prepare_selected(prepared_songs[prepared_index])   -- redundant from above
+	   page_index = 1
+	   -- prepared_index = 1
+	   if not prepare_selected(prepared_songs[1]) then -- if song was not prepared, transition lyrics to page 1 manually
+			transition_lyric_text(false)
+		end
+	else
+		clear_prepared_clicked(true)
 	end
 	return true
 end
 
 function home_song(pressed)
 	if not pressed then return false end
+	dbg_method("home_song")
 	--visible = true
-	set_text_visiblity(TEXT_VISIBLE)
+	--set_text_visiblity(TEXT_VISIBLE)
 	if #prepared_songs > 0 then
-	   display_index = 1
+	   page_index = 1
+	   transition_lyric_text(false)
 	end
-	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
+	--prepare_selected(prepared_songs[prepared_index])   -- redundant from above
 	return true
 end
 
-function set_current_scene_name()
-	local scene = obs.obs_frontend_get_current_preview_scene()
-	current_scene = obs.obs_source_get_name(scene)
-	obs.obs_source_release(scene);
-end
+-- function set_current_scene_name()
+	-- local scene = obs.obs_frontend_get_current_preview_scene()
+	-- current_scene = obs.obs_source_get_name(scene)
+	-- obs.obs_source_release(scene);
+-- end
 
 function next_button_clicked(props, p)
 	next_lyric(true)
@@ -423,21 +430,26 @@ end
 function save_song_clicked(props, p)
 	local name = obs.obs_data_get_string(script_sets, "prop_edit_song_title")
 	local text = obs.obs_data_get_string(script_sets, "prop_edit_song_text")
-	if save_song(name, text) then -- this is a new song
+	--if this is a new song, add it to the directory
+	if save_song(name, text) then
 		local prop_dir_list = obs.obs_properties_get(props, "prop_directory_list")
 		obs.obs_property_list_add_string(prop_dir_list, name, name)
 		obs.obs_data_set_string(script_sets, "prop_directory_list", name)
 		obs.obs_properties_apply_settings(props, script_sets)
-	elseif displayed_song == name then
-		prepare_lyrics(name)
+	elseif prepared_songs[prepared_index] == name then
+		--if this song is being displayed, then prepare it anew
+		prepare_song_by_name(name)
 		transition_lyric_text(false)
 	end
 	return true
 end
 
 function delete_song_clicked(props, p)
+	dbg_method("delete_song_clicked")
+	--call delete song function
 	local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
 	delete_song(name)
+	--update 
 	local prop_dir_list = obs.obs_properties_get(props, "prop_directory_list")
 	for i = 0, obs.obs_property_list_item_count(prop_dir_list) do
 		if obs.obs_property_list_item_string(prop_dir_list, i) == name then
@@ -471,16 +483,17 @@ end
 
 -- prepare song button clicked
 function prepare_song_clicked(props, p)
-	prepared_songs[#prepared_songs+1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
+	dbg_method("prepare_song_clicked")
+	prepared_songs[#prepared_songs + 1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
 	local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
 	obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
 	if #prepared_songs == 1 then 
 		obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
-		prepared_index = 1
+		prepare_song_by_index(#prepared_songs)
 	end
 	obs.obs_properties_apply_settings(props, script_sets)
 	save_prepared()
-	update_lyrics_display()
+	--update_source_text()
 	return true
 end
 
@@ -521,23 +534,30 @@ function refresh_button_clicked(props, p)
 end
 
 function prepare_selection_made(props, prop, settings)
+	dbg_method("prepare_selection_made")
 	local name = obs.obs_data_get_string(settings, "prop_prepared_list")
+	using_source = false
     prepare_selected(name)
 	return true
 end
 
 function prepare_selected(name)
-	if name == nil then return end
-	if name == "" then return end
-	if name == displayed_song then return end
-	prepare_lyrics(name)
-	if displayed_song ~= name then
-		display_index = 1
-		--visible = true   
-		set_text_visiblity(TEXT_VISIBLE)
-		displayed_song = name
-		update_lyrics_display()
+	dbg_method("prepare_selected: " .. name)
+	if name == nil then return false end
+	if name == "" then return false end
+	if name == prepared_songs[prepared_index]
+		or (using_source and name == source_song_title) then return false end
+	prepare_song_by_name(name)
+	page_index = 1
+	if not using_source then
+		prepared_index = get_index_in_list(prepared_songs, name)
+		transition_lyric_text(false)
+	else
+		source_song_title = name
+		transition_lyric_text(true)
 	end
+	--visible = true   
+	--set_text_visiblity(TEXT_VISIBLE)
 	return true
 end
 
@@ -546,7 +566,7 @@ end
 function preview_selection_made(props, prop, settings)
 	local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
 	
-	if get_index_in_list(song_directory, name) == nil then return end -- do nothing if invalid name
+	if get_index_in_list(song_directory, name) == nil then return false end -- do nothing if invalid name
 	
 	obs.obs_data_set_string(settings, "prop_edit_song_title", name)
 	local song_lines = get_song_text(name)
@@ -564,20 +584,23 @@ end
 
 -- removes prepared songs
 function clear_prepared_clicked(props, p)
-    scene_load_complete = false
+	dbg_method("clear_prepared_clicked")
+    --scene_load_complete = false
 	prepared_songs = {}
-	lyrics = {}
-	alternate = {}
-	static = ""
+	-- lyrics = {}
+	-- alternate = {}
+	-- static = ""
 	set_text_visiblity(TEXT_HIDDEN)
+	--clear the list
 	local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
 	obs.obs_property_list_clear(prep_prop)
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
 	obs.obs_properties_apply_settings(props, script_sets)
 	save_prepared()
-	display_index = 0
+	page_index = 0
 	prepared_index = 0
-	displayed_song = ""
+	transition_lyric_text(false)
+	--displayed_song = ""
 	return true
 end
 
@@ -613,30 +636,40 @@ end
 --------
 
 -- updates the displayed lyrics
-function update_lyrics_display()
-	print("Update lyrics display")
+function update_source_text()
+	dbg_method("update_source_text")
+	if prepared_index == nil or prepared_index == 0 then return end
 	local text = ""
 	local alttext = "" 
 	local next_lyric = ""
 	local next_alternate = ""
 	local static = static_text
-	local title = displayed_song
-	init_opacity = 0;
+	local title = ""
+	
+	if not using_source then
+		title = prepared_songs[prepared_index]
+	else
+		title = source_song_title
+	end
+	--init_opacity = 0;
 	
 	local source = obs.obs_get_source_by_name(source_name)
 	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
+	local stat_source = obs.obs_get_source_by_name(static_source_name)
+	local title_source = obs.obs_get_source_by_name(title_source_name)
 	
 	--if visible then
 		--text_fade_dir = 2
 	    --init_opacity = 100
-	if #lyrics > 0 and sourceShowing() then
-		if lyrics[display_index] ~= nil then
-			text = lyrics[display_index]
+	--get text
+	if #lyrics > 0 then --and sourceShowing() then
+		if lyrics[page_index] ~= nil then
+			text = lyrics[page_index]
 		end
 	end
-	if  #alternate > 0 and alternateShowing() then
-		if alternate[display_index] ~= nil then
-			alttext = alternate[display_index]
+	if  #alternate > 0 then --and alternateShowing() then
+		if alternate[page_index] ~= nil then
+			alttext = alternate[page_index]
 		end
 	end	
 
@@ -649,66 +682,101 @@ function update_lyrics_display()
 		end
 	end
 	
-	
-	if alt_source ~= nil then
-		local Asettings = obs.obs_data_create()
-		obs.obs_data_set_string(Asettings, "text", alttext)
-		obs.obs_data_set_int(Asettings, "opacity", init_opacity)    
-		obs.obs_data_set_int(Asettings, "outline_opacity", init_opacity)    
-		obs.obs_source_update(alt_source, Asettings)
-		obs.obs_data_release(Asettings)
-		
-		next_alternate = alternate[display_index+1]
-	    if (next_alternate == nil) then 
-	       next_alternate = ""
-		end
-	end
+	-- update source texts
 	if source ~= nil then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_string(settings, "text", text)
-		obs.obs_data_set_int(settings, "opacity", init_opacity)    
-		obs.obs_data_set_int(settings, "outline_opacity", init_opacity)    
+		--obs.obs_data_set_int(settings, "opacity", init_opacity)    
+		--obs.obs_data_set_int(settings, "outline_opacity", init_opacity)    
 		obs.obs_source_update(source, settings)
 		obs.obs_data_release(settings)
 		
-		next_lyric = lyrics[display_index + 1]
+		next_lyric = lyrics[page_index + 1]
 		if (next_lyric == nil) then 
 			next_lyric = ""
 		end
 	end
+	if alt_source ~= nil then
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_string(settings, "text", alttext)
+		--obs.obs_data_set_int(alt_settings, "opacity", init_opacity)    
+		--obs.obs_data_set_int(alt_settings, "outline_opacity", init_opacity)    
+		obs.obs_source_update(alt_source, settings)
+		obs.obs_data_release(settings)
+		
+		next_alternate = alternate[page_index + 1]
+	    if (next_alternate == nil) then 
+	       next_alternate = ""
+		end
+	end
+	if stat_source ~= nil then
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_string(settings, "text", static)
+		obs.obs_source_update(stat_source, settings)
+		obs.obs_data_release(settings)
+	end
+	if title_source ~= nil then
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_string(settings, "text", title)
+		obs.obs_source_update(title_source, settings)
+		obs.obs_data_release(settings)
+	end
+	-- release source references
 	obs.obs_source_release(source)
 	obs.obs_source_release(alt_source)
-	local stat_source = obs.obs_get_source_by_name(static_source_name)
-	if stat_source ~= nil then
-		local Xsettings = obs.obs_data_create()
-		obs.obs_data_set_string(Xsettings, "text", static)
-		obs.obs_source_update(stat_source, Xsettings)
-		obs.obs_data_release(Xsettings)
-	end
 	obs.obs_source_release(stat_source)		
-	local title_source = obs.obs_get_source_by_name(title_source_name)
-	if title_source ~= nil then
-		local Tsettings = obs.obs_data_create()
-		obs.obs_data_set_string(Tsettings, "text", title)
-		obs.obs_source_update(title_source, Tsettings)
-		obs.obs_data_release(Tsettings)
-	end
 	obs.obs_source_release(title_source)
 
 
-	local next_prepared = prepared_songs[prepared_index+1]
+	local next_prepared = prepared_songs[prepared_index + 1]
 	if (next_prepared == nil) then 
 	   next_prepared = ""
 	end
-	update_monitor(displayed_song, text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
+	update_monitor(title, text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
 	if obs.obs_data_get_bool(script_sets, "transition_enabled") then 
-	  if FirstTransition then
+	  if first_transition then
 		obs.obs_frontend_preview_program_trigger_transition()
 	  end
 	end
 end
 
+function apply_source_opacity()
+	local settings = obs.obs_data_create()
+	local source = obs.obs_get_source_by_name(source_name)
+	if source ~= nil then
+		obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+		obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+		obs.obs_source_update(source, settings)
+	end
+	obs.obs_source_release(source)
+	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
+	if alt_source ~= nil then	
+		obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+		obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+		obs.obs_source_update(alt_source, settings)
+	end
+	obs.obs_source_release(alt_source)
+	if text_status ~= TEXT_TRANSITION_IN and text_status ~= TEXT_TRANSITION_OUT then
+		local title_source = obs.obs_get_source_by_name(title_source_name)
+		if title_source ~= nil then	
+			obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+			obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+			obs.obs_source_update(title_source, settings)
+		end
+		obs.obs_source_release(title_source)	
+		local static_source = obs.obs_get_source_by_name(static_source_name)
+		if static_source ~= nil then	
+			obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+			obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
+			obs.obs_source_update(static_source, settings)
+		end
+		obs.obs_source_release(static_source)
+	end
+	obs.obs_data_release(settings)
+end
+
 function set_text_visiblity(end_status)
+	dbg_method("set_text_visiblity")
 	--if already at desired visibility, then exit
 	if text_status == end_status then return end
 	--if fade is disabled, change visibility immediately
@@ -720,57 +788,58 @@ function set_text_visiblity(end_status)
 		end
 		text_status = end_status
 		apply_source_opacity()
+		dbg_inner("immediate visibility change")
 	else
-	--if fade enabled, begin fade in or out
+		--if fade enabled, begin fade in or out
 		if end_status == TEXT_HIDDEN then
 			text_status = TEXT_HIDING
 		elseif end_status == TEXT_VISIBLE then
 			text_status = TEXT_SHOWING
 		end
+		start_fade_timer()
 	end
 end
 
 --transition to the next lyrics, use fade if enabled
 --if lyrics are hidden, force_show set to true will make them visible
 function transition_lyric_text(force_show)
+	dbg_method("transition_lyric_text")
 	--update the lyrics display immediately on 2 conditions
 	-- a) the text is hidden or hiding, and we will not force it to show
 	-- b) text fade is not enabled
 	-- otherwise, start text transition out and update the lyrics once
 	-- fade out transition is complete
-	if ((text_status == TEXT_HIDDEN or text_status == TEXT_HIDING) and not force_show) or not text_fade_enabled then
-		update_lyrics_display()
+	if (text_status == TEXT_HIDDEN or text_status == TEXT_HIDING) and not force_show then
+		update_source_text()
+		dbg_inner("hidden")
+	elseif not text_fade_enabled then
+		update_source_text()
+		set_text_visiblity(TEXT_VISIBLE)
+		dbg_inner("no text fade")
 	else
 		text_status = TEXT_TRANSITION_OUT
+		start_fade_timer()
 	end
 end
 
-function apply_source_opacity()
-	local source = obs.obs_get_source_by_name(source_name)
-	if source ~= nil then
-		local settings = obs.obs_data_create()
-		obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
-		obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
-		obs.obs_source_update(source, settings)
-		obs.obs_data_release(settings)
+function start_fade_timer()
+	if not timer_exists then 
+		timer_exists = true
+		obs.timer_add(fade_callback, 50)
+		dbg_inner("started fade timer")
 	end
-	obs.obs_source_release(source)
-	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
-	if alt_source ~= nil then
-		local alt_settings = obs.obs_data_create()
-		obs.obs_data_set_int(alt_settings, "opacity", text_opacity)  -- Set new text opacity to zero
-		obs.obs_data_set_int(alt_settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero			
-		obs.obs_source_update(alt_source, alt_settings)
-		obs.obs_data_release(alt_settings)
-	end
-	obs.obs_source_release(alt_source)	
 end
 
-function timer_callback()
+function fade_callback()
+	dbg_method("fade_callback")
 	--if not in a transitory state, exit callback
-	if text_status == TEXT_HIDDEN or text_status == TEXT_VISIBLE then return end
+	if text_status == TEXT_HIDDEN or text_status == TEXT_VISIBLE then
+		timer_exists = false
+		obs.remove_current_callback()
+		dbg_inner("ended fade timer")
+	end
 	--the amount we want to change opacity by
-	local opacity_delta = 1 + (text_fade_speed * 2)
+	local opacity_delta = 1 + text_fade_speed
 	--change opacity in the direction of transitory state
 	if text_status == TEXT_HIDING or text_status == TEXT_TRANSITION_OUT then
 		local new_opacity = text_opacity - opacity_delta
@@ -780,7 +849,7 @@ function timer_callback()
 			--completed fade out, determine next move
 			text_opacity = 0
 			if text_status == TEXT_TRANSITION_OUT then
-				update_lyrics_display()	
+				update_source_text()	
 				text_status = TEXT_TRANSITION_IN
 			else 
 				text_status = TEXT_HIDDEN
@@ -800,21 +869,29 @@ function timer_callback()
 	apply_source_opacity()
 end
 
+function prepare_song_by_index(index)
+	if index <= #prepared_songs then
+		prepare_song_by_name(prepared_songs[index])
+	end	
+end
+
 -- prepares lyrics of the song
-function prepare_lyrics(name)
-	pause_timer = true
-	if name == nil then return end
-	FirstTransition = false
+function prepare_song_by_name(name)
+	--pause_timer = true
+	if name == nil then return false end
+	first_transition = false
 	local song_lines = get_song_text(name)
 	local cur_line = 1
 	local cur_aline = 1
 	local recordRefrain = false
 	local playRefrain = false
+	local use_alternate = false
+	local use_static = false
 	local showText = true
 	local commentBlock = false
 	local singleAlternate = false
-	refrain = {}
-	arefrain = {}
+	local refrain = {}
+	local arefrain = {}
 	lyrics = {}
 	alternate = {}
 	static_text = ""
@@ -844,25 +921,25 @@ function prepare_lyrics(name)
 			end			
 			local alternate_index = line:find("#A%[")
 			if alternate_index ~= nil then
-				useAlternate = true
+				use_alternate = true
 				line = line:sub(1, alternate_index - 1)
 				new_lines = 0	
 			end
 			alternate_index = line:find("#A]")
 			if alternate_index ~= nil then
-				useAlternate = false
+				use_alternate = false
 				line = line:sub(1, alternate_index - 1)
 				new_lines = 0	
 			end	
 			local static_index = line:find("#S%[")
 			if static_index ~= nil then
-				useStatic = true
+				use_static = true
 				line = line:sub(1, static_index - 1)
 				new_lines = 0	
 			end
 			static_index = line:find("#S]")
 			if static_index ~= nil then
-				useStatic = false
+				use_static = false
 				line = line:sub(1, static_index - 1)
 				new_lines = 0	
 			end					
@@ -871,7 +948,7 @@ function prepare_lyrics(name)
 			if newcount_index ~= nil then
 				local iS,iE = line:find("%d+",newcount_index+3)
 				local newLines = tonumber(line:sub(iS,iE))
-				if useAlternate then
+				if use_alternate then
 					alternate_display_lines = newLines
 				elseif recordRefrain then
 					refrain_display_lines = newLines
@@ -919,7 +996,7 @@ function prepare_lyrics(name)
 				line = line:sub(1, refrain_index - 1)
 				new_lines = 0	
 			end
-			local refrain_index = line:find("#r%[")
+			refrain_index = line:find("#r%[")
 			if refrain_index ~= nil then
 				if next(refrain) ~= nil then
 					for i, _ in ipairs(refrain) do refrain[i] = nil end
@@ -951,12 +1028,12 @@ function prepare_lyrics(name)
 			else
 				playRefrain = false
 			end
-			local newcount_index = line:find("#P:")
+			newcount_index = line:find("#P:")
 			if newcount_index ~= nil then
 				new_lines = tonumber(line:sub(newcount_index+3))
 				line = line:sub(1, newcount_index - 1)	
 			end	
-			local newcount_index = line:find("#B:")
+			newcount_index = line:find("#B:")
 			if newcount_index ~= nil then
 				line = line:sub(1, newcount_index - 1)
 			end			
@@ -964,20 +1041,20 @@ function prepare_lyrics(name)
 			if phantom_index ~= nil then
 				line = line:sub(1, phantom_index - 1)
 			end	
-			local phantom_index = line:find("##B")
+			phantom_index = line:find("##B")
 			if phantom_index ~= nil then
 				line = line:gsub("%s*##B%s*", "") .. "\n"
 				--line = line:sub(1, phantom_index - 1)
 			end
 		    if line ~= nil then 
-				if useStatic then
+				if use_static then
 					if static_text == "" then 
 						static_text = line 
 					else 
 						static_text = static_text .. "\n" .. line
 					end
 				else
-					if useAlternate or singleAlternate then
+					if use_alternate or singleAlternate then
 						if recordRefrain then 
 							displaySize = refrain_display_lines 
 						else 
@@ -1076,7 +1153,7 @@ function prepare_lyrics(name)
 	if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then
 		for i = cur_line, displaySize, 1 do
 			cur_line = i
-			if useAlternate then
+			if use_alternate then
 				if showText and alternate[#alternate] ~= nil then
 					alternate[#alternate] = alternate[#alternate] .. "\n"
 				end
@@ -1091,10 +1168,12 @@ function prepare_lyrics(name)
 		end
 	end
 	lyrics[#lyrics + 1] = ""
-	pause_timer = false
+	--pause_timer = false
+	return true
 end
 
 -- finds the index of a song in the directory
+--if item is not in list, then return nil
 function get_index_in_list(list, q_item)
 	for index, item in ipairs(list) do
 		if item == q_item then return index end
@@ -1110,7 +1189,7 @@ end
 
 -- loads the song directory
 function load_song_directory()
-	pause_timer = true
+	--pause_timer = true
 	song_directory = {}
 	local filenames = {}
 	local dir = obs.os_opendir(get_songs_folder_path())--get_songs_folder_path())
@@ -1130,7 +1209,7 @@ function load_song_directory()
 	  end
 	until not entry
 	obs.os_closedir(dir)
-	pause_timer = false
+	--pause_timer = false
 end
 
 -- delete previewed song
@@ -1213,18 +1292,20 @@ end
 
 -- saves preprepared songs
 function save_prepared()
+	dbg_method("save_prepared")
 	local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
     for i, name in ipairs(prepared_songs) do
-		if not scene_load_complete or i > 1 then  --don't save scene prepared songs
+		-- if not scene_load_complete or i > 1 then  --don't save scene prepared songs
 		   file:write(name, "\n")
-		end
+		-- end
 	end
 	file:close()
 	return true
 end
 
 function load_prepared()
-	pause_timer = true
+	dbg_method("load_prepared")
+	-- pause_timer = true
 	local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
 	if file ~= nil then
 		for line in file:lines() do
@@ -1233,11 +1314,12 @@ function load_prepared()
 		prepared_index = 1
 		file:close()
 	end
-	pause_timer = false
+	-- pause_timer = false
 	return true
 end
 
 function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
+	dbg_method("update_monitor")
     local tableback = "#000000"
 	local text = ""
 	text = text .. "<!DOCTYPE html><html>"
@@ -1250,23 +1332,21 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	text = text .. "<meta http-equiv='refresh' content='1'>"
 	text = text .. "</head>"
 	text = text .. "<body style='background-color:black;'><hr style = 'background-color: #98AFC7; height:2px; border:0px; margin: 0px;'>"
-	text = text .. "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; width: 160px; margin: 2px; '>Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index 
-	text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
-	text = text .. "<div style = 'color: #B0E0E6; float: left; width: 145px; margin: 2px; '>Lyric Page: <B style='color: #FFEF00;'>" .. display_index
+	if not using_source then 
+		text = text .. "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; width: 160px; margin: 2px; '>Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index 
+		text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
+	end
+	text = text .. "<div style = 'color: #B0E0E6; float: left; width: 145px; margin: 2px; '>Lyric Page: <B style='color: #FFEF00;'>" .. page_index
     text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .."</b></div>"
 	text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
-	if sourceActive() or alternateActive() or titleActive() or staticActive() then 
-		if scene_load_complete and (prepared_index == 1) then 
-	        text = text .. "From: <B style = 'color: #FFEF00;'> "		
-		    if load_scene ~= nil then
-				 text = text .. load_scene .. "</B>"
-			else 
-				 text = text .. "Prepared</B>"	
-			end
-		end
+	-- show if song is from source or prepared songs
+	text = text .. "From: <B style = 'color: #FFEF00;'> "		
+	if using_source then
+		 text = text .. "Source</B>"
 	else 
-		 tableback = "#440000"
-    end		
+		 text = text .. "Prepared</B>"	
+	end
+
 	text = text .. "</div><table bgcolor=" .. tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
 	if song ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 50px; text-align: center;'>Song<br>Title</td>"
@@ -1307,7 +1387,7 @@ end
 
 -- returns path of the lyrics songs folder
 function get_songs_folder_path()
-    local sep = package.config:sub(1,1)
+    local sep = package.config:sub(1, 1)
     local path = ""
     if windows_os then
         path = os.getenv("USERPROFILE")
@@ -1346,6 +1426,7 @@ end
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
 function script_properties()
+	dbg_method("script_properties")
 	script_props = obs.obs_properties_create()
 	obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title", obs.OBS_TEXT_DEFAULT)
 	local lyric_prop = obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
@@ -1421,7 +1502,9 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_home_button", "Reset to Song Start", home_button_clicked)
 	obs.obs_properties_add_button(script_props, "prop_reset_button", "Reset to First Song", reset_button_clicked)	
-	obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
+	if #prepared_songs > 0 and prepared_index > 0 then
+		obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[prepared_index])
+	end
 
 	obs.obs_properties_apply_settings(script_props, script_sets)
 	
@@ -1491,24 +1574,25 @@ function script_update(settings)
 	end	
 
 	if reload then
-		if #prepared_songs > 0 and displayed_song ~= "" then 
-		   prepare_lyrics(displayed_song)
-		   display_index = 1
-		   update_lyrics_display()
+		if #prepared_songs > 0 and prepared_songs[prepared_index] ~= "" then 
+		   prepare_song_by_name(prepared_songs[prepared_index])
+		   page_index = 1
+		   transition_lyric_text(false)
 		end
 	end
 end
 
 -- A function named script_defaults will be called to set the default settings
 function script_defaults(settings)
+	dbg_method("script_defaults")
 	obs.obs_data_set_default_int(settings, "prop_lines_counter", 2)
-	obs.obs_data_set_default_string(settings, "prop_source_list", prepared_songs[1] )
-	if #prepared_songs ~= 0 then 
-	    displayed_song = prepared_songs[1]
-		prepared_index = 1
-	else
-		displayed_song = ""
-	end
+	--obs.obs_data_set_default_string(settings, "prop_source_list", prepared_songs[1] )
+	--if #prepared_songs ~= 0 then 
+	--    prepared_songs[prepared_index] = prepared_songs[1]
+	--	prepared_index = 1
+	--else
+	--	prepared_songs[prepared_index] = ""
+	--end
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
 	if windows_os then
 		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
@@ -1558,6 +1642,7 @@ end
 
 -- a function named script_load will be called on startup
 function script_load(settings)
+	dbg_method("script_load")
 	hotkey_n_id = obs.obs_hotkey_register_frontend("lyric_next_hotkey", "Advance Lyrics", next_lyric)
 	local hotkey_save_array = obs.obs_data_get_array(settings, "lyric_next_hotkey")
 	obs.obs_hotkey_load(hotkey_n_id, hotkey_save_array)
@@ -1598,11 +1683,8 @@ function script_load(settings)
 	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
 	load_song_directory()
 	load_prepared()
-	if #prepared_songs ~= 0 then
-	  prepare_selected(prepared_songs[1])
-	end
-	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
-	obs.timer_add(timer_callback, 50)	-- Setup callback for text fade effect
+	--obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
+	--obs.timer_add(timer_callback, 50)	-- Setup callback for text fade effect
 end
 
 --------
@@ -1612,9 +1694,8 @@ end
 --------
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
-function rename_prepareLyric()  
-	pause_timer = true
-	TextSources = {}
+function rename_source()  
+	--pause_timer = true
 	local sources = obs.obs_enum_sources()
 	if (sources ~= nil) then
 			-- count and index sources
@@ -1684,7 +1765,7 @@ function rename_prepareLyric()
 		end
 	end
 	obs.source_list_release(sources)
-	pause_timer = false
+	--pause_timer = false
 end
 
 source_def.get_name = function()
@@ -1692,7 +1773,7 @@ source_def.get_name = function()
 end
 
 source_def.update = function (data, settings)
-		rename_prepareLyric()						-- Rename and Mark sources instantly on update (WZ)
+		rename_source()	-- Rename and Mark sources instantly on update (WZ)
 end
 
 source_def.get_properties = function (data)
@@ -1703,93 +1784,128 @@ source_def.get_properties = function (data)
 	for _, name in ipairs(song_directory) do
 		obs.obs_property_list_add_string(source_dir_list, name, name)
 	end
-	obs.obs_properties_add_bool(props,"inPreview","Change Lyrics in Preview Mode")  -- Option to load new lyric in preview mode
-	obs.obs_properties_add_bool(props,"autoHome","Home Lyrics with Scene")  -- Option to home new lyric in preview mode	return props
+	obs.obs_properties_add_bool(props, "source_activate_in_preview", "Activate song in Preview mode")  -- Option to load new lyric in preview mode
+	obs.obs_properties_add_bool(props, "source_home_on_active", "Go to lyrics home on source activation")  -- Option to home new lyric in preview mode
 	return props
 end
 
 source_def.create = function(settings, source)
     data = {}
 	sh = obs.obs_source_get_signal_handler(source)
-	obs.signal_handler_connect(sh,"activate",active)   --Set Active Callback
-	obs.signal_handler_connect(sh,"show",showing)	   --Set Preview Callback
+	obs.signal_handler_connect(sh, "activate", source_active)   --Set Active Callback
+	obs.signal_handler_connect(sh, "show", source_showing)	   --Set Preview Callback
+	obs.signal_handler_connect(sh, "hide", source_hidden)	   --Set Preview Callback
 	return data
 end
 
 source_def.get_defaults = function(settings) 
-   obs.obs_data_set_default_bool(settings, "inPreview", false)
-   obs.obs_data_set_default_string(settings,"index","0")
+   obs.obs_data_set_default_bool(settings, "source_activate_in_preview", false)
+   obs.obs_data_set_default_string(settings, "index", "0")
 end
 
 source_def.destroy = function(source)
 
 end
 
-function on_event(event)
-	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-	    set_current_scene_name()
-		rename_prepareLyric()  
-	    update_lyrics_display()
-	end
+-- function on_event(event)
+	-- if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+	    -- set_current_scene_name()
+		-- rename_source()  
+	    -- --update_source_text()
+		-- transition_lyric_text(false)
+	-- end
 
 		
-end
+-- end
 
-function loadSong(source, preview)
+function load_song(source, preview)
+	dbg_method("load_song")
 	local settings = obs.obs_source_get_settings(source)
-	if not preview or (preview and obs.obs_data_get_bool(settings, "inPreview")) then 
+	if not preview or (preview and obs.obs_data_get_bool(settings, "source_activate_in_preview")) then 
 		local song = obs.obs_data_get_string(settings, "songs")
-		if song ~= displayed_song then 
-			print("Loading song from source")
-			if song == nil then return end
-			if song == "" then return end
-			if song == displayed_song then return end
-			if song == prepared_songs[1] then return end
-			local prop_prep_list = obs.obs_properties_get(script_props, "prop_prepared_list")
-			if scene_load_complete then
-				obs.obs_property_list_item_remove(prop_prep_list, 0)
-				table.remove(prepared_songs , 1)  -- clear older scene loaded song	
-			end
-			obs.obs_property_list_insert_string(prop_prep_list, 0, song, song)
-			table.insert(prepared_songs, 1, song)
-			scene_load_complete = true
-			obs.obs_data_set_string(script_sets, "prop_prepared_list", song)
-			obs.obs_properties_apply_settings(script_props, script_sets)
-			prepare_lyrics(song)
-			save_prepared()
-			displayed_song = song
-			display_index = 1
-			prepared_index = 1
-			set_current_scene_name()
-			load_scene = current_scene
-			update_lyrics_display()
+		--if song ~= prepared_songs[prepared_index] then 
+			if song == nil
+				or song == ""
+				then return end
+				dbg_inner("load_song: " .. song)
+			--local prop_prep_list = obs.obs_properties_get(script_props, "prop_prepared_list")
+			--if scene_load_complete then
+			--	obs.obs_property_list_item_remove(prop_prep_list, 0)
+			--	table.remove(prepared_songs , 1)  -- clear older scene loaded song	
+			--end
+			--obs.obs_property_list_insert_string(prop_prep_list, 0, song, song)
+			--table.insert(prepared_songs, 1, song)
+			--scene_load_complete = true
+			--obs.obs_data_set_string(script_sets, "prop_prepared_list", song)
+			--obs.obs_properties_apply_settings(script_props, script_sets)
+			
+			--update scene info
+			--set_current_scene_name()
+			--load_scene = current_scene
+			
+			using_source = true
+			
+			--prepare song and update lyrics
+			-- if (song ~= prepared_songs[prepared_index]) then
+				prepare_selected(song)
+			-- end
+			
+			--save_prepared()
+			--page_index = 1
+			--prepared_index = 1
+			
+			--update_source_text()
 			--text_opacity = 99
 			--text_fade_dir = 2
-			transition_lyric_text(true)  
-		end
-		if obs.obs_data_get_bool(settings, "autoHome") then
+			--transition_lyric_text(true)  
+		--end
+		-- TODO: ensure home on activate working correctly
+		if obs.obs_data_get_bool(settings, "source_home_on_active") then
 			home_prepared(true)
 		end		
 	end
 	obs.obs_data_release(settings)
 end
 
-function active(cd)
-	local source = obs.calldata_source(cd,"source")
+function source_active(cd)
+	local source = obs.calldata_source(cd, "source")
 	if source == nil then 
 		return
 	end
-	loadSong(source,false)
+	load_song(source, false)
 end
 
-function showing(cd)
-    local source = obs.calldata_source(cd,"source")
+function source_showing(cd)
+    local source = obs.calldata_source(cd, "source")
 	if source == nil then
 		return
 	end
-	if sourceActive() then return end
-	loadSong(source,true)
+	--if sourceActive() then return end
+	load_song(source, true)
 end
 
+function dbg(message)
+	if DEBUG then
+		print(message)
+	end
+end
+
+function dbg_inner(message)
+	if DEBUG_INNER then
+		dbg("INNER: " .. message)
+	end
+end
+
+function dbg_method(message)
+	if DEBUG_METHODS then
+		dbg("METHOD: " .. message)
+	end
+end
+
+function dbg_custom(message)
+	if DEBUG_CUSTOM then
+		dbg("CUSTOM: " .. message)
+	end
+end
 
 obs.obs_register_source(source_def);
