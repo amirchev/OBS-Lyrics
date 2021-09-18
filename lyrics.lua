@@ -83,6 +83,11 @@
 -- added refresh song directory to refresh sources button (songs are sources of a sort)
 -- added button to edit song text in default system editor for .txt or .enc file types.
 
+-- Source update by W. Zaggle (DCSTRATO) 9/18/2021
+-- Repair restart lyric
+-- Repair restart list
+-- Indicate hidden lyrics/alt in monitor
+
 obs = obslua
 bit = require("bit")
 
@@ -372,6 +377,7 @@ function home_prepared(pressed)
 	   prepared_index = 1
 	   prepare_selected(prepared_songs[prepared_index])   -- redundant from above
 	end
+	update_lyrics_display()
 	return true
 end
 
@@ -382,6 +388,7 @@ function home_song(pressed)
 	   display_index = 1
 	end
 	prepare_selected(prepared_songs[prepared_index])   -- redundant from above
+	update_lyrics_display()
 	return true
 end
 
@@ -446,6 +453,10 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	else 
 		 tableback = "#440000"
     end		
+	local visbg = "black"
+	if not visible then
+	   visbg = "maroon"
+	end
 	text = text .. "</div><table bgcolor=" .. tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
 	if song ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 50px; text-align: center;'>Song<br>Title</td>"
@@ -453,7 +464,7 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	end
 	if lyric ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: PaleGreen;  text-align: center;'>Current<br>Page</td>"
-		text = text .. "<td style='color: PaleGreen;'> &bull; " .. lyric .. "</td></tr>"
+		text = text .. "<td bgcolor= '" .. visbg .."' style='color: palegreen;'> &bull; " .. lyric .. "</td></tr>"
 	end
 	if nextlyric ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Lavender;  text-align: center;'>Next<br>Page</td>"
@@ -461,7 +472,7 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
 	end
 	if alt ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: SpringGreen; text-align: center;'>Alt<br>Lyric</td>"
-		text = text .. "<td  style='color: SpringGreen;'> &bull; " .. alt .. "</td></tr>"
+		text = text .. "<td bgcolor= '" .. visbg .."' style='color: SpringGreen; ;'> &bull; " .. alt .. "</td></tr>"
 	end
 	if nextalt ~= "" then
 		text = text .. "<tr style='border-bottom: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: Plum; text-align: center;'>Next<br>Alt</td>"
@@ -692,7 +703,9 @@ end
 function update_lyrics_display()
 
 	local text = ""
+	local mon_text = ""   -- patch monitor update for now
 	local alttext = "" 
+	local mon_alttext = ""  -- patch this one too
 	local next_lyric = ""
 	local next_alternate = ""
 	local static = static_text
@@ -702,30 +715,29 @@ function update_lyrics_display()
 	local source = obs.obs_get_source_by_name(source_name)
 	local alt_source = obs.obs_get_source_by_name(alternate_source_name)
 	
+	if #lyrics > 0 and sourceShowing() then
+		if lyrics[display_index] ~= nil then
+			mon_text = lyrics[display_index]
+		end
+	end
+	if  #alternate > 0 and alternateShowing() then
+		if alternate[display_index] ~= nil then
+			mon_alttext = alternate[display_index]
+		end
+	end	
 	if visible then
 		text_fade_dir = 2
 	    init_opacity = 100
-		if #lyrics > 0 and sourceShowing() then
-			if lyrics[display_index] ~= nil then
-				text = lyrics[display_index]
-			end
-		end
-		if  #alternate > 0 and alternateShowing() then
-			if alternate[display_index] ~= nil then
-				alttext = alternate[display_index]
-			end
-		end	
-
-    end	
-	
+		text = mon_text
+		alttext = mon_altext
+	end	
 	if link_text then
 		if string.len(text) == 0 and string.len(alttext) == 0 then
 			static = ""
 			title = ""
 		end
 	end
-	
-	
+		
 	if alt_source ~= nil then
 		local Asettings = obs.obs_data_create()
 		obs.obs_data_set_string(Asettings, "text", alttext)
@@ -771,12 +783,12 @@ function update_lyrics_display()
 	end
 	obs.obs_source_release(title_source)
 
-
 	local next_prepared = prepared_songs[prepared_index+1]
 	if (next_prepared == nil) then 
 	   next_prepared = ""
 	end
-	update_monitor(displayed_song, text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
+	update_monitor(displayed_song, mon_text:gsub("\n","<br>&bull; "), next_lyric:gsub("\n","<br>&bull; "), mon_alttext:gsub("\n","<br>&bull; "), next_alternate:gsub("\n","<br>&bull; "), next_prepared)
+
 	if obs.obs_data_get_bool(script_sets, "transition_enabled") then 
 	  if FirstTransition then
 		obs.obs_frontend_preview_program_trigger_transition()
