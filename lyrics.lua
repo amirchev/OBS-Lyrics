@@ -789,6 +789,7 @@ function prepare_song_by_name(name)
     lyrics = {}
     alternate = {}
     static_text = ""
+	alt_title = ""
     local adjusted_display_lines = display_lines
     local refrain_display_lines = display_lines
     local alternate_display_lines = display_lines
@@ -861,6 +862,13 @@ function prepare_song_by_name(name)
                 static_text = line
                 new_lines = 0
             end
+            local title_index = line:find("#T:")
+            if title_index ~= nil then
+                local title_indexEnd = line:find("%s+", title_index + 1)
+                line = line:sub(title_indexEnd + 1)
+                alt_title = line
+                new_lines = 0
+            end			
             local alt_index = line:find("#A:")
             if alt_index ~= nil then
                 local alt_indexStart, alt_indexEnd = line:find("%d+", alt_index + 3)
@@ -1257,15 +1265,19 @@ function update_source_text()
     local static = static_text
     local mstatic = static -- save static for use with monitor
     local title = ""
-    if not using_source then
-        dbg_custom("Load title from prepared: " .. prepared_index)
-        if prepared_index ~= nil or prepared_index ~= 0 then
-            title = prepared_songs[prepared_index]
-        end
-    else
-        dbg_custom("Load title from source")
-        title = source_song_title
-    end
+	if alt_title ~= "" then 
+	    title = alt_title
+	else
+		if not using_source then
+			dbg_custom("Load title from prepared: " .. prepared_index)
+			if prepared_index ~= nil or prepared_index ~= 0 then
+				title = prepared_songs[prepared_index]
+			end
+		else
+			dbg_custom("Load title from source")
+			title = source_song_title
+		end
+	end
     local mtitle = title -- save title for use with monitor
 
     local source = obs.obs_get_source_by_name(source_name)
@@ -1501,7 +1513,7 @@ end
 function script_properties()
     dbg_method("script_properties")
     script_props = obs.obs_properties_create()
-    obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title", obs.OBS_TEXT_DEFAULT)
+    obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
     local lyric_prop =
         obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
     obs.obs_property_set_long_description(lyric_prop, "Lyric Text with Markup")
@@ -1652,7 +1664,7 @@ end
 -- A function named script_description returns the description shown to
 -- the user
 function script_description()
-    return "Manage song lyrics to be displayed as subtitles (Version: September 2021 (beta2)  Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr></table>"
+    return "Manage song lyrics to be displayed as subtitles (Version: September 2021 (beta2)  Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr><tr><th>Titles with invalid filename characters are encoded for compatiblity</th></tr><tr><th>Option is to markup override title with #T:<i>title text inside lyrics</i></th></tr></table>"
 end
 
 function change_fade_property(props, prop, settings)
