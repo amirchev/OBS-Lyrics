@@ -1513,62 +1513,78 @@ end
 function script_properties()
     dbg_method("script_properties")
     script_props = obs.obs_properties_create()
-    obs.obs_properties_add_text(script_props, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
+-----------
+	info_prop = obs.obs_properties_add_bool(script_props, "info_showing", "Hide Song Information")
+    obs.obs_property_set_modified_callback(info_prop, change_info_visible)
+	gp = obs.obs_properties_create()
+    obs.obs_properties_add_text(gp, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
     local lyric_prop =
-        obs.obs_properties_add_text(script_props, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
+        obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
     obs.obs_property_set_long_description(lyric_prop, "Lyric Text with Markup")
-    obs.obs_properties_add_button(script_props, "prop_save_button", "Save Song", save_song_clicked)
-    local prop_dir_list =
-        obs.obs_properties_add_list(
-        script_props,
-        "prop_directory_list",
-        "Song Directory",
-        obs.OBS_COMBO_TYPE_LIST,
-        obs.OBS_COMBO_FORMAT_STRING
-    )
+    obs.obs_properties_add_button(gp, "prop_save_button", "Save Song", save_song_clicked)
+    obs.obs_properties_add_button(gp, "prop_delete_button", "Delete Song", delete_song_clicked)
+    obs.obs_properties_add_button(gp, "prop_opensong_button","Edit Song with System Editor", open_song_clicked)
+	obs.obs_properties_add_button(gp, "prop_open_button", "Open Songs Folder", open_button_clicked)
+	obs.obs_properties_add_group(script_props,"info_grp","Song Title (filename) and Lyrics Information", obs.OBS_GROUP_NORMAL,gp)
+------------	
+	prep_prop = obs.obs_properties_add_bool(script_props, "prepared_showing", "Hide Source Selections")
+    obs.obs_property_set_modified_callback(prep_prop, change_prepared_visible)	
+	gp = obs.obs_properties_create()	
+    local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
     table.sort(song_directory)
     for _, name in ipairs(song_directory) do
         obs.obs_property_list_add_string(prop_dir_list, name, name)
     end
     obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
-
-    obs.obs_properties_add_button(script_props, "prop_prepare_button", "Prepare Song", prepare_song_clicked)
-    obs.obs_properties_add_button(script_props, "prop_delete_button", "Delete Song", delete_song_clicked)
-    obs.obs_properties_add_button(
-        script_props,
-        "prop_opensong_button",
-        "Edit Song with System Editor",
-        open_song_clicked
-    )
-    obs.obs_properties_add_button(script_props, "prop_open_button", "Open Songs Folder", open_button_clicked)
-    local lines_prop = obs.obs_properties_add_int(script_props, "prop_lines_counter", "Lines to Display", 1, 100, 1)
+    obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
+		gps = obs.obs_properties_create()
+		obs.obs_properties_add_group(gp, "line", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
+    local prep_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+    prepare_props = prep_prop
+    for _, name in ipairs(prepared_songs) do
+        obs.obs_property_list_add_string(prep_prop, name, name)
+    end
+    obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
+    obs.obs_properties_add_button(gps, "prop_undo_button", "UnPrepare Selected Song", remove_selection_made)
+	obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs", clear_prepared_clicked)
+	obs.obs_properties_add_group(script_props,"prep_grp","Manage Prepared Songs", obs.OBS_GROUP_NORMAL,gp)	
+------	
+	options_prop = obs.obs_properties_add_bool(script_props, "options_showing", "Hide Display Options")
+    obs.obs_property_set_modified_callback(options_prop, change_options_visible)
+	
+	gp = obs.obs_properties_create()	
+    local lines_prop = obs.obs_properties_add_int(gp, "prop_lines_counter", "Lines to Display", 1, 100, 1)
     obs.obs_property_set_long_description(
         lines_prop,
         "Sets default lines per page of lyric, overwritten by Markup: #L:n"
     )
 
-    local prop_lines = obs.obs_properties_add_bool(script_props, "prop_lines_bool", "Strictly ensure number of lines")
+    local prop_lines = obs.obs_properties_add_bool(gp, "prop_lines_bool", "Strictly ensure number of lines")
     obs.obs_property_set_long_description(prop_lines, "Guarantees fixed number of lines per page")
 
     local link_prop =
-        obs.obs_properties_add_bool(script_props, "link_text", "Only show title and static text with lyrics")
+        obs.obs_properties_add_bool(gp, "link_text", "Only show title and static text with lyrics")
     obs.obs_property_set_long_description(link_prop, "Hides title and static text at end of lyrics")
 
     local transition_prop =
-        obs.obs_properties_add_bool(script_props, "transition_enabled", "Transition Preview to Program on lyric change")
+    obs.obs_properties_add_bool(gp, "transition_enabled", "Transition Preview to Program on lyric change")
     obs.obs_property_set_modified_callback(transition_prop, change_transition_property)
     obs.obs_property_set_long_description(
         transition_prop,
         "Use with Studio Mode, duplicate sources, and OBS source transitions"
     )
 
-    local fade_prop = obs.obs_properties_add_bool(script_props, "text_fade_enabled", "Enable text fade") -- Fade Enable (WZ)
+    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable text fade") -- Fade Enable (WZ)
     obs.obs_property_set_modified_callback(fade_prop, change_fade_property)
-    obs.obs_properties_add_int_slider(script_props, "text_fade_speed", "Fade Speed", 1, 10, 1)
-
+    obs.obs_properties_add_int_slider(gp, "text_fade_speed", "Fade Speed", 1, 10, 1)
+	obs.obs_properties_add_group(script_props,"disp_grp","Display Options", obs.OBS_GROUP_NORMAL,gp)
+-------------	
+	src_prop = obs.obs_properties_add_bool(script_props, "src_showing", "Hide Source Selections")
+    obs.obs_property_set_modified_callback(src_prop, change_src_visible)
+	gp = obs.obs_properties_create()
     local source_prop =
         obs.obs_properties_add_list(
-        script_props,
+        gp,
         "prop_source_list",
         "Text Source",
         obs.OBS_COMBO_TYPE_LIST,
@@ -1577,7 +1593,7 @@ function script_properties()
     obs.obs_property_set_long_description(source_prop, "Shows main lyric text")
     local title_source_prop =
         obs.obs_properties_add_list(
-        script_props,
+        gp,
         "prop_title_list",
         "Title Source",
         obs.OBS_COMBO_TYPE_LIST,
@@ -1586,7 +1602,7 @@ function script_properties()
     obs.obs_property_set_long_description(title_source_prop, "Shows text from song title")
     local alternate_source_prop =
         obs.obs_properties_add_list(
-        script_props,
+        gp,
         "prop_alternate_list",
         "Alternate Source",
         obs.OBS_COMBO_TYPE_LIST,
@@ -1595,7 +1611,7 @@ function script_properties()
     obs.obs_property_set_long_description(alternate_source_prop, "Shows text annotated with #A[ and #A]")
     local static_source_prop =
         obs.obs_properties_add_list(
-        script_props,
+        gp,
         "prop_static_list",
         "Static Source",
         obs.OBS_COMBO_TYPE_LIST,
@@ -1624,38 +1640,27 @@ function script_properties()
         end
     end
     obs.source_list_release(sources)
-    obs.obs_properties_add_button(script_props, "prop_refresh", "Refresh Sources", refresh_button_clicked)
-    local prep_prop =
-        obs.obs_properties_add_list(
-        script_props,
-        "prop_prepared_list",
-        "Prepared Songs",
-        obs.OBS_COMBO_TYPE_EDITABLE,
-        obs.OBS_COMBO_FORMAT_STRING
-    )
-    prepare_props = prep_prop
-    for _, name in ipairs(prepared_songs) do
-        obs.obs_property_list_add_string(prep_prop, name, name)
-    end
-    obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
-    obs.obs_properties_add_button(script_props, "prop_undo_button", "UnPrepare Selected Song", remove_selection_made)
-    obs.obs_properties_add_button(script_props, "prop_clear_button", "Clear Prepared Songs", clear_prepared_clicked)
-    obs.obs_properties_add_button(script_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
-    obs.obs_properties_add_button(script_props, "prop_next_button", "Next Lyric", next_button_clicked)
-    obs.obs_properties_add_button(script_props, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
-    obs.obs_properties_add_button(script_props, "prop_home_button", "Reset to Song Start", home_button_clicked)
-    obs.obs_properties_add_button(script_props, "prop_prev_prep_button", "Previous Prepared", prev_prepared_clicked)
-    obs.obs_properties_add_button(script_props, "prop_next_prep_button", "Next Prepared", next_prepared_clicked)
-    obs.obs_properties_add_button(
-        script_props,
-        "prop_reset_button",
-        "Reset to First Prepared Song",
-        reset_button_clicked
-    )
+    obs.obs_properties_add_button(gp, "prop_refresh", "Refresh Sources", refresh_button_clicked)
+ 	obs.obs_properties_add_group(script_props,"src_grp","Text Sources in Scenes", obs.OBS_GROUP_NORMAL,gp)
+------------------		
+	ctrl_prop = obs.obs_properties_add_bool(script_props, "ctrl_showing", "Hide Lyric Controls")
+    obs.obs_property_set_modified_callback(ctrl_prop, change_ctrl_visible)
+
+	gp = obs.obs_properties_create()	
+    obs.obs_properties_add_button(gp, "prop_prev_button", "Previous Lyric", prev_button_clicked)
+    obs.obs_properties_add_button(gp, "prop_next_button", "Next Lyric", next_button_clicked)
+    obs.obs_properties_add_button(gp, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
+    obs.obs_properties_add_button(gp, "prop_home_button", "Reset to Song Start", home_button_clicked)
+    obs.obs_properties_add_button(gp, "prop_prev_prep_button", "Previous Prepared", prev_prepared_clicked)
+    obs.obs_properties_add_button(gp, "prop_next_prep_button", "Next Prepared", next_prepared_clicked)
+    obs.obs_properties_add_button(gp,"prop_reset_button","Reset to First Prepared Song",reset_button_clicked)
+	obs.obs_properties_add_group(script_props,"ctrl_grp","Lyric Controls (Duplicated by Hot Keys)", obs.OBS_GROUP_NORMAL,gp)
+-----------------		
     if #prepared_songs > 0 then
         obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
     end
-
+	pp = obs.obs_properties_get(script_props,"ctrl_grp")
+	obs.obs_property_set_visible(pp, true)
     obs.obs_properties_apply_settings(script_props, script_sets)
 
     return script_props
@@ -1665,6 +1670,41 @@ end
 -- the user
 function script_description()
     return "Manage song lyrics to be displayed as subtitles (Version: September 2021 (beta2)  Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr><tr><th>Titles with invalid filename characters are encoded for compatiblity</th></tr><tr><th>Option is to markup override title with #T:<i>title text inside lyrics</i></th></tr></table>"
+end
+
+function change_info_visible(props, prop, settings)
+    local visible = obs.obs_data_get_bool(settings, "info_showing")
+	local ctrlpp = obs.obs_properties_get(script_props,"info_grp")
+	obs.obs_property_set_visible(ctrlpp, not visible)
+    return true
+end
+
+function change_prepared_visible(props, prop, settings)
+    local visible = obs.obs_data_get_bool(settings, "prepared_showing")
+	local ctrlpp = obs.obs_properties_get(script_props,"prep_grp")
+	obs.obs_property_set_visible(ctrlpp, not visible)
+    return true
+end
+
+function change_options_visible(props, prop, settings)
+    local visible = obs.obs_data_get_bool(settings, "options_showing")
+	local ctrlpp = obs.obs_properties_get(script_props,"disp_grp")
+	obs.obs_property_set_visible(ctrlpp, not visible)
+    return true
+end
+
+function change_src_visible(props, prop, settings)
+    local visible = obs.obs_data_get_bool(settings, "src_showing")
+	local ctrlpp = obs.obs_properties_get(script_props,"src_grp")
+	obs.obs_property_set_visible(ctrlpp, not visible)
+    return true
+end
+
+function change_ctrl_visible(props, prop, settings)
+    local visible = obs.obs_data_get_bool(settings, "ctrl_showing")
+	local ctrlpp = obs.obs_properties_get(script_props,"ctrl_grp")
+	obs.obs_property_set_visible(ctrlpp, not visible)
+    return true
 end
 
 function change_fade_property(props, prop, settings)
