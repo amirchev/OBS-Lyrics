@@ -1,4 +1,4 @@
---- Copyright 2020 amirchev
+----- Copyright 2020 amirchev
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ text_opacity = 100
 text_fade_speed = 1
 text_fade_enabled = false
 load_source = nil
+expandcollapse = false
 
 transition_completed = false
 
@@ -1513,6 +1514,7 @@ end
 function script_properties()
     dbg_method("script_properties")
     script_props = obs.obs_properties_create()
+	obs.obs_properties_add_button(script_props, "expand_all_button", "Expand/Collapse All Groups", expand_all_groups)
 -----------
 	info_prop = obs.obs_properties_add_bool(script_props, "info_showing", "Hide Song Information")
     obs.obs_property_set_modified_callback(info_prop, change_info_visible)
@@ -1670,6 +1672,25 @@ end
 -- the user
 function script_description()
     return "Manage song lyrics to be displayed as subtitles (Version: September 2021 (beta2)  Author: Amirchev & DC Strato; with significant contributions from taxilian. <br><table border = '1'><tr><td><table border='0' cellpadding='0' cellspacing='3'> <tr><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><b><u>Markup</u></b></td><td>&nbsp;&nbsp;</td><td><b><u>Syntax</u></b></td></tr><tr><td>Display n Lines</td><td>&nbsp;&nbsp;</td><td>#L:<i>n</i></td><td></td><td>End Page after Line</td><td>&nbsp;&nbsp;</td><td>Line ###</td></tr><tr><td>Blank(Pad) Line</td><td>&nbsp;&nbsp;</td><td>##B or ##P</td><td></td><td>Blank(Pad) Lines</td><td>&nbsp;&nbsp;</td><td>#B:<i>n</i> or #P:<i>n</i></td></tr><tr><td>External Refrain</td><td>&nbsp;&nbsp;</td><td>#r[ and #r]</td><td></td><td>In-Line Refrain</td><td>&nbsp;&nbsp;</td><td>#R[ and #R]</td></tr><tr><td>Repeat Refrain</td><td>&nbsp;&nbsp;</td><td>##R or ##r</td><td></td><td>Duplicate Line <i>n</i> times</td><td>&nbsp;&nbsp;</td><td>#D:<i>n</i> Line</td></tr><tr><td>Define Static Lines</td><td>&nbsp;&nbsp;</td><td>#S[ and #S]</td><td></td><td>Single Static Line</td><td>&nbsp;&nbsp;</td><td>#S: Line</td></tr><tr><td>Define Alternate Text</td><td>&nbsp;&nbsp;</td><td>#A[ and #A]</td><td></td><td>Alt Repeat <i>n</i> Pages</td><td>&nbsp;&nbsp;</td><td>#A:<i>n</i> Line</td></tr><tr><td>Comment Line</td><td>&nbsp;&nbsp;</td><td>// Line</td><td></td><td>Block Comments</td><td>&nbsp;&nbsp;</td><td>//[ and //]</td></tr></table></td></tr><tr><th>Titles with invalid filename characters are encoded for compatiblity</th></tr><tr><th>Option is to markup override title with #T:<i>title text inside lyrics</i></th></tr></table>"
+end
+function expand_all_groups(props, prop, settings)
+	expandcollapse = not expandcollapse
+    obs.obs_data_set_bool(script_sets, "info_showing", not expandcollapse)
+	local ctrlpp = obs.obs_properties_get(script_props,"info_grp")
+	obs.obs_property_set_visible(ctrlpp, expandcollapse)
+    obs.obs_data_set_bool(script_sets, "prepared_showing", not expandcollapse)	
+	local ctrlpp = obs.obs_properties_get(script_props,"prep_grp")
+	obs.obs_property_set_visible(ctrlpp, expandcollapse)
+    obs.obs_data_set_bool(script_sets, "options_showing", not expandcollapse)	
+	local ctrlpp = obs.obs_properties_get(script_props,"disp_grp")
+	obs.obs_property_set_visible(ctrlpp, expandcollapse)
+    obs.obs_data_set_bool(script_sets, "src_showing", not expandcollapse)	
+	local ctrlpp = obs.obs_properties_get(script_props,"src_grp")
+	obs.obs_property_set_visible(ctrlpp, expandcollapse)
+	obs.obs_data_set_bool(script_sets, "ctrl_showing", not expandcollapse)
+	local ctrlpp = obs.obs_properties_get(script_props,"ctrl_grp")
+	obs.obs_property_set_visible(ctrlpp, expandcollapse)
+	return true		
 end
 
 function change_info_visible(props, prop, settings)
