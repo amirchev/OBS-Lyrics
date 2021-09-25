@@ -1,4 +1,4 @@
------ Copyright 2020 amirchev
+--- Copyright 2020 amirchev
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -1457,7 +1457,7 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
     end
     text = text .. "</table></body></html>"
     local file = io.open(get_songs_folder_path() .. "/" .. "Monitor.htm", "w")
-    dbg_inner("write file")
+    dbg_inner("write monitor file")
     file:write(text)
     file:close()
     return true
@@ -1503,6 +1503,24 @@ function get_song_text(name)
     return song_lines
 end
 
+function get_song_tag(name)
+    local song_lines = {}
+    local path = {}
+    if testValid(name) then
+        path = get_song_file_path(name, ".txt")
+    else
+        path = get_song_file_path(enc(name), ".enc")
+    end
+    local file = io.open(path, "r")
+    if file ~= nil then
+        for line in file:lines() do
+            song_lines[#song_lines + 1] = line
+        end
+        file:close()
+    end
+
+    return song_lines
+end
 -- ------
 ----------------
 ------------------------ OBS DEFAULT FUNCTIONS
@@ -1807,7 +1825,8 @@ function script_defaults(settings)
 end
 
 -- A function named script_save will be called when the script is saved
-function script_save(settings)
+function script_save(settings)	
+	dbg_method("script_save")
     save_prepared()
     local hotkey_save_array = obs.obs_hotkey_save(hotkey_n_id)
     obs.obs_data_set_array(settings, "lyric_next_hotkey", hotkey_save_array)
@@ -2043,8 +2062,8 @@ function load_song(source, preview)
         using_source = true
         load_source = source
         prepare_selected(song)
-        --transition_lyric_text()
-        --set_text_visiblity(TEXT_SHOWING)
+        transition_lyric_text()
+        set_text_visiblity(TEXT_VISIBLE)
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
@@ -2061,6 +2080,7 @@ function source_isactive(cd)
     dbg_inner("source active")
     load_scene = get_current_scene_name()
     load_song(source, false)
+	
     source_active = true -- using source lyric
 end
 
@@ -2081,6 +2101,40 @@ function source_showing(cd)
     end
     load_song(source, true)
 end
+
+function ParseCSVLine (line,sep) 
+	local res = {}
+	local pos = 1
+	sep = sep or ','
+	while true do 
+		local c = string.sub(line,pos,pos)
+		if (c == "") then break end
+		if (c == '"') then
+			local txt = ""
+			repeat
+				local startp,endp = string.find(line,'^%b""',pos)
+				txt = txt..string.sub(line,startp+1,endp-1)
+				pos = endp + 1
+				c = string.sub(line,pos,pos) 
+				if (c == '"') then txt = txt..'"' end 
+			until (c ~= '"')
+			table.insert(res,txt)
+			assert(c == sep or c == "")
+			pos = pos + 1
+		else	
+			local startp,endp = string.find(line,sep,pos)
+			if (startp) then 
+				table.insert(res,string.sub(line,pos,startp-1))
+				pos = endp + 1
+			else
+				table.insert(res,string.sub(line,pos))
+				break
+			end 
+		end
+	end
+	return res
+end
+
 
 function dbg(message)
     if DEBUG then
@@ -2115,5 +2169,6 @@ function dbg_bool(message, value)
         end
     end
 end
+
 
 obs.obs_register_source(source_def)
