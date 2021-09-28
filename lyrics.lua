@@ -59,10 +59,10 @@ lyric_change = false -- Text and Static should only fade when lyrics are changin
 source_song_title = "" -- The song title from a source loaded song
 using_source = false -- true when a lyric load song is being used instead of a pre-prepared song
 source_active = false -- true when a lyric load source is active in the current scene (song is loaded or available to load)
-transition_enabled = false
-load_scene = ""
+
+load_scene = ""       -- name of scene loading a lyric with a source
 timer_exists = false
-forceNoFade = false
+forceNoFade = false  -- allows for instant opacity change even if fade is enabled - Reset each time by set_text_visibility
 
 -- hotkeys
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
@@ -91,10 +91,11 @@ text_fade_enabled = false
 load_source = nil
 expandcollapse = false
 
+transition_enabled = false     -- transitions are a work in progress to support duplicate source mode (not very stable)
 transition_completed = false
 
 -- simple debugging/print mechanism
-DEBUG = true -- on/off switch for entire debugging mechanism
+DEBUG = false -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
 DEBUG_CUSTOM = true -- print custom debugging messages
@@ -454,7 +455,6 @@ end
 -- prepare song button clicked
 function prepare_song_clicked(props, p)
     dbg_method("prepare_song_clicked")
-	print("prepared=" .. #prepared_songs)
     if #prepared_songs == 0 then
 		forceNoFade = true
         set_text_visiblity(TEXT_HIDDEN)
@@ -476,6 +476,7 @@ function refresh_button_clicked(props, p)
     local alternate_source_prop = obs.obs_properties_get(props, "prop_alternate_list")
     local static_source_prop = obs.obs_properties_get(props, "prop_static_list")
     local title_source_prop = obs.obs_properties_get(props, "prop_title_list")
+	local prop_dir_list = obs.obs_properties_get(props,"prop_directory_list")
     obs.obs_property_list_clear(source_prop) -- clear current properties list
     obs.obs_property_list_clear(alternate_source_prop) -- clear current properties list
     obs.obs_property_list_clear(static_source_prop) -- clear current properties list
@@ -504,6 +505,13 @@ function refresh_button_clicked(props, p)
     end
     obs.source_list_release(sources)
     load_song_directory()
+    table.sort(song_directory)
+	obs.obs_property_list_clear(prop_dir_list) -- clear directories
+    for _, name in ipairs(song_directory) do
+	print(name)
+        obs.obs_property_list_add_string(prop_dir_list, name, name)
+    end	
+    obs.obs_properties_apply_settings(props, script_sets)	
     return true
 end
 
@@ -1103,36 +1111,6 @@ end
 ------------------------ FILE FUNCTIONS
 ----------------
 --------
-
--- loads the song directory
-function load_song_directory()
-    -- pause_timer = true
-    song_directory = {}
-    local filenames = {}
-    local dir = obs.os_opendir(get_songs_folder_path())
-    -- get_songs_folder_path())
-    local entry
-    local songExt
-    local songTitle
-    repeat
-        entry = obs.os_readdir(dir)
-        if
-            entry and not entry.directory and
-                (obs.os_get_path_extension(entry.d_name) == ".enc" or obs.os_get_path_extension(entry.d_name) == ".txt")
-         then
-            songExt = obs.os_get_path_extension(entry.d_name)
-            songTitle = string.sub(entry.d_name, 0, string.len(entry.d_name) - string.len(songExt))
-            if songExt == ".enc" then
-                song_directory[#song_directory + 1] = dec(songTitle)
-            else
-                song_directory[#song_directory + 1] = songTitle
-            end
-        end
-    until not entry
-    obs.os_closedir(dir)
-    -- pause_timer = false
-end
-
 -- delete previewed song
 function delete_song(name)
     if testValid(name) then
@@ -1143,6 +1121,124 @@ function delete_song(name)
     os.remove(path)
     table.remove(song_directory, get_index_in_list(song_directory, name))
     load_song_directory()
+end
+
+-- loads the song directory
+function load_song_directory()
+    local keytext = obs.obs_data_get_string(script_sets, "prop_edit_metatags")
+	local keys = ParseCSVLine(keytext)
+    song_directory = {}
+    local filenames = {}
+	local tags = {}
+    local dir = obs.os_opendir(get_songs_folder_path())
+    -- get_songs_folder_path())
+    local entry
+    local songExt
+    local songTitle
+	local goodEntry = true
+
+    repeat
+        entry = obs.os_readdir(dir)
+        if
+            entry and not entry.directory and
+			(obs.os_get_path_extension(entry.d_name) == ".enc" or obs.os_get_path_extension(entry.d_name) == ".txt") then
+			songExt = obs.os_get_path_extension(entry.d_name)
+			songTitle = string.sub(entry.d_name, 0, string.len(entry.d_name) - string.len(songExt))
+			tags = readTags(songTitle)
+			goodEntry = true
+
+			if #keys>0 then
+				if keys[1] ~= "*" or #tags> 0 then 
+					goodEntry = false
+				end
+			end
+			if (#tags > 0 and #keys > 0) then
+				goodEntry = false
+				for t = 1, #tags do
+					for k = 1, #keys do
+						if tags[t] == keys[k] then
+							goodEntry = true
+							break
+						end
+					end
+					if goodEntry then 
+					   break
+					end
+				end
+			end
+			if goodEntry then 
+				if songExt == ".enc" then
+					song_directory[#song_directory + 1] = dec(songTitle)
+				else
+					song_directory[#song_directory + 1] = songTitle
+				end
+			end
+		end
+    until not entry
+    obs.os_closedir(dir)
+    -- pause_timer = false
+end
+
+function readTags(name)
+    local meta = ""
+    local path = {}
+    if testValid(name) then
+        path = get_song_file_path(name, ".txt")
+    else
+        path = get_song_file_path(enc(name), ".enc")
+    end
+    local file = io.open(path, "r")
+    if file ~= nil then
+        for line in file:lines() do
+			meta = line
+			break;
+        end
+        file:close()
+    end
+    local meta_index = meta:find("//meta ") -- Look for meta block Set
+    if meta_index ~= nil then
+       meta = meta:sub(meta_index + 7)
+		return ParseCSVLine(meta) 
+    end
+    return {}
+end
+
+function ParseCSVLine (line) 
+	local res = {}
+	local pos = 1
+	sep = ','
+	while true do 
+		local c = string.sub(line,pos,pos)
+		if (c == "") then break end
+		if (c == '"') then
+			local txt = ""
+			repeat
+				local startp,endp = string.find(line,'^%b""',pos)
+				txt = txt..string.sub(line,startp+1,endp-1)
+				pos = endp + 1
+				c = string.sub(line,pos,pos) 
+				if (c == '"') then txt = txt..'"' end 
+			until (c ~= '"')
+			txt = string.gsub(txt, "^%s*(.-)%s*$", "%1")
+			table.insert(res,txt)
+			assert(c == sep or c == "")
+			pos = pos + 1
+		else	
+			local startp,endp = string.find(line,sep,pos)
+			if (startp) then 
+				local t = string.sub(line,pos,startp-1)
+				t = string.gsub(t, "^%s*(.-)%s*$", "%1")
+				table.insert(res,t)
+				pos = endp + 1
+			else
+				local t = string.sub(line,pos)
+				t = string.gsub(t, "^%s*(.-)%s*$", "%1")				
+				table.insert(res,t)
+				break
+			end 
+		end
+	end
+	return res
 end
 
 local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-" -- encoding alphabet
@@ -1540,15 +1636,19 @@ function script_properties()
 	prep_prop = obs.obs_properties_add_bool(script_props, "prepared_showing", "Hide Manage Prepared Songs")
     obs.obs_property_set_modified_callback(prep_prop, change_prepared_visible)	
 	gp = obs.obs_properties_create()	
-    local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
+	local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
     table.sort(song_directory)
     for _, name in ipairs(song_directory) do
         obs.obs_property_list_add_string(prop_dir_list, name, name)
     end
     obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
     obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
-		gps = obs.obs_properties_create()
-		obs.obs_properties_add_group(gp, "line", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
+    gps = obs.obs_properties_create()
+    obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+    obs.obs_properties_add_button(gps, "prop_refresh", "Refresh Directory", refresh_button_clicked)
+    obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
+    gps = obs.obs_properties_create()
+    obs.obs_properties_add_group(gp, "line", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
     local prep_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
     prepare_props = prep_prop
     for _, name in ipairs(prepared_songs) do
@@ -2088,7 +2188,6 @@ function source_showing(cd)
     end
     load_song(source, true)
 end
-
 
 function dbg(message)
     if DEBUG then
