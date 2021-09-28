@@ -12,6 +12,8 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
+-- added delete single prepared song (WZ)
+
 obs = obslua
 bit = require("bit")
 
@@ -57,10 +59,10 @@ lyric_change = false -- Text and Static should only fade when lyrics are changin
 source_song_title = "" -- The song title from a source loaded song
 using_source = false -- true when a lyric load song is being used instead of a pre-prepared song
 source_active = false -- true when a lyric load source is active in the current scene (song is loaded or available to load)
-
-load_scene = ""       -- name of scene loading a lyric with a source
+transition_enabled = false
+load_scene = ""
 timer_exists = false
-forceNoFade = false  -- allows for instant opacity change even if fade is enabled - Reset each time by set_text_visibility
+forceNoFade = false
 
 -- hotkeys
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
@@ -89,11 +91,10 @@ text_fade_enabled = false
 load_source = nil
 expandcollapse = false
 
-transition_enabled = false     -- transitions are a work in progress to support duplicate source mode (not very stable)
 transition_completed = false
 
 -- simple debugging/print mechanism
-DEBUG = false -- on/off switch for entire debugging mechanism
+DEBUG = true -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
 DEBUG_CUSTOM = true -- print custom debugging messages
@@ -453,6 +454,7 @@ end
 -- prepare song button clicked
 function prepare_song_clicked(props, p)
     dbg_method("prepare_song_clicked")
+	print("prepared=" .. #prepared_songs)
     if #prepared_songs == 0 then
 		forceNoFade = true
         set_text_visiblity(TEXT_HIDDEN)
@@ -573,7 +575,6 @@ function prepare_selected(name)
     page_index = 1
     if not using_source then
         prepared_index = get_index_in_list(prepared_songs, name)
-        dbg_custom("prepared_index: " .. prepared_index)
     else
         source_song_title = name
     end
@@ -2087,6 +2088,7 @@ function source_showing(cd)
     end
     load_song(source, true)
 end
+
 
 function dbg(message)
     if DEBUG then
