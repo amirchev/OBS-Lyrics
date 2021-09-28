@@ -12,8 +12,6 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- added delete single prepared song (WZ)
-
 obs = obslua
 bit = require("bit")
 
@@ -59,9 +57,10 @@ lyric_change = false -- Text and Static should only fade when lyrics are changin
 source_song_title = "" -- The song title from a source loaded song
 using_source = false -- true when a lyric load song is being used instead of a pre-prepared song
 source_active = false -- true when a lyric load source is active in the current scene (song is loaded or available to load)
-transition_enabled = false
-load_scene = ""
+
+load_scene = ""       -- name of scene loading a lyric with a source
 timer_exists = false
+forceNoFade = false  -- allows for instant opacity change even if fade is enabled - Reset each time by set_text_visibility
 
 -- hotkeys
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
@@ -90,6 +89,7 @@ text_fade_enabled = false
 load_source = nil
 expandcollapse = false
 
+transition_enabled = false     -- transitions are a work in progress to support duplicate source mode (not very stable)
 transition_completed = false
 
 -- simple debugging/print mechanism
@@ -331,7 +331,8 @@ function home_prepared(pressed)
         obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
     end
     obs.obs_properties_apply_settings(props, script_sets)
-
+	prepared_index = 1
+    prepare_selected(prepared_songs[prepared_index])
     return true
 end
 
@@ -452,13 +453,17 @@ end
 -- prepare song button clicked
 function prepare_song_clicked(props, p)
     dbg_method("prepare_song_clicked")
+    if #prepared_songs == 0 then
+		forceNoFade = true
+        set_text_visiblity(TEXT_HIDDEN)
+	end	
     prepared_songs[#prepared_songs + 1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
-    if #prepared_songs == 1 then
-        obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
-        prepare_song_by_index(#prepared_songs)
-    end
+
+       obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
+    --    prepare_song_by_index(#prepared_songs)
+    --end
     obs.obs_properties_apply_settings(props, script_sets)
     save_prepared()
     return true
@@ -572,7 +577,7 @@ function prepare_selected(name)
     else
         source_song_title = name
     end
-    transition_lyric_text(false)
+    update_source_text()
     return true
 end
 
@@ -666,7 +671,8 @@ function set_text_visiblity(end_status)
         return
     end
     -- if fade is disabled, change visibility immediately
-    if not text_fade_enabled then
+	
+    if not text_fade_enabled or forceNoFade then
         if end_status == TEXT_HIDDEN then
             text_opacity = 0
         elseif end_status == TEXT_VISIBLE then
@@ -685,6 +691,7 @@ function set_text_visiblity(end_status)
         start_fade_timer()
     end
     update_source_text()
+	forceNoFade = false
 end
 
 -- transition to the next lyrics, use fade if enabled
@@ -1547,7 +1554,7 @@ function script_properties()
 	obs.obs_properties_add_button(gp, "prop_open_button", "Open Songs Folder", open_button_clicked)
 	obs.obs_properties_add_group(script_props,"info_grp","Song Title (filename) and Lyrics Information", obs.OBS_GROUP_NORMAL,gp)
 ------------	
-	prep_prop = obs.obs_properties_add_bool(script_props, "prepared_showing", "Hide Source Selections")
+	prep_prop = obs.obs_properties_add_bool(script_props, "prepared_showing", "Hide Manage Prepared Songs")
     obs.obs_property_set_modified_callback(prep_prop, change_prepared_visible)	
 	gp = obs.obs_properties_create()	
     local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
@@ -2055,15 +2062,12 @@ function load_song(source, preview)
     local settings = obs.obs_source_get_settings(source)
     if not preview or (preview and obs.obs_data_get_bool(settings, "source_activate_in_preview")) then
         local song = obs.obs_data_get_string(settings, "songs")
-        if song == nil or song == "" then
-            return
-        end
         dbg_inner("load_song: " .. song)
         using_source = true
         load_source = source
         prepare_selected(song)
-        transition_lyric_text()
-        set_text_visiblity(TEXT_VISIBLE)
+        --transition_lyric_text()
+        --set_text_visiblity(TEXT_VISIBLE)
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
