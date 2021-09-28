@@ -1510,24 +1510,6 @@ function get_song_text(name)
     return song_lines
 end
 
-function get_song_tag(name)
-    local song_lines = {}
-    local path = {}
-    if testValid(name) then
-        path = get_song_file_path(name, ".txt")
-    else
-        path = get_song_file_path(enc(name), ".enc")
-    end
-    local file = io.open(path, "r")
-    if file ~= nil then
-        for line in file:lines() do
-            song_lines[#song_lines + 1] = line
-        end
-        file:close()
-    end
-
-    return song_lines
-end
 -- ------
 ----------------
 ------------------------ OBS DEFAULT FUNCTIONS
