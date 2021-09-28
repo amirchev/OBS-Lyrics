@@ -2149,8 +2149,7 @@ function load_song(source, preview)
         using_source = true
         load_source = source
         prepare_selected(song)
-        --transition_lyric_text()
-        --set_text_visiblity(TEXT_VISIBLE)
+	lyric_change = false -- transition is with scene for source loads
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
