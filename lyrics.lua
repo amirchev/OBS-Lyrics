@@ -1,4 +1,4 @@
---- Copyright 2020 amirchev
+---- Copyright 2020 amirchev
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ transition_enabled = false     -- transitions are a work in progress to support 
 transition_completed = false
 
 -- simple debugging/print mechanism
-DEBUG = false -- on/off switch for entire debugging mechanism
+DEBUG = true -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
 DEBUG_CUSTOM = true -- print custom debugging messages
@@ -238,50 +238,54 @@ function prev_prepared(pressed)
     if not pressed then
         return
     end
-
-    if using_source then
-        using_source = false
-        prepare_selected(prepared_songs[prepared_index])
-        return
-    end
-    if prepared_index > 1 then
-        using_source = false
-        prepare_selected(prepared_songs[prepared_index - 1])
-        return
-    end
-
-    if not source_active or using_source then
-        using_source = false
-        prepare_selected(prepared_songs[#prepared_songs]) -- cycle through prepared
-    else
-        using_source = true
-        prepared_index = #prepared_songs -- wrap prepared index to end so ready if leaving load source
-        load_song(load_source, false)
-    end
+	if #prepared_songs == 0 then
+		return
+	end
+	if using_source  then
+		using_source = false
+		prepare_selected(prepared_songs[prepared_index])
+		return
+	end	
+	if prepared_index > 1 then
+		using_source = false
+		prepare_selected(prepared_songs[prepared_index - 1])
+		return
+	end
+	if not source_active or using_source then
+		using_source = false
+		prepare_selected(prepared_songs[#prepared_songs]) -- cycle through prepared
+	else
+		using_source = true
+		prepared_index = #prepared_songs -- wrap prepared index to end so ready if leaving load source
+		load_song(load_source, false)
+	end
 end
 
 function next_prepared(pressed)
     if not pressed then
         return
     end
-    if using_source then
-        using_source = false
-        prepare_selected(prepared_songs[prepared_index]) -- if source load song showing then goto curren prepared song
-        return
-    end
-    if prepared_index < #prepared_songs then
-        using_source = false
-        prepare_selected(prepared_songs[prepared_index + 1]) -- if prepared then goto next prepared
-        return
-    end
-    if not source_active or using_source then
-        using_source = false
-        prepare_selected(prepared_songs[1]) -- at the end so go back to start if no source load available
-    else
-        using_source = true
-        prepared_index = 1 -- wrap prepared index to beginning so ready if leaving load source
-        load_song(load_source, false)
-    end
+	if #prepared_songs == 0 then	
+	    return
+	end
+	if using_source then
+		using_source = false
+		prepare_selected(prepared_songs[prepared_index]) -- if source load song showing then goto curren prepared song
+		return
+	end
+	if prepared_index < #prepared_songs then
+		using_source = false
+		prepare_selected(prepared_songs[prepared_index + 1]) -- if prepared then goto next prepared
+		return
+	end
+	if not source_active or using_source then
+		using_source = false
+		prepare_selected(prepared_songs[1]) -- at the end so go back to start if no source load available
+	else
+		using_source = true
+		prepared_index = 1 -- wrap prepared index to beginning so ready if leaving load source
+		load_song(load_source, false)
+	end
 end
 
 function toggle_lyrics_visibility(pressed)
@@ -572,7 +576,7 @@ function clear_prepared_clicked(props, p)
 end
 
 function prepare_selected(name)
-    dbg_method("prepare_selected: " .. name)
+    --dbg_method("prepare_selected: " .. name)
     if name == nil then
         return false
     end
@@ -643,7 +647,7 @@ end
 --------
 
 function apply_source_opacity()
-    dbg_method("apply_source_visiblity")
+--    dbg_method("apply_source_visiblity")
     local settings = obs.obs_data_create()
     obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
     obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
@@ -657,7 +661,7 @@ function apply_source_opacity()
         obs.obs_source_update(alt_source, settings)
     end
     obs.obs_source_release(alt_source)
-    dbg_bool("lyric_change", lyric_change)
+ --   dbg_bool("lyric_change", lyric_change)
     if lyric_change then
         local title_source = obs.obs_get_source_by_name(title_source_name)
         if title_source ~= nil then
@@ -740,7 +744,6 @@ function fade_callback()
     if text_status == TEXT_HIDDEN or text_status == TEXT_VISIBLE then
         timer_exists = false
         obs.remove_current_callback()
-        dbg_inner("ended fade timer")
         lyric_change = false
     end
     -- the amount we want to change opacity by
@@ -874,8 +877,7 @@ function prepare_song_by_name(name)
             end
             local static_index = line:find("#S:")
             if static_index ~= nil then
-                local static_indexEnd = line:find("%s+", static_index + 1)
-                line = line:sub(static_indexEnd + 1)
+                line = line:sub(static_index+3)
                 static_text = line
                 new_lines = 0
             end
@@ -890,7 +892,7 @@ function prepare_song_by_name(name)
             if alt_index ~= nil then
                 local alt_indexStart, alt_indexEnd = line:find("%d+", alt_index + 3)
                 new_lines = tonumber(line:sub(alt_indexStart, alt_indexEnd))
-                _, alt_indexEnd = line:find("%s+", alt_indexEnd + 1)
+				local alt_indexEnd = line:find("%s+", alt_indexEnd + 1)
                 line = line:sub(alt_indexEnd + 1)
                 singleAlternate = true
             end
@@ -943,8 +945,12 @@ function prepare_song_by_name(name)
                 line = line:sub(1, refrain_index - 1)
                 new_lines = 0
             end
+	
             refrain_index = line:find("##R")
-            if refrain_index ~= nil then
+            if refrain_index == nil then
+	            refrain_index = line:find("##r")
+			end
+            if refrain_index ~= nil then			
                 playRefrain = true
                 line = line:sub(1, refrain_index - 1)
                 new_lines = 0
@@ -958,6 +964,7 @@ function prepare_song_by_name(name)
             end
             newcount_index = line:find("#B:")
             if newcount_index ~= nil then
+                new_lines = tonumber(line:sub(newcount_index + 3))			
                 line = line:sub(1, newcount_index - 1)
             end
             local phantom_index = line:find("##P")
@@ -967,7 +974,6 @@ function prepare_song_by_name(name)
             phantom_index = line:find("##B")
             if phantom_index ~= nil then
                 line = line:gsub("%s*##B%s*", "") .. "\n"
-            -- line = line:sub(1, phantom_index - 1)
             end
             if line ~= nil then
                 if use_static then
@@ -1146,27 +1152,36 @@ function load_song_directory()
 			songTitle = string.sub(entry.d_name, 0, string.len(entry.d_name) - string.len(songExt))
 			tags = readTags(songTitle)
 			goodEntry = true
-
-			if #keys>0 then
-				if keys[1] ~= "*" or #tags> 0 then 
-					goodEntry = false
-				end
-			end
-			if (#tags > 0 and #keys > 0) then
-				goodEntry = false
-				for t = 1, #tags do
+			if #keys>0 then  -- need to check files
+				for k = 1, #keys do
+					if keys[k] == "*" then
+						goodEntry = true  -- okay to show untagged files
+						break
+					end
+				end				
+				goodEntry = false   -- start assuming file will not be shown		
+				if #tags == 0 then  -- check no tagged option
 					for k = 1, #keys do
-						if tags[t] == keys[k] then
-							goodEntry = true
+						if keys[k] == "*" then
+							goodEntry = true  -- okay to show untagged files
 							break
 						end
 					end
-					if goodEntry then 
-					   break
+				else -- have keys and tags so compare them
+					for k = 1, #keys do
+						for t = 1, #tags do
+							if tags[t] == keys[k] then
+								goodEntry = true  -- found match so show file
+								break
+							end
+						end
+						if goodEntry then -- stop outer key loop on match
+						   break
+						end
 					end
 				end
 			end
-			if goodEntry then 
+			if goodEntry then -- add file if valid match
 				if songExt == ".enc" then
 					song_directory[#song_directory + 1] = dec(songTitle)
 				else
@@ -1176,7 +1191,6 @@ function load_song_directory()
 		end
     until not entry
     obs.os_closedir(dir)
-    -- pause_timer = false
 end
 
 function readTags(name)
@@ -1489,7 +1503,7 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
         "<body style='background-color:black;'><hr style = 'background-color: #98AFC7; height:2px; border:0px; margin: 0px;'>"
     text =
         text ..
-        "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; width: 160px; margin: 2px; '>"
+        "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; ; margin: 2px; margin-right: 20px; '>"
     if using_source then
         text = text .. "From Source: <B style='color: #FFEF00;'>" .. load_scene .. "</B></div>"
     else
@@ -1500,7 +1514,7 @@ function update_monitor(song, lyric, nextlyric, alt, nextalt, nextsong)
     end
     text =
         text ..
-        "<div style = 'color: #B0E0E6; float: left; width: 145px; margin: 2px; '>Lyric Page: <B style='color: #FFEF00;'>" ..
+        "<div style = 'color: #B0E0E6; float: left; margin: 2px; '>Lyric Page: <B style='color: #FFEF00;'>" ..
             page_index
     text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .. "</b></div>"
     text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
@@ -1643,12 +1657,12 @@ function script_properties()
     end
     obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
     obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
-    gps = obs.obs_properties_create()
-    obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
-    obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_button_clicked)
-    obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
-    gps = obs.obs_properties_create()
-    obs.obs_properties_add_group(gp, "line", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
+	gps = obs.obs_properties_create()
+	obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+	obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_button_clicked)
+	obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
+	gps = obs.obs_properties_create()
+	obs.obs_properties_add_group(gp, "line", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
     local prep_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
     prepare_props = prep_prop
     for _, name in ipairs(prepared_songs) do
@@ -2149,7 +2163,8 @@ function load_song(source, preview)
         using_source = true
         load_source = source
         prepare_selected(song)
-	lyric_change = false -- transition is with scene for source loads
+        --transition_lyric_text()
+        lyric_change = false
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
