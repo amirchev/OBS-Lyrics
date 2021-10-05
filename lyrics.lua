@@ -1,4 +1,4 @@
----- Copyright 2020 amirchev
+--- Copyright 2020 amirchev
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -94,8 +94,11 @@ expandcollapse = false
 transition_enabled = false     -- transitions are a work in progress to support duplicate source mode (not very stable)
 transition_completed = false
 
+editVisSet = false
+
+
 -- simple debugging/print mechanism
-DEBUG = true -- on/off switch for entire debugging mechanism
+DEBUG = false -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
 DEBUG_CUSTOM = true -- print custom debugging messages
@@ -527,37 +530,6 @@ function prepare_selection_made(props, prop, settings)
     return true
 end
 
--- delete selected prepared song from list (user request)
-function remove_selection_made(props, p)
-    dbg_method("unprepare_selection_made")
-    local name = obs.obs_data_get_string(script_sets, "prop_prepared_list")
-    local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
-    local count = obs.obs_property_list_item_count(prop_prep_list)
-    for i = 0, count do
-        local song = obs.obs_property_list_item_string(prop_prep_list, i)
-        if song == name then
-            table.remove(prepared_songs, i + 1)
-            save_prepared()
-            prepared_songs = {}
-            load_prepared()
-            obs.obs_property_list_clear(prop_prep_list)
-            for _, name in ipairs(prepared_songs) do
-                obs.obs_property_list_add_string(prop_prep_list, name, name)
-            end
-            if #prepared_songs > 0 then
-                obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
-                prepared_index = 1
-            else
-                obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
-                prepared_index = 0
-            end
-        end
-    end
-    obs.obs_properties_apply_settings(props, script_sets)
-    update_source_text()
-    return true
-end
-
 -- removes prepared songs
 function clear_prepared_clicked(props, p)
     dbg_method("clear_prepared_clicked")
@@ -574,6 +546,9 @@ function clear_prepared_clicked(props, p)
     transition_lyric_text(false)
     return true
 end
+
+
+
 
 function prepare_selected(name)
     --dbg_method("prepare_selected: " .. name)
@@ -1631,6 +1606,7 @@ end
 -- can change for the entire script module itself
 function script_properties()
     dbg_method("script_properties")
+	editVisSet = false	
     script_props = obs.obs_properties_create()
 	obs.obs_properties_add_button(script_props, "expand_all_button", "Expand/Collapse All Groups", expand_all_groups)
 -----------
@@ -1647,30 +1623,35 @@ function script_properties()
 	obs.obs_properties_add_button(gp, "prop_open_button", "Open Songs Folder", open_button_clicked)
 	obs.obs_properties_add_group(script_props,"info_grp","Song Title (filename) and Lyrics Information", obs.OBS_GROUP_NORMAL,gp)
 ------------	
-	prep_prop = obs.obs_properties_add_bool(script_props, "prepared_showing", "Hide Manage Prepared Songs")
+	prep_prop = obs.obs_properties_add_bool(script_props, "prepared_showing", "Hide Prepared Songs")
     obs.obs_property_set_modified_callback(prep_prop, change_prepared_visible)	
 	gp = obs.obs_properties_create()	
-	local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
-    table.sort(song_directory)
-    for _, name in ipairs(song_directory) do
-        obs.obs_property_list_add_string(prop_dir_list, name, name)
-    end
-    obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
-    obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
-	gps = obs.obs_properties_create()
-	obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
-	obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_button_clicked)
-	obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
-	gps = obs.obs_properties_create()
-	obs.obs_properties_add_group(gp, "line", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
-    local prep_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
-    prepare_props = prep_prop
-    for _, name in ipairs(prepared_songs) do
-        obs.obs_property_list_add_string(prep_prop, name, name)
-    end
-    obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
-    obs.obs_properties_add_button(gps, "prop_undo_button", "UnPrepare Selected Song", remove_selection_made)
-	obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs", clear_prepared_clicked)
+		local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
+		table.sort(song_directory)
+		for _, name in ipairs(song_directory) do
+			obs.obs_property_list_add_string(prop_dir_list, name, name)
+		end
+		obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
+		obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
+		gps = obs.obs_properties_create()
+		obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+		obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_button_clicked)
+		obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
+			gps = obs.obs_properties_create()
+			local prep_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+			prepare_props = prep_prop
+			for _, name in ipairs(prepared_songs) do
+				obs.obs_property_list_add_string(prep_prop, name, name)
+			end
+			obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
+			obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs", clear_prepared_clicked)
+			obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared Songs List",edit_prepared_clicked)
+			eps = obs.obs_properties_create()	
+				local edit_prop = obs.obs_properties_add_editable_list(eps, "prep_list", "Prepared Songs", obs.OBS_EDITABLE_LIST_TYPE_STRINGS,nil,nil )	
+			    obs.obs_property_set_modified_callback(edit_prop, setEditVis)				
+				obs.obs_properties_add_button(eps, "prop_save_button", "Done",save_edits_clicked)
+			obs.obs_properties_add_group(gps,"edit_grp","Edit Prepared Songs", obs.OBS_GROUP_NORMAL,eps)	
+	obs.obs_properties_add_group(gp, "prep_grp", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)	
 	obs.obs_properties_add_group(script_props,"prep_grp","Manage Prepared Songs", obs.OBS_GROUP_NORMAL,gp)	
 ------	
 	options_prop = obs.obs_properties_add_bool(script_props, "options_showing", "Hide Display Options")
@@ -1785,6 +1766,7 @@ function script_properties()
     end
 	pp = obs.obs_properties_get(script_props,"ctrl_grp")
 	obs.obs_property_set_visible(pp, true)
+
     obs.obs_properties_apply_settings(script_props, script_sets)
 
     return script_props
@@ -1814,7 +1796,71 @@ function expand_all_groups(props, prop, settings)
 	obs.obs_property_set_visible(ctrlpp, expandcollapse)
 	return true		
 end
+function setEditVis(props, prop, settings)
+	dbg_method("setEditVis")
+	if not editVisSet then
+	pp = obs.obs_properties_get(script_props,"edit_grp")	
+	obs.obs_property_set_visible(pp, false)	
+	editVisSet = true
+	end
+end
 
+function edit_prepared_clicked(props, p)
+    local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
+    local count = obs.obs_property_list_item_count(prop_prep_list)
+    local songNames =  obs.obs_data_get_array(script_sets, "prep_list")
+    local count2 = obs.obs_data_array_count(songNames)
+	if count2 > 0 then
+		for i = 0, count2 do
+			obs.obs_data_array_erase(songNames,0)
+		end
+	end
+
+    for i = 0, count-1 do
+        local song = obs.obs_property_list_item_string(prop_prep_list, i)
+		local array_obj = obs.obs_data_create()				
+		obs.obs_data_set_string(array_obj, "value", song)
+		obs.obs_data_array_push_back(songNames,array_obj)
+		obs.obs_data_release(array_obj)	
+	end
+	obs.obs_data_set_array(script_sets, "prep_list", songNames)
+	obs.obs_data_array_release(songNames)
+	pp = obs.obs_properties_get(script_props,"edit_grp")	
+	obs.obs_property_set_visible(pp, true)	
+    --obs.obs_properties_apply_settings(props, script_sets)	
+    return true
+end
+
+-- removes prepared songs
+function save_edits_clicked(props, p)
+	prepared_songs = {}
+    local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")	
+	obs.obs_property_list_clear(prop_prep_list)	
+	local songNames =  obs.obs_data_get_array(script_sets, "prep_list")
+    local count2 = obs.obs_data_array_count(songNames)
+	print("count: " .. count2)
+	if count2 > 0 then
+		for i = 0, count2-1 do
+			local item = obs.obs_data_array_item(songNames, i);		
+			local itemName = obs.obs_data_get_string(item, "value");
+			prepared_songs[#prepared_songs+1] = itemName
+		    obs.obs_property_list_add_string(prop_prep_list, itemName, itemName)			
+			print(itemName)
+		end
+	end	
+	save_prepared()
+	if #prepared_songs > 0 then
+		obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
+		prepared_index = 1
+	else
+		obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
+		prepared_index = 0
+	end
+	pp = obs.obs_properties_get(script_props,"edit_grp")	
+	obs.obs_property_set_visible(pp, false)	
+    obs.obs_properties_apply_settings(props, script_sets)		
+    return true
+end
 function change_info_visible(props, prop, settings)
     local visible = obs.obs_data_get_bool(settings, "info_showing")
 	local ctrlpp = obs.obs_properties_get(script_props,"info_grp")
@@ -1912,6 +1958,7 @@ function script_update(settings)
             prepare_selected(prepared_songs[prepared_index])
         end
     end
+
 end
 
 -- A function named script_defaults will be called to set the default settings
@@ -1926,6 +1973,7 @@ function script_defaults(settings)
     else
         os.execute('mkdir -p "' .. get_songs_folder_path() .. '"')
     end
+
 end
 
 -- A function named script_save will be called when the script is saved
