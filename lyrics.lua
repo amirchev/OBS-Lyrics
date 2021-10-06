@@ -98,7 +98,7 @@ editVisSet = false
 
 
 -- simple debugging/print mechanism
-DEBUG = false -- on/off switch for entire debugging mechanism
+DEBUG = true -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
 DEBUG_CUSTOM = true -- print custom debugging messages
@@ -515,7 +515,7 @@ function refresh_button_clicked(props, p)
     table.sort(song_directory)
 	obs.obs_property_list_clear(prop_dir_list) -- clear directories
     for _, name in ipairs(song_directory) do
-	print(name)
+	dbg_inner(name)
         obs.obs_property_list_add_string(prop_dir_list, name, name)
     end	
     obs.obs_properties_apply_settings(props, script_sets)	
@@ -1838,14 +1838,14 @@ function save_edits_clicked(props, p)
 	obs.obs_property_list_clear(prop_prep_list)	
 	local songNames =  obs.obs_data_get_array(script_sets, "prep_list")
     local count2 = obs.obs_data_array_count(songNames)
-	print("count: " .. count2)
+	dbg_inner("count: " .. count2)
 	if count2 > 0 then
 		for i = 0, count2-1 do
 			local item = obs.obs_data_array_item(songNames, i);		
 			local itemName = obs.obs_data_get_string(item, "value");
 			prepared_songs[#prepared_songs+1] = itemName
 		    obs.obs_property_list_add_string(prop_prep_list, itemName, itemName)			
-			print(itemName)
+			dbg_inner(itemName)
 		end
 	end	
 	save_prepared()
