@@ -55,14 +55,14 @@ prepared_index = 0 -- TODO: avoid setting prepared_index directly, use prepare_s
 song_directory = {}
 prepared_songs = {}
 link_text = false -- true if Title and Static should fade with text only during hide/show
-lyric_change = false -- Text and Static should only fade when lyrics are changing or during show/hide
+all_sources_fade = false -- Title and Static should only fade when lyrics are changing or during show/hide
 source_song_title = "" -- The song title from a source loaded song
 using_source = false -- true when a lyric load song is being used instead of a pre-prepared song
 source_active = false -- true when a lyric load source is active in the current scene (song is loaded or available to load)
 
 load_scene = ""       -- name of scene loading a lyric with a source
 timer_exists = false
-forceNoFade = false  -- allows for instant opacity change even if fade is enabled - Reset each time by set_text_visibility
+--forceNoFade = false  -- allows for instant opacity change even if fade is enabled - Reset each time by set_text_visibility
 
 -- hotkeys
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
@@ -102,7 +102,7 @@ DEBUG = true -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
 DEBUG_CUSTOM = true -- print custom debugging messages
-DEBUG_BOOL = true -- print message with bool state true/false
+DEBUG_BOOL = false -- print message with bool state true/false
 
 --------
 ----------------
@@ -260,7 +260,7 @@ function prev_prepared(pressed)
 	else
 		using_source = true
 		prepared_index = #prepared_songs -- wrap prepared index to end so ready if leaving load source
-		load_song(load_source, false)
+		load_source_song(load_source, false)
 	end
 end
 
@@ -287,7 +287,7 @@ function next_prepared(pressed)
 	else
 		using_source = true
 		prepared_index = 1 -- wrap prepared index to beginning so ready if leaving load source
-		load_song(load_source, false)
+		load_source_song(load_source, false)
 	end
 end
 
@@ -296,13 +296,12 @@ function toggle_lyrics_visibility(pressed)
     if not pressed then
         return
     end
-    lyric_change = true --  This makes sure title and static change with text if selected
     if text_status ~= TEXT_HIDDEN then
         dbg_inner("hiding")
-        set_text_visiblity(TEXT_HIDDEN)
+        set_text_visibility(TEXT_HIDDEN)
     else
         dbg_inner("showing")
-        set_text_visiblity(TEXT_VISIBLE)
+        set_text_visibility(TEXT_VISIBLE)
     end
 end
 
@@ -463,8 +462,8 @@ end
 function prepare_song_clicked(props, p)
     dbg_method("prepare_song_clicked")
     if #prepared_songs == 0 then
-		forceNoFade = true
-        set_text_visiblity(TEXT_HIDDEN)
+		--forceNoFade = true
+        set_text_visibility(TEXT_HIDDEN)
 	end	
     prepared_songs[#prepared_songs + 1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
@@ -511,7 +510,7 @@ function refresh_button_clicked(props, p)
         end
     end
     obs.source_list_release(sources)
-    load_song_directory()
+    load_source_song_directory()
     table.sort(song_directory)
 	obs.obs_property_list_clear(prop_dir_list) -- clear directories
     for _, name in ipairs(song_directory) do
@@ -533,39 +532,40 @@ end
 -- removes prepared songs
 function clear_prepared_clicked(props, p)
     dbg_method("clear_prepared_clicked")
-    prepared_songs = {}
-    page_index = 0
-    prepared_index = 0
-    update_source_text()
+    -- set_text_visibility(TEXT_HIDDEN)
+    -- prepared_songs = {}
+    -- page_index = 0
+    -- prepared_index = 0
+    -- update_source_text()
     -- clear the list
     local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_clear(prep_prop)
     obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
     obs.obs_properties_apply_settings(props, script_sets)
     save_prepared()
-    transition_lyric_text(false)
     return true
 end
 
-
-
-
 function prepare_selected(name)
-    --dbg_method("prepare_selected: " .. name)
-    if name == nil then
-        return false
-    end
-    if name == "" then
-        return false
-    end
-    prepare_song_by_name(name)
-    page_index = 1
-    if not using_source then
-        prepared_index = get_index_in_list(prepared_songs, name)
-    else
-        source_song_title = name
-    end
-    update_source_text()
+    dbg_method("prepare_selected")
+	-- try to prepare song
+	if prepare_song_by_name(name) then
+		page_index = 1
+		if not using_source then
+			prepared_index = get_index_in_list(prepared_songs, name)
+		else
+			source_song_title = name
+		end
+		all_sources_fade = true
+		-- if using source, then force show the new lyrics, even if lyrics were previously hidden
+		transition_lyric_text(using_source)
+	else
+		-- hide everything if unable to prepare song
+		-- TODO: clear lyrics entirely after text is hidden
+		set_text_visibility(TEXT_HIDDEN)
+	end
+		
+    --update_source_text()
     return true
 end
 
@@ -636,8 +636,7 @@ function apply_source_opacity()
         obs.obs_source_update(alt_source, settings)
     end
     obs.obs_source_release(alt_source)
- --   dbg_bool("lyric_change", lyric_change)
-    if lyric_change then
+    if all_sources_fade and link_text then
         local title_source = obs.obs_get_source_by_name(title_source_name)
         if title_source ~= nil then
             obs.obs_source_update(title_source, settings)
@@ -652,15 +651,15 @@ function apply_source_opacity()
     obs.obs_data_release(settings)
 end
 
-function set_text_visiblity(end_status)
-    dbg_method("set_text_visiblity")
+function set_text_visibility(end_status)
+    dbg_method("set_text_visibility")
     -- if already at desired visibility, then exit
     if text_status == end_status then
         return
     end
     -- if fade is disabled, change visibility immediately
 	
-    if not text_fade_enabled or forceNoFade then
+    if not text_fade_enabled then --or forceNoFade then
         if end_status == TEXT_HIDDEN then
             text_opacity = 0
         elseif end_status == TEXT_VISIBLE then
@@ -676,10 +675,11 @@ function set_text_visiblity(end_status)
         elseif end_status == TEXT_VISIBLE then
             text_status = TEXT_SHOWING
         end
+		all_sources_fade = true
         start_fade_timer()
     end
     update_source_text()
-	forceNoFade = false
+	--forceNoFade = false
 end
 
 -- transition to the next lyrics, use fade if enabled
@@ -694,9 +694,15 @@ function transition_lyric_text(force_show)
     -- fade out transition is complete
     if (text_status == TEXT_HIDDEN or text_status == TEXT_HIDING) and not force_show then
         update_source_text()
+		-- if text is done hiding, we can cancel the all_sources_fade
+		if text_status == TEXT_HIDDEN then
+			all_sources_fade = false
+		end
         dbg_inner("hidden")
     elseif not text_fade_enabled then
-        set_text_visiblity(TEXT_VISIBLE)
+		-- if text fade is not enabled, then we can cancel the all_sources_fade
+		all_sources_fade = false
+        set_text_visibility(TEXT_VISIBLE)
         update_source_text()
         dbg_inner("no text fade")
     else
@@ -719,7 +725,7 @@ function fade_callback()
     if text_status == TEXT_HIDDEN or text_status == TEXT_VISIBLE then
         timer_exists = false
         obs.remove_current_callback()
-        lyric_change = false
+        all_sources_fade = false
     end
     -- the amount we want to change opacity by
     local opacity_delta = 1 + text_fade_speed
@@ -732,7 +738,9 @@ function fade_callback()
             -- completed fade out, determine next move
             text_opacity = 0
             if text_status == TEXT_TRANSITION_OUT then
-                update_source_text() --------------------------------------------UPDATE to NEW LYRIC BETWEEN FADES
+				-- update to new lyric between fades
+                update_source_text()
+				-- begin transition back in
                 text_status = TEXT_TRANSITION_IN
             else
                 text_status = TEXT_HIDDEN
@@ -762,14 +770,17 @@ end
 -- prepares lyrics of the song
 function prepare_song_by_name(name)
     dbg_method("prepare_song_by_name")
-    lyric_change = true
     if name == nil then
         return false
     end
     -- if using transition on lyric change, first transition
     -- would be reset with new song prepared
     transition_completed = false
+	-- load song lines
     local song_lines = get_song_text(name)
+	if song_lines == nil then
+		return false
+	end
     local cur_line = 1
     local cur_aline = 1
     local recordRefrain = false
@@ -1092,6 +1103,7 @@ end
 ------------------------ FILE FUNCTIONS
 ----------------
 --------
+
 -- delete previewed song
 function delete_song(name)
     if testValid(name) then
@@ -1101,11 +1113,11 @@ function delete_song(name)
     end
     os.remove(path)
     table.remove(song_directory, get_index_in_list(song_directory, name))
-    load_song_directory()
+    load_source_song_directory()
 end
 
 -- loads the song directory
-function load_song_directory()
+function load_source_song_directory()
     local keytext = obs.obs_data_get_string(script_sets, "prop_edit_metatags")
 	local keys = ParseCSVLine(keytext)
     song_directory = {}
@@ -1335,19 +1347,6 @@ function save_prepared()
     return true
 end
 
-function load_prepared()
-    dbg_method("load_prepared")
-    local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
-    if file ~= nil then
-        for line in file:lines() do
-            prepared_songs[#prepared_songs + 1] = line
-        end
-        prepared_index = 1
-        file:close()
-    end
-    return true
-end
-
 -- updates the selected lyrics
 function update_source_text()
     dbg_method("update_source_text")
@@ -1363,8 +1362,8 @@ function update_source_text()
 	    title = alt_title
 	else
 		if not using_source then
-			dbg_custom("Load title from prepared: " .. prepared_index)
-			if prepared_index ~= nil or prepared_index ~= 0 then
+			if prepared_index ~= nil and prepared_index ~= 0 then
+				dbg_custom("Load title from prepared: " .. prepared_index)
 				title = prepared_songs[prepared_index]
 			end
 		else
@@ -1591,7 +1590,9 @@ function get_song_text(name)
             song_lines[#song_lines + 1] = line
         end
         file:close()
-    end
+    else
+		return nil
+	end
 
     return song_lines
 end
@@ -2053,15 +2054,23 @@ function script_load(settings)
     if os.getenv("HOME") == nil then
         windows_os = true
     end -- must be set prior to calling any file functions
-    load_song_directory()
-    load_prepared()
+    load_source_song_directory()
+    -- load prepared songs from previous
+    local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
+    if file ~= nil then
+        for line in file:lines() do
+            prepared_songs[#prepared_songs + 1] = line
+        end
+        --prepared_index = 1
+        file:close()
+    end
     local transition_set = obs.obs_data_get_bool(settings, "transition_enabled")
     local text_fade_set_prop = obs.obs_properties_get(props, "text_fade_enabled")
     local fade_speed_prop = obs.obs_properties_get(props, "text_fade_speed")
     obs.obs_property_set_enabled(text_fade_set_prop, not transition_set)
     obs.obs_property_set_enabled(fade_speed_prop, not transition_set)
     transition_enabled = transition_set
-    obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
+    -- obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
 end
 
 --------
@@ -2154,7 +2163,7 @@ source_def.update = function(data, settings)
 end
 
 source_def.get_properties = function(data)
-    load_song_directory()
+    load_source_song_directory()
     local props = obs.obs_properties_create()
     local source_dir_list =
         obs.obs_properties_add_list(
@@ -2190,29 +2199,27 @@ end
 source_def.destroy = function(source)
 end
 
-function updateSources()
-    obs.timer_remove(updateSources)
-    update_source_text()
-end
+-- function update_source_callback()
+    -- obs.remove_current_callback()
+    -- update_source_text()
+-- end
 
-function on_event(event)
-    if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-        dbg_method("on_event")
-        obs.timer_add(updateSources, 100) -- delay updating source text until all sources have been removed by OBS
-    end
-end
+-- function on_event(event)
+    -- if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
+        -- dbg_method("on_event")
+        -- obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
+    -- end
+-- end
 
-function load_song(source, preview)
-    dbg_method("load_song")
+function load_source_song(source, preview)
+    dbg_method("load_source_song")
     local settings = obs.obs_source_get_settings(source)
     if not preview or (preview and obs.obs_data_get_bool(settings, "source_activate_in_preview")) then
         local song = obs.obs_data_get_string(settings, "songs")
-        dbg_inner("load_song: " .. song)
         using_source = true
         load_source = source
         prepare_selected(song)
         --transition_lyric_text()
-        lyric_change = false
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
@@ -2228,7 +2235,7 @@ function source_isactive(cd)
     end
     dbg_inner("source active")
     load_scene = get_current_scene_name()
-    load_song(source, false)
+    load_source_song(source, false)
 	
     source_active = true -- using source lyric
 end
@@ -2248,7 +2255,7 @@ function source_showing(cd)
     if source == nil then
         return
     end
-    load_song(source, true)
+    load_source_song(source, true)
 end
 
 function dbg(message)
@@ -2259,29 +2266,31 @@ end
 
 function dbg_inner(message)
     if DEBUG_INNER then
-        dbg("INNER: " .. message)
+        dbg("INNR: " .. message)
     end
 end
 
 function dbg_method(message)
     if DEBUG_METHODS then
-        dbg("METHOD: " .. message)
+        dbg("-- MTHD: " .. message)
     end
 end
 
 function dbg_custom(message)
     if DEBUG_CUSTOM then
-        dbg("CUSTOM: " .. message)
+        dbg("CUST: " .. message)
     end
 end
 
-function dbg_bool(message, value)
+function dbg_bool(name, value)
     if DEBUG_BOOL then
+		local message = "BOOL: " .. name
         if value then
-            dbg("BOOL: " .. message .. " = true")
+            message = message .. " = true"
         else
-            dbg("BOOL: " .. message .. " = false")
+            message = message .. " = false"
         end
+		dbg(message)
     end
 end
 
