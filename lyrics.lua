@@ -113,8 +113,8 @@ editVisSet = false
 DEBUG = true -- on/off switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
 DEBUG_INNER = true -- print inner method breakpoints
-DEBUG_CUSTOM = true -- print custom debugging messages
-DEBUG_BOOL = false -- print message with bool state true/false
+DEBUG_CUSTOM = false -- print custom debugging messages
+DEBUG_BOOL = true -- print message with bool state true/false
 
 --------
 ----------------
@@ -474,7 +474,6 @@ end
 function prepare_song_clicked(props, p)
     dbg_method("prepare_song_clicked")
     if #prepared_songs == 0 then
-		--forceNoFade = true
         set_text_visibility(TEXT_HIDDEN)
 	end	
     prepared_songs[#prepared_songs + 1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
@@ -557,7 +556,6 @@ end
 -- removes prepared songs
 function clear_prepared_clicked(props, p)
     dbg_method("clear_prepared_clicked")
-    -- set_text_visibility(TEXT_HIDDEN)
     prepared_songs = {}  	-- required for monitor page
     page_index = 0			-- required for monitor page
     prepared_index = 0		-- required for monitor page
@@ -682,18 +680,20 @@ function set_text_visibility(end_status)
     if text_status == end_status then
         return
     end
-    -- if fade is disabled, change visibility immediately
-	
-    if not text_fade_enabled then --or forceNoFade then
-        if end_status == TEXT_HIDDEN then
-            text_opacity = 0
-        elseif end_status == TEXT_VISIBLE then
-            text_opacity = 100
-        end
-        text_status = end_status
-        apply_source_opacity()
-        dbg_inner("immediate visibility change")
-    else
+    -- change visibility immediately (fade or no fade)
+	if end_status == TEXT_HIDDEN then
+		text_opacity = 0
+		text_status = end_status
+	elseif end_status == TEXT_VISIBLE then
+		text_opacity = 100
+		text_status = end_status
+	end
+    if text_status == end_status then	
+		apply_source_opacity()	
+		update_source_text() 
+		return	
+	end
+    --if text_fade_enabled then 
         -- if fade enabled, begin fade in or out
         if end_status == TEXT_HIDDEN then
             text_status = TEXT_HIDING
@@ -702,9 +702,8 @@ function set_text_visibility(end_status)
         end
 		all_sources_fade = true
         start_fade_timer()
-    end
+    --end
     update_source_text()
-	--forceNoFade = false
 end
 
 -- transition to the next lyrics, use fade if enabled
@@ -1661,9 +1660,7 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "info_showing", "HIDE SONG INFORMATION",change_info_visible)
 	gp = obs.obs_properties_create()
     obs.obs_properties_add_text(gp, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
-    local lyric_prop =
-        obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
-    obs.obs_property_set_long_description(lyric_prop, "Lyric Text with Markup")
+    obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
     obs.obs_properties_add_button(gp, "prop_save_button", "Save Song", save_song_clicked)
     obs.obs_properties_add_button(gp, "prop_delete_button", "Delete Song", delete_song_clicked)
     obs.obs_properties_add_button(gp, "prop_opensong_button","Edit Song with System Editor", open_song_clicked)
@@ -2378,6 +2375,7 @@ end
 
 source_def.create = function(settings, source)
     data = {}
+	source_sets = settings
     sh = obs.obs_source_get_signal_handler(source)
     obs.signal_handler_connect(sh, "activate", source_isactive) -- Set Active Callback
     obs.signal_handler_connect(sh, "show", source_showing) -- Set Preview Callback
@@ -2399,10 +2397,11 @@ function update_source_callback()
 end
 
 function on_event(event)
-    if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
-        dbg_method("on_event")
-        obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
-    end
+	dbg_method("on_event")
+	if event == obs.OBS_FRONTEND_EVENT_TRANSITION_STOPPED then
+		dbg_bool("Active:",source_active)
+		obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
+	end
 end
 
 function load_source_song(source, preview)
@@ -2412,8 +2411,9 @@ function load_source_song(source, preview)
         local song = obs.obs_data_get_string(settings, "songs")
         using_source = true
         load_source = source
+        set_text_visibility(TEXT_HIDDEN)		
         prepare_selected(song)
-        set_text_visibility(TEXT_VISIBLE)
+		transition_lyric_text()
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
@@ -2432,14 +2432,14 @@ function source_isactive(cd)
     load_source_song(source, false)
 	
     source_active = true -- using source lyric
-end
+	end
 
 function source_inactive(cd)
+    dbg_inner("source inactive")
     local source = obs.calldata_source(cd, "source")
     if source == nil then
         return
     end
-    dbg_inner("source inactive")
     source_active = false -- indicates source loading lyric is active (but using prepared lyrics is still possible)
 end
 
