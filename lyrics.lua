@@ -1636,9 +1636,9 @@ end
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
 
-local help = 	"-------------- MARKUP SYNTAX HELP --------------\n\n" ..
+local help = 	"░░░░░░░░░░░░░░░ MARKUP SYNTAX HELP ░░░░░░░░░░░░░░░\n\n" ..
 				"Markup      Syntax        Markup       Syntax\n" ..
-				"=======    =======      =======     ======\n" ..
+				"==========  ==========    ==========  ==========\n" ..
 				" Display n Lines    #L:n      End Page after Line   Line ###\n" .. 
 				"  Blank (Pad) Line  ##B or ##P     Blank(Pad) Lines   #B:n or #P:n\n" .. 
 				" External Refrain   #r[ and #r]      In-Line Refrain     #R[ and #R]\n" .. 
@@ -1648,14 +1648,14 @@ local help = 	"-------------- MARKUP SYNTAX HELP --------------\n\n" ..
 				"Comment Line     // Line       Block Comments     //[ and //] \n\n" ..	
 				"Titles must be valid filenames. Override Title with #T: title markup\n\n"	..
 				"Optional comma delimited meta tags follow '//meta ' on 1st line\n\n" ..
-				"*** CLICK TO CLOSE ***"	
+				"▲░░░░░░ CLICK TO CLOSE ░░░░░░▲"	
 
 function script_properties()
     dbg_method("script_properties")
 	editVisSet = false	
     script_props = obs.obs_properties_create()
 	obs.obs_properties_add_button(script_props, "show_help_button", "SHOW MARKUP SYNTAX HELP", show_help_button)
-	obs.obs_properties_add_button(script_props, "expand_all_button", "<--- HIDE ALL GROUPS", expand_all_groups)
+	obs.obs_properties_add_button(script_props, "expand_all_button", "▲░ HIDE ALL GROUPS ░▲", expand_all_groups)
 -----------
 	obs.obs_properties_add_button(script_props, "info_showing", "HIDE SONG INFORMATION",change_info_visible)
 	gp = obs.obs_properties_create()
@@ -1667,7 +1667,7 @@ function script_properties()
 	obs.obs_properties_add_button(gp, "prop_open_button", "Open Songs Folder", open_button_clicked)
 	obs.obs_properties_add_group(script_props,"info_grp","Song Title (filename) and Lyrics Information", obs.OBS_GROUP_NORMAL,gp)
 ------------	
-	obs.obs_properties_add_button(script_props, "prepared_showing", "<--- HIDE PREPARED SONGS",change_prepared_visible)
+	obs.obs_properties_add_button(script_props, "prepared_showing", "▲░ HIDE PREPARED SONGS ░▲",change_prepared_visible)
 	gp = obs.obs_properties_create()	
 		local prop_dir_list = obs.obs_properties_add_list(gp,"prop_directory_list","Song Directory",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
 		table.sort(song_directory)
@@ -1698,7 +1698,7 @@ function script_properties()
 		obs.obs_properties_add_group(gp, "prep_grp", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)	
 	obs.obs_properties_add_group(script_props,"prep_grp","Manage Prepared Songs", obs.OBS_GROUP_NORMAL,gp)	
 ------	
-	obs.obs_properties_add_button(script_props, "options_showing", "<--- HIDE DISPLAY OPTIONS",change_options_visible)
+	obs.obs_properties_add_button(script_props, "options_showing", "▲░ HIDE DISPLAY OPTIONS ░▲",change_options_visible)
 	gp = obs.obs_properties_create()	
     local lines_prop = obs.obs_properties_add_int(gp, "prop_lines_counter", "Lines to Display", 1, 100, 1)
     obs.obs_property_set_long_description(
@@ -1726,7 +1726,7 @@ function script_properties()
     obs.obs_properties_add_int_slider(gp, "text_fade_speed", "Fade Speed", 1, 10, 1)
 	obs.obs_properties_add_group(script_props,"disp_grp","Display Options", obs.OBS_GROUP_NORMAL,gp)
 -------------	
-	obs.obs_properties_add_button(script_props, "src_showing", "<--- HIDE SOURCE TEXT SELECTIONS",change_src_visible)
+	obs.obs_properties_add_button(script_props, "src_showing", "▲░ HIDE SOURCE TEXT SELECTIONS ░▲",change_src_visible)
 	gp = obs.obs_properties_create()
     local source_prop =
         obs.obs_properties_add_list(
@@ -1789,7 +1789,7 @@ function script_properties()
     obs.obs_properties_add_button(gp, "prop_refresh", "Refresh Sources", refresh_button_clicked)
  	obs.obs_properties_add_group(script_props,"src_grp","Text Sources in Scenes", obs.OBS_GROUP_NORMAL,gp)
 ------------------		
-	obs.obs_properties_add_button(script_props, "ctrl_showing", "<--- HIDE LYRIC CONTROLS",change_ctrl_visible)
+	obs.obs_properties_add_button(script_props, "ctrl_showing", "▲░ HIDE LYRIC CONTROLS ░▲",change_ctrl_visible)
 	gp = obs.obs_properties_create()	
     obs.obs_properties_add_button(gp, "prop_prev_button", "Previous Lyric", prev_button_clicked)
     obs.obs_properties_add_button(gp, "prop_next_button", "Next Lyric", next_button_clicked)
@@ -1839,11 +1839,11 @@ function expand_all_groups(props, prop, settings)
 	obs.obs_property_set_visible(obs.obs_properties_get(script_props,"disp_grp"), expandcollapse)
 	obs.obs_property_set_visible(obs.obs_properties_get(script_props,"src_grp"), expandcollapse)
 	obs.obs_property_set_visible(obs.obs_properties_get(script_props,"ctrl_grp"), expandcollapse)
-	local mode1 = "SHOW "
-	local mode2 = " --->"
+	local mode1 = "▼░ SHOW "
+	local mode2 = "░▼"
 	if expandcollapse then
-	   mode1 = "<--- HIDE "
-	   mode2 = ""
+	   mode1 = "▲░ HIDE "
+	   mode2 = "░▲"
 	end
 	obs.obs_property_set_description(obs.obs_properties_get(props, "expand_all_button"), mode1 .. "ALL GROUPS" .. mode2)
 	obs.obs_property_set_description(obs.obs_properties_get(props, "info_showing"), mode1 .. "SONG INFORMATION" .. mode2)
@@ -1872,11 +1872,11 @@ function change_info_visible(props, prop, settings)
 	local pp = obs.obs_properties_get(script_props,"info_grp")
 	local vis = not obs.obs_property_visible(pp)	
 	obs.obs_property_set_visible(pp,vis) 
-	local mode1 = "SHOW "
-	local mode2 = " --->"
+	local mode1 = "▼░ SHOW "
+	local mode2 = "░▼"
 	if vis then
-	   mode1 = "<--- HIDE "
-	   mode2 = ""
+	   mode1 = "▲░ HIDE "
+	   mode2 = "░▲"
 	end
 	obs.obs_property_set_description(obs.obs_properties_get(props, "info_showing"), mode1 .. "SONG INFORMATION" .. mode2)
 	if all_vis_equal() then
@@ -1890,11 +1890,11 @@ function change_prepared_visible(props, prop, settings)
 	local pp = obs.obs_properties_get(script_props,"prep_grp")
 	local vis = not obs.obs_property_visible(pp)	
 	obs.obs_property_set_visible(pp,vis) 
-	local mode1 = "SHOW "
-	local mode2 = " --->"
+local mode1 = "▼░ SHOW "
+	local mode2 = "░▼"
 	if vis then
-	   mode1 = "<--- HIDE "
-	   mode2 = ""
+	   mode1 = "▲░ HIDE "
+	   mode2 = "░▲"
 	end
 	obs.obs_property_set_description(obs.obs_properties_get(props, "prepared_showing"), mode1 .. "PREPARED SONGS" .. mode2)
 	if all_vis_equal() then
@@ -1908,11 +1908,11 @@ function change_options_visible(props, prop, settings)
 	local pp = obs.obs_properties_get(script_props,"disp_grp")
 	local vis = not obs.obs_property_visible(pp)	
 	obs.obs_property_set_visible(pp,vis) 
-	local mode1 = "SHOW "
-	local mode2 = " --->"
+local mode1 = "▼░ SHOW "
+	local mode2 = "░▼"
 	if vis then
-	   mode1 = "<--- HIDE "
-	   mode2 = ""
+	   mode1 = "▲░ HIDE "
+	   mode2 = "░▲"
 	end
 	obs.obs_property_set_description(obs.obs_properties_get(props, "options_showing"), mode1 .. "DISPLAY OPTIONS" .. mode2)
 	if all_vis_equal() then
@@ -1926,11 +1926,11 @@ function change_src_visible(props, prop, settings)
 	local pp = obs.obs_properties_get(script_props,"src_grp")
 	local vis = not obs.obs_property_visible(pp)	
 	obs.obs_property_set_visible(pp,vis) 
-	local mode1 = "SHOW "
-	local mode2 = " --->"
+local mode1 = "▼░ SHOW "
+	local mode2 = "░▼"
 	if vis then
-	   mode1 = "<--- HIDE "
-	   mode2 = ""
+	   mode1 = "▲░ HIDE "
+	   mode2 = "░▲"
 	end
 	obs.obs_property_set_description(obs.obs_properties_get(props, "src_showing"), mode1 .. "SOURCE TEXT SELECTIONS" .. mode2)
 	if all_vis_equal() then
@@ -1944,11 +1944,11 @@ function change_ctrl_visible(props, prop, settings)
 	local pp = obs.obs_properties_get(script_props,"ctrl_grp")
 	local vis = not obs.obs_property_visible(pp)	
 	obs.obs_property_set_visible(pp,vis) 
-	local mode1 = "SHOW "
-	local mode2 = " --->"
+local mode1 = "▼░ SHOW "
+	local mode2 = "░▼"
 	if vis then
-	   mode1 = "<--- HIDE "
-	   mode2 = ""
+	   mode1 = "▲░ HIDE "
+	   mode2 = "░▲"
 	end
 	obs.obs_property_set_description(obs.obs_properties_get(props, "ctrl_showing"), mode1 .. "LYRIC CONTROLS" .. mode2)	
 	if all_vis_equal() then
