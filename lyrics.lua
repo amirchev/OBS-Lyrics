@@ -48,6 +48,8 @@ ensure_lines = true
 -- TODO: removed displayed_song and use prepared_songs[prepared_index]
 -- displayed_song = ""
 lyrics = {}
+verses = {}
+
 -- refrain = {}
 alternate = {}
 page_index = 0
@@ -82,6 +84,7 @@ source_props = nil
 --monitor variables
 mon_song = ""
 mon_lyric = ""
+mon_verse = ""
 mon_nextlyric = ""
 mon_alt = ""
 mon_nextalt = ""
@@ -817,6 +820,7 @@ function prepare_song_by_name(name)
     local refrain = {}
     local arefrain = {}
     lyrics = {}
+	verses = {}
     alternate = {}
     static_text = ""
 	alt_title = ""
@@ -985,6 +989,13 @@ function prepare_song_by_name(name)
             if phantom_index ~= nil then
                 line = line:gsub("%s*##B%s*", "") .. "\n"
             end
+            local verse_index = line:find("##V")
+            if verse_index ~= nil then
+                line = line:sub(1, verse_index - 1)
+                new_lines = 0
+				verses[#verses+1] = #lyrics
+				dbg_inner("Verse: " .. #lyrics)
+            end		
             if line ~= nil then
                 if use_static then
                     if static_text == "" then
@@ -1376,6 +1387,7 @@ function save_prepared()
     return true
 end
 
+
 -- updates the selected lyrics
 function update_source_text()
     dbg_method("update_source_text")
@@ -1387,6 +1399,8 @@ function update_source_text()
     local static = static_text
     local mstatic = static -- save static for use with monitor
     local title = ""
+	
+	
 	if alt_title ~= "" then 
 	    title = alt_title
 	else
@@ -1406,7 +1420,7 @@ function update_source_text()
     local alt_source = obs.obs_get_source_by_name(alternate_source_name)
     local stat_source = obs.obs_get_source_by_name(static_source_name)
     local title_source = obs.obs_get_source_by_name(title_source_name)
-
+	
     if using_source or (prepared_index ~= nil and prepared_index ~= 0) then
         if #lyrics > 0 then 
             if lyrics[page_index] ~= nil then
@@ -1477,7 +1491,14 @@ function update_source_text()
             next_prepared = prepared_songs[1] -- plan to loop around to first prepared song
         end
     end
-
+	mon_verse = 0
+	if #verses ~= nil then --find valid page Index
+		for i = 1, #verses do
+			if page_index >= verses[i]+1 then
+				mon_verse = i
+			end
+		end  -- v = current verse number for this page
+	end	
 	mon_song = title
 	mon_lyric = text:gsub("\n", "<br>&bull; ")
 	mon_nextlyric = next_lyric:gsub("\n", "<br>&bull; ")
@@ -1516,11 +1537,12 @@ function update_monitor()
             text ..
             "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
     end
-    text =
-        text ..
-        "<div style = 'color: #B0E0E6; float: left; margin: 2px; '>Lyric Page: <B style='color: #FFEF00;'>" ..
-            page_index
+    text = text .. "<div style = 'color: #B0E0E6; float: left; margin: 2px; margin-right: 20px; '>Lyric Page: <B style='color: #FFEF00;'>" .. page_index
     text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .. "</b></div>"
+	if #verses ~= nil and mon_verse>0 then
+		text = text ..  "<div style = 'color: #B0E0E6; float: left; margin: 2px; '>Verse: <B style='color: #FFEF00;'>" ..  mon_verse
+		text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #verses .. "</b></div>"	
+	end
     text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
     if not anythingActive() then
         tableback = "#440000"
@@ -1645,8 +1667,8 @@ local help = 	"░░░░░░░░░░░░░░░ MARKUP SYNTAX HELP 
 				" Repeat Refrain   ##r or ##R    Duplicate Line n times   #D:n Line\n"	..
 				" Static Lines    #S[ and #s]      Single Static Line      #S: Line \n"	..
 				"Alternate Text    #A[ and #A]    Alt Line Repeat n Pages  #A:n Line \n" ..				
-				"Comment Line     // Line       Block Comments     //[ and //] \n\n" ..	
-				"Titles must be valid filenames. Override Title with #T: title markup\n\n"	..
+				"Comment Line     // Line       Block Comments     //[ and //] \n" ..	
+				"Mark Verses     ##V        Override Title     #T: text\n\n" ..					
 				"Optional comma delimited meta tags follow '//meta ' on 1st line\n\n" ..
 				"▲░░░░░░ CLICK TO CLOSE ░░░░░░▲"	
 
