@@ -2430,11 +2430,20 @@ function update_source_callback()
     update_monitor()
 end
 
+function rename_callback()
+    obs.remove_current_callback()
+    rename_source()
+end
+
 function on_event(event)
 	dbg_method("on_event: " .. event)
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
 		dbg_bool("Active:",source_active)
 		obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
+	end
+	if event == obs.OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED then
+	dbg_inner("Scene Change")
+		obs.timer_add(rename_callback, 1000)
 	end
 end
 
