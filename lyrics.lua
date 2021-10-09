@@ -1538,10 +1538,10 @@ function update_monitor()
             "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
     end
     text = text .. "<div style = 'color: #B0E0E6; float: left; margin: 2px; margin-right: 20px; '>Lyric Page: <B style='color: #FFEF00;'>" .. page_index
-    text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .. "</b></div>"
+    text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #lyrics .. "</B></div>"
 	if #verses ~= nil and mon_verse>0 then
 		text = text ..  "<div style = 'color: #B0E0E6; float: left; margin: 2px; '>Verse: <B style='color: #FFEF00;'>" ..  mon_verse
-		text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #verses .. "</b></div>"	
+		text = text .. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #verses .. "</B></div>"	
 	end
     text = text .. "<div style = 'color: #B0E0E6; float: left;  margin: 2px; '>"
     if not anythingActive() then
@@ -2350,10 +2350,24 @@ source_def.get_name = function()
     return "Prepare Lyric"
 end
 
+saved = false
+
 source_def.save = function(data, settings)
+	if saved then return end   -- obs calls save for every load source in all scenes and we only need it once (So we could probably do rename here eventually)
+	saved = true
+    using_source = true
+    prepare_selected(obs.obs_data_get_string(source_sets, "songs")) -- show song to user
     rename_source() -- Rename and Mark sources instantly on update (WZ)
 end
 
+source_def.update = function(data, settings)
+	saved = false            -- mark properties changed
+	source_sets = settings   -- saved so the actual SAVE callback can update the right song
+end
+
+source_def.load = function(data)
+dbg_method("load")
+end
 
 function source_refresh_button_clicked(props, p)
 	dbg_method("source_refresh_button")
@@ -2396,12 +2410,13 @@ source_def.get_properties = function(data)
 end
 
 source_def.create = function(settings, source)
+dbg_method("create")
     data = {}
 	source_sets = settings
-    sh = obs.obs_source_get_signal_handler(source)
-    obs.signal_handler_connect(sh, "activate", source_isactive) -- Set Active Callback
-    obs.signal_handler_connect(sh, "show", source_showing) -- Set Preview Callback
-    obs.signal_handler_connect(sh, "deactivate", source_inactive) -- Set Preview Callback
+    obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "activate", source_isactive) -- Set Active Callback
+    obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "show", source_showing) -- Set Preview Callback
+    obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "deactivate", source_inactive) -- Set Preview Callback
+    obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "updated", source_update) -- Set Preview Callback	
     return data
 end
 
@@ -2410,17 +2425,14 @@ source_def.get_defaults = function(settings)
     obs.obs_data_set_default_string(settings, "index", "0")
 end
 
-source_def.destroy = function(source)
-end
-
 function update_source_callback()
     obs.remove_current_callback()
     update_monitor()
 end
 
 function on_event(event)
-	dbg_method("on_event")
-	if event == obs.OBS_FRONTEND_EVENT_TRANSITION_STOPPED then
+	dbg_method("on_event: " .. event)
+	if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then
 		dbg_bool("Active:",source_active)
 		obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
 	end
@@ -2443,6 +2455,7 @@ function load_source_song(source, preview)
     obs.obs_data_release(settings)
 end
 
+
 function source_isactive(cd)
     dbg_method("source_active")
     local source = obs.calldata_source(cd, "source")
@@ -2452,9 +2465,8 @@ function source_isactive(cd)
     dbg_inner("source active")
     load_scene = get_current_scene_name()
     load_source_song(source, false)
-	
     source_active = true -- using source lyric
-	end
+end
 
 function source_inactive(cd)
     dbg_inner("source inactive")
