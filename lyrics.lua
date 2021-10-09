@@ -2272,78 +2272,65 @@ end
 --------
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
-function rename_source()
-    -- pause_timer = true
+function index_sources()
     local sources = obs.obs_enum_sources()
     if (sources ~= nil) then
         -- count and index sources
         local t = 1
         for _, source in ipairs(sources) do
-            local source_id = obs.obs_source_get_unversioned_id(source)
-            if source_id == "Prepare_Lyrics" then
-                local settings = obs.obs_source_get_settings(source)
+            local settings = obs.obs_source_get_settings(source)
+			if obs.obs_data_get_bool(settings,"isLLC") then
                 obs.obs_data_set_string(settings, "index", t) -- add index to source data
                 t = t + 1
-                obs.obs_data_release(settings) -- release memory
-            end
+			end
+            obs.obs_data_release(settings) -- release memory
         end
-        -- Find and mark Duplicates in loadLyric_items table
-        local loadLyric_items = {} -- Start Table for all load Sources
-        local scenes = obs.obs_frontend_get_scenes() -- Get list of all scene items
-        if scenes ~= nil then
-            for _, scenesource in ipairs(scenes) do -- Loop through all scenes
-                local scene = obs.obs_scene_from_source(scenesource) -- Get scene pointer
-                local scene_name = obs.obs_source_get_name(scenesource) -- Get scene name
-                local scene_items = obs.obs_scene_enum_items(scene) -- Get list of all items in this scene
-                if scene_items ~= nil then
-                    for _, scene_item in ipairs(scene_items) do -- Loop through all scene source items
-                        local source = obs.obs_sceneitem_get_source(scene_item) -- Get item source pointer
-                        local source_id = obs.obs_source_get_unversioned_id(source) -- Get item source_id
-                        if source_id == "Prepare_Lyrics" then -- Skip if not a Prepare_Lyric source item
-                            local settings = obs.obs_source_get_settings(source) -- Get settings for this Prepare_Lyric source
-                            local index = obs.obs_data_get_string(settings, "index") -- Get index for this source (set earlier)
-                            if loadLyric_items[index] == nil then
-                                loadLyric_items[index] = "x" -- First time to find this source so mark with x
-                            else
-                                loadLyric_items[index] = "*" -- Found this source again so mark with *
-                            end
-                            obs.obs_data_release(settings) -- release memory
-                        end
-                    end
-                end
-                obs.sceneitem_list_release(scene_items) -- Free scene list
-            end
-            obs.source_list_release(scenes) -- Free source list
-        end
+	end	
+    local loadLyric_items = {} -- Start Table for all load Sources
+	local scenes = obs.obs_frontend_get_scenes() -- Get list of all scene items
+	if scenes ~= nil then
+		for _, scenesource in ipairs(scenes) do -- Loop through all scenes
+			local scene = obs.obs_scene_from_source(scenesource) -- Get scene pointer
+			local scene_name = obs.obs_source_get_name(scenesource) -- Get scene name
+			local scene_items = obs.obs_scene_enum_items(scene) -- Get list of all items in this scene
+			if scene_items ~= nil then
+				for _, scene_item in ipairs(scene_items) do -- Loop through all scene source items
+					local source = obs.obs_sceneitem_get_source(scene_item) -- Get item source pointer
+					local settings = obs.obs_source_get_settings(source) -- Get settings for this Prepare_Lyric source
+					if obs.obs_data_get_bool(settings,"isLLC") then
+						local index = obs.obs_data_get_string(settings, "index") -- Get index for this source (set earlier)
+						obs.obs_data_set_bool(settings,"duplicate", loadLyric_items[index])  -- false (nil) the first time
+						loadLyric_items[index] = true   -- duplicate (true) if used again
+					end
+					obs.obs_data_release(settings) -- release memory
+				end
+			end
+			obs.sceneitem_list_release(scene_items) -- Free scene list
+		end
+		obs.source_list_release(scenes) -- Free source list
+	end	
+    obs.source_list_release(sources)	
+end
 
-        -- Name Source with Song Title
-        local i = 1
+function rename_sources()
+    local sources = obs.obs_enum_sources()
+    if (sources ~= nil) then
+        -- count and index sources
+        local t = 1
         for _, source in ipairs(sources) do
-            local source_id = obs.obs_source_get_unversioned_id(source) -- Get source
-            if source_id == "Prepare_Lyrics" then -- Skip if not a Load Lyric source
-                local c_name = obs.obs_source_get_name(source) -- Get current Source Name
-                local settings = obs.obs_source_get_settings(source) -- Get settings for this source
-                local song = obs.obs_data_get_string(settings, "songs") -- Get the current song name to load
-                local index = obs.obs_data_get_string(settings, "index") -- get index
-                if (song ~= nil) then
-                    local name = t - i .. ". Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
-                    -- Mark Duplicates
-                    if index ~= nil then
-                        if loadLyric_items[index] == "*" then
-                            name = '<span style="color:#FF6050;">' .. name .. " * </span>"
-                        end
-                        if (c_name ~= name) then
-                            obs.obs_source_set_name(source, name)
-                        end
-                    end
-                    i = i + 1
-                end
-                obs.obs_data_release(settings)
-            end
+            local settings = obs.obs_source_get_settings(source)
+				if obs.obs_data_get_bool(settings,"isLLC") then
+					local name = obs.obs_data_get_string(settings, "index") .. ". Load lyrics for: <i><b>" .. 
+							obs.obs_data_get_string(settings, "songs") .. "</i></b>" -- use index for compare
+					if obs.obs_data_get_bool(settings, "duplicate") then
+					   name = '<span style="color:#FF6050;">' .. name .. " * </span>" 
+					end
+					obs.obs_source_set_name(source, name)
+				end
+            obs.obs_data_release(settings) -- release memory
         end
+     obs.source_list_release(sources)
     end
-    obs.source_list_release(sources)
-    -- pause_timer = false
 end
 
 source_def.get_name = function()
@@ -2353,20 +2340,12 @@ end
 saved = false
 
 source_def.save = function(data, settings)
-	if saved then return end   -- obs calls save for every load source in all scenes and we only need it once (So we could probably do rename here eventually)
-	saved = true
-    using_source = true
-    prepare_selected(obs.obs_data_get_string(source_sets, "songs")) -- show song to user
-    rename_source() -- Rename and Mark sources instantly on update (WZ)
+
 end
 
 source_def.update = function(data, settings)
 	saved = false            -- mark properties changed
 	source_sets = settings   -- saved so the actual SAVE callback can update the right song
-end
-
-source_def.load = function(data)
-dbg_method("load")
 end
 
 function source_refresh_button_clicked(props, p)
@@ -2386,6 +2365,7 @@ source_def.get_properties = function(data)
 	source_filter = true
     load_source_song_directory(true)
     local source_props = obs.obs_properties_create()
+	index_sources()	
     local source_dir_list =
         obs.obs_properties_add_list(
         source_props,
@@ -2413,10 +2393,13 @@ source_def.create = function(settings, source)
 dbg_method("create")
     data = {}
 	source_sets = settings
+	obs.obs_data_set_string(settings,"index",nil)
+	obs.obs_data_set_bool(settings,"duplicate",false)
+	obs.obs_data_set_bool(settings,"isLLC",true)
     obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "activate", source_isactive) -- Set Active Callback
     obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "show", source_showing) -- Set Preview Callback
     obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "deactivate", source_inactive) -- Set Preview Callback
-    obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "updated", source_update) -- Set Preview Callback	
+    obs.signal_handler_connect(obs.obs_source_get_signal_handler(source), "save", source_save) -- Set Preview Callback	
     return data
 end
 
@@ -2432,7 +2415,7 @@ end
 
 function rename_callback()
     obs.remove_current_callback()
-    rename_source()
+    rename_sources()
 end
 
 function on_event(event)
@@ -2442,7 +2425,7 @@ function on_event(event)
 		obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
 	end
 	if event == obs.OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED then
-	dbg_inner("Scene Change")
+		dbg_inner("Scene Change")
 		obs.timer_add(rename_callback, 1000)
 	end
 end
@@ -2475,6 +2458,25 @@ function source_isactive(cd)
     load_scene = get_current_scene_name()
     load_source_song(source, false)
     source_active = true -- using source lyric
+end
+
+function source_save(cd)
+    dbg_inner("source save")
+    local source = obs.calldata_source(cd, "source")
+	local settings = obs.obs_source_get_settings(source) -- Get settings for this Prepare_Lyric source		
+	dbg_inner("Index: " .. obs.obs_data_get_string(settings,"index"))
+	dbg_bool("Duplicate: ", obs.obs_data_get_bool(settings,"duplicate"))
+    --using_source = true
+    --prepare_selected(obs.obs_data_get_string(source_sets, "songs")) -- show song to user
+    local song = obs.obs_data_get_string(settings, "songs") -- Get the current song name to load
+    local index = obs.obs_data_get_string(settings, "index") -- get index
+	local duplicate = obs.obs_data_get_bool(settings,"duplicate")
+    obs.obs_data_release(settings) -- release memory	
+    local name = index .. ". Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
+    if duplicate then
+       name = '<span style="color:#FF6050;">' .. name .. " * </span>" 
+	end
+	obs.obs_source_set_name(source, name)		
 end
 
 function source_inactive(cd)
