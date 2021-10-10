@@ -90,6 +90,7 @@ mon_alt = ""
 mon_nextalt = ""
 mon_nextsong = ""
 meta_tags = ""
+source_meta_tags = "" 
 
 -- text status & fade
 TEXT_VISIBLE = 0 -- text is visible
@@ -523,6 +524,7 @@ function refresh_button_clicked(props, p)
             obs.obs_property_list_add_string(static_source_prop, name, name)
         end
     end
+	obs.source_list_release(sources)	
 	refresh_directory()
 	
     return true
@@ -536,8 +538,7 @@ end
 
 function refresh_directory()
 	local prop_dir_list = obs.obs_properties_get(script_props,"prop_directory_list")
-    local source_prop = obs.obs_properties
-    obs.source_list_release(sources)
+    local source_prop = obs.obs_properties_get(props, "prop_source_list")
 	source_filter = false	
     load_source_song_directory(true)
     table.sort(song_directory)
@@ -1158,9 +1159,11 @@ function load_source_song_directory(use_filter)
 dbg_method("load_source_song_directory")
     local keytext = meta_tags
 	if source_filter then
-		keytext = obs.obs_data_get_string(source_sets, "prop_edit_metatags")
+		keytext = source_meta_tags
 	end	
+	dbg_inner(keytext)
 	local keys = ParseCSVLine(keytext)
+	
     song_directory = {}
     local filenames = {}
 	local tags = {}
@@ -1262,6 +1265,7 @@ function ParseCSVLine (line)
 				if (c == '"') then txt = txt..'"' end 
 			until (c ~= '"')
 			txt = string.gsub(txt, "^%s*(.-)%s*$", "%1")
+			dbg_inner("CSV: " .. txt)
 			table.insert(res,txt)
 			assert(c == sep or c == "")
 			pos = pos + 1
@@ -1270,11 +1274,13 @@ function ParseCSVLine (line)
 			if (startp) then 
 				local t = string.sub(line,pos,startp-1)
 				t = string.gsub(t, "^%s*(.-)%s*$", "%1")
+				dbg_inner("CSV: " .. t)
 				table.insert(res,t)
 				pos = endp + 1
 			else
 				local t = string.sub(line,pos)
-				t = string.gsub(t, "^%s*(.-)%s*$", "%1")				
+				t = string.gsub(t, "^%s*(.-)%s*$", "%1")	
+				dbg_inner("CSV: " .. t)
 				table.insert(res,t)
 				break
 			end 
@@ -1852,7 +1858,7 @@ local description = [[
 ]]
 
 function script_description()
-    return "<B style = 'color: #dddd22;'>Manage song Lyrics and Other Paged Text (Version: September 2021 (beta2)<br>Author: Amirchev & DC Strato; with significant contributions from Taxilian. </B>" 
+    return "<B style = 'color: #dddd22;'>Manage song Lyrics and Other Paged Text (Version: Nov 2021)<br>Authors: Amirchev & DC Strato; with significant contributions from Taxilian. </B>" 
 	end
 	
 function expand_all_groups(props, prop, settings)
@@ -2327,7 +2333,7 @@ function rename_source()
                 local song = obs.obs_data_get_string(settings, "songs") -- Get the current song name to load
                 local index = obs.obs_data_get_string(settings, "index") -- get index
                 if (song ~= nil) then
-                    local name = t - i .. ". Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
+                    local name = "<meta " .. t - i .. " />Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
                     -- Mark Duplicates
                     if index ~= nil then
                         if loadLyric_items[index] == "*" then
@@ -2373,14 +2379,22 @@ end
 function source_refresh_button_clicked(props, p)
 	dbg_method("source_refresh_button")
 	source_filter = true
+	dbg_inner("tags: " .. source_meta_tags)
     load_source_song_directory(true)
     table.sort(song_directory)
-	local prop_dir_list = obs.obs_properties_get(props,"source_directory_list")	
+	local prop_dir_list = obs.obs_properties_get(props,"songs")	
 	obs.obs_property_list_clear(prop_dir_list) -- clear directories
     for _, name in ipairs(song_directory) do
+	dbg_inner("SLD: " .. name)
         obs.obs_property_list_add_string(prop_dir_list, name, name)
     end	
     return true
+end
+
+function update_source_metatags(props, p, settings)
+
+	source_meta_tags = obs.obs_data_get_string(settings,"metatags")
+	return true
 end
 
 function source_selection_made(props, prop, settings)
@@ -2410,7 +2424,8 @@ source_def.get_properties = function(data)
         obs.obs_property_list_add_string(source_dir_list, name, name)
     end
 	gps = obs.obs_properties_create()	
-	obs.obs_properties_add_text(gps, "source_prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+	source_metatags = obs.obs_properties_add_text(gps, "metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+	obs.obs_property_set_modified_callback(source_metatags, update_source_metatags)	
 	obs.obs_properties_add_button(gps, "source_dir_refresh", "Refresh Directory", source_refresh_button_clicked)
 	obs.obs_properties_add_group(source_props, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)		
 	gps = obs.obs_properties_create()		
@@ -2435,6 +2450,7 @@ dbg_method("create")
 end
 
 source_def.get_defaults = function(settings)
+source_sets = settings
     obs.obs_data_set_default_bool(settings, "source_activate_in_preview", false)
     obs.obs_data_set_default_string(settings, "index", "0")
 end
