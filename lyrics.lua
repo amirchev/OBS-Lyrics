@@ -586,7 +586,9 @@ function prepare_selected(name)
 		end
 		all_sources_fade = true
 		-- if using source, then force show the new lyrics, even if lyrics were previously hidden
-		transition_lyric_text(using_source)
+		if using_source then   -- this keeps preapare selected from showing lyrics until hide/show
+			transition_lyric_text(using_source)
+		end
 	else
 		-- hide everything if unable to prepare song
 		-- TODO: clear lyrics entirely after text is hidden
@@ -1683,12 +1685,12 @@ function script_properties()
     dbg_method("script_properties")
 	editVisSet = false	
     script_props = obs.obs_properties_create()
-	obs.obs_properties_add_button(script_props, "show_help_button", "SHOW MARKUP SYNTAX HELP", show_help_button)
 	obs.obs_properties_add_button(script_props, "expand_all_button", "▲░ HIDE ALL GROUPS ░▲", expand_all_groups)
 -----------
 	obs.obs_properties_add_button(script_props, "info_showing", "HIDE SONG INFORMATION",change_info_visible)
 	gp = obs.obs_properties_create()
     obs.obs_properties_add_text(gp, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
+	obs.obs_properties_add_button(gp, "show_help_button", "SHOW MARKUP SYNTAX HELP", show_help_button)	
     obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
     obs.obs_properties_add_button(gp, "prop_save_button", "Save Song", save_song_clicked)
     obs.obs_properties_add_button(gp, "prop_delete_button", "Delete Song", delete_song_clicked)
@@ -2048,6 +2050,7 @@ function edit_prepared_clicked(props, p)
 	dbg_inner("count: " .. count)
     local songNames =  obs.obs_data_get_array(script_sets, "prep_list")
     local count2 = obs.obs_data_array_count(songNames)
+	dbg_inner("count2: " .. count2)	
 	if count2 > 0 then
 		for i = 0, count2 do
 			obs.obs_data_array_erase(songNames,0)
@@ -2056,6 +2059,7 @@ function edit_prepared_clicked(props, p)
 
     for i = 0, count-1 do
         local song = obs.obs_property_list_item_string(prop_prep_list, i)
+		print("song to move: " .. song)
 		local array_obj = obs.obs_data_create()				
 		obs.obs_data_set_string(array_obj, "value", song)
 		obs.obs_data_array_push_back(songNames,array_obj)
@@ -2310,9 +2314,9 @@ function rename_source()
                             local settings = obs.obs_source_get_settings(source) -- Get settings for this Prepare_Lyric source
                             local index = obs.obs_data_get_string(settings, "index") -- Get index for this source (set earlier)
                             if loadLyric_items[index] == nil then
-                                loadLyric_items[index] = "x" -- First time to find this source so mark with x
+                                loadLyric_items[index] = 1 -- First time to find this source so mark with 1
                             else
-                                loadLyric_items[index] = "*" -- Found this source again so mark with *
+                                loadLyric_items[index] = loadLyric_items[index]+1 -- Found this source again so increment
                             end
                             obs.obs_data_release(settings) -- release memory
                         end
@@ -2336,8 +2340,8 @@ function rename_source()
                     local name = "<meta " .. t - i .. " />Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
                     -- Mark Duplicates
                     if index ~= nil then
-                        if loadLyric_items[index] == "*" then
-                            name = '<span style="color:#FF6050;">' .. name .. " * </span>"
+                        if loadLyric_items[index] > 1 then
+                            name = '<span style="color:#FF6050;">' .. name .. " <sup>" .. loadLyric_items[index] .. "</sup></span>"
                         end
                         if (c_name ~= name) then
                             obs.obs_source_set_name(source, name)
