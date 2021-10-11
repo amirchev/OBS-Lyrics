@@ -601,12 +601,8 @@ function prepare_selected(name)
 			all_sources_fade = true			
 		end
 
-		-- if using source, then force show the new lyrics, even if lyrics were previously hidden
-		if using_source then   -- this keeps preapare selected from showing lyrics until hide/show
-			transition_lyric_text(using_source)
-		else
-			set_text_visibility(TEXT_HIDDEN)	
-		end
+		transition_lyric_text(using_source)
+
 		
 	else
 		-- hide everything if unable to prepare song
@@ -2293,13 +2289,13 @@ function script_load(settings)
     dbg_method("script_load")
     hotkey_n_id = obs.obs_hotkey_register_frontend("lyric_next_hotkey", "Advance Lyrics", next_lyric)
     hotkey_save_array = obs.obs_data_get_array(settings, "lyric_next_hotkey")
-	hotkey_n_key = get_hotkeys(hotkey_save_array,"Previous Lyric")	
+	hotkey_n_key = get_hotkeys(hotkey_save_array,"Next Lyric")	
     obs.obs_hotkey_load(hotkey_n_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
     hotkey_p_id = obs.obs_hotkey_register_frontend("lyric_prev_hotkey", "Go Back Lyrics", prev_lyric)
     hotkey_save_array = obs.obs_data_get_array(settings, "lyric_prev_hotkey")
-	hotkey_p_key = get_hotkeys(hotkey_save_array,"Next Lyric")
+	hotkey_p_key = get_hotkeys(hotkey_save_array,"Previous Lyric")
     obs.obs_hotkey_load(hotkey_p_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
