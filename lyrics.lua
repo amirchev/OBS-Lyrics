@@ -2089,8 +2089,10 @@ function save_edits_clicked(props, p)
 				prepared_songs[#prepared_songs+1] = itemName
 				obs.obs_property_list_add_string(prop_prep_list, itemName, itemName)	
 			end
+			obs.obs_data_release(item)
 		end
 	end	
+	obs.obs_data_array_release(songNames)	
 	save_prepared()
 	if #prepared_songs > 0 then
 		obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
