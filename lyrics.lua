@@ -75,11 +75,20 @@ hotkey_p_p_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_home_id = obs.OBS_INVALID_HOTKEY_ID
 hotkey_reset_id = obs.OBS_INVALID_HOTKEY_ID
 
+hotkey_n_key = ""
+hotkey_p_key = ""
+hotkey_c_key = ""
+hotkey_n_p_key = ""
+hotkey_p_p_key = ""
+hotkey_home_key = ""
+hotkey_reset_key = ""
+
 -- script placeholders
 script_sets = nil
 script_props = nil
 source_sets = nil
 source_props = nil
+hotkey_props = nil
 
 --monitor variables
 mon_song = ""
@@ -290,19 +299,23 @@ function next_prepared(pressed)
 	end
 	if using_source then
 		using_source = false
+		dbg_custom("do current prepared")
 		prepare_selected(prepared_songs[prepared_index]) -- if source load song showing then goto curren prepared song
 		return
 	end
 	if prepared_index < #prepared_songs then
 		using_source = false
+		dbg_custom("do next prepared")		
 		prepare_selected(prepared_songs[prepared_index + 1]) -- if prepared then goto next prepared
 		return
 	end
 	if not source_active or using_source then
 		using_source = false
+		dbg_custom("do first prepared")		
 		prepare_selected(prepared_songs[1]) -- at the end so go back to start if no source load available
 	else
 		using_source = true
+		dbg_custom("do source prepared")		
 		prepared_index = 1 -- wrap prepared index to beginning so ready if leaving load source
 		load_source_song(load_source, false)
 	end
@@ -485,9 +498,8 @@ function prepare_song_clicked(props, p)
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
 
-       obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
-    --    prepare_song_by_index(#prepared_songs)
-    --end
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
+
     obs.obs_properties_apply_settings(props, script_sets)
     save_prepared()
     return true
@@ -550,7 +562,10 @@ function refresh_directory()
     obs.obs_properties_apply_settings(script_props, script_sets)		
 end	
 
+
+-- Called with ANY change to the prepared song list 
 function prepare_selection_made(props, prop, settings)
+	obs.obs_property_set_description(prop, "Prepared Songs (" .. #prepared_songs .. ")")	
     dbg_method("prepare_selection_made")
     local name = obs.obs_data_get_string(settings, "prop_prepared_list")
     using_source = false
@@ -583,12 +598,16 @@ function prepare_selected(name)
 			prepared_index = get_index_in_list(prepared_songs, name)
 		else
 			source_song_title = name
+			all_sources_fade = true			
 		end
-		all_sources_fade = true
+
 		-- if using source, then force show the new lyrics, even if lyrics were previously hidden
 		if using_source then   -- this keeps preapare selected from showing lyrics until hide/show
 			transition_lyric_text(using_source)
+		else
+			set_text_visibility(TEXT_HIDDEN)	
 		end
+		
 	else
 		-- hide everything if unable to prepare song
 		-- TODO: clear lyrics entirely after text is hidden
@@ -653,6 +672,7 @@ end
 
 function apply_source_opacity()
 --    dbg_method("apply_source_visiblity")
+
     local settings = obs.obs_data_create()
     obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
     obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
@@ -661,24 +681,41 @@ function apply_source_opacity()
         obs.obs_source_update(source, settings)
     end
     obs.obs_source_release(source)
+    obs.obs_data_release(settings)
+	
+    local settings = obs.obs_data_create()
+    obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
+    obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
     local alt_source = obs.obs_get_source_by_name(alternate_source_name)
     if alt_source ~= nil then
         obs.obs_source_update(alt_source, settings)
     end
     obs.obs_source_release(alt_source)
-    if all_sources_fade and link_text then
+    obs.obs_data_release(settings)	
+	dbg_bool("All Sources Fade:", all_sources_fade)
+	dbg_bool("Link Text:", link_text)	
+    if all_sources_fade or  link_text then
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
+		obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
         local title_source = obs.obs_get_source_by_name(title_source_name)
         if title_source ~= nil then
             obs.obs_source_update(title_source, settings)
         end
-        obs.obs_source_release(title_source)
+		obs.obs_source_release(title_source)
+		obs.obs_data_release(settings)			
+		
+		local settings = obs.obs_data_create()
+		obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
+		obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
         local static_source = obs.obs_get_source_by_name(static_source_name)
         if static_source ~= nil then
             obs.obs_source_update(static_source, settings)
         end
         obs.obs_source_release(static_source)
+		obs.obs_data_release(settings)			
     end
-    obs.obs_data_release(settings)
+
 end
 
 function set_text_visibility(end_status)
@@ -694,13 +731,15 @@ function set_text_visibility(end_status)
 	elseif end_status == TEXT_VISIBLE then
 		text_opacity = 100
 		text_status = end_status
+		all_sources_fade = true             -- prevent orphaned title/static if link is removed when hidden
 	end
     if text_status == end_status then	
 		apply_source_opacity()	
 		update_source_text() 
+		all_sources_fade = false
 		return	
 	end
-    --if text_fade_enabled then 
+    if text_fade_enabled then 
         -- if fade enabled, begin fade in or out
         if end_status == TEXT_HIDDEN then
             text_status = TEXT_HIDING
@@ -709,15 +748,16 @@ function set_text_visibility(end_status)
         end
 		all_sources_fade = true
         start_fade_timer()
-    --end
-    update_source_text()
+    else
+        update_source_text()
+	end
 end
 
 -- transition to the next lyrics, use fade if enabled
 -- if lyrics are hidden, force_show set to true will make them visible
 function transition_lyric_text(force_show)
     dbg_method("transition_lyric_text")
-    dbg_bool("using_source", using_source)
+    dbg_bool("force show", force_show)
     -- update the lyrics display immediately on 2 conditions
     -- a) the text is hidden or hiding, and we will not force it to show
     -- b) text fade is not enabled
@@ -736,8 +776,9 @@ function transition_lyric_text(force_show)
         set_text_visibility(TEXT_VISIBLE)
         update_source_text()
         dbg_inner("no text fade")
-    else
+    else  -- initiate fade out/in
         text_status = TEXT_TRANSITION_OUT
+        --set_text_visibility(TEXT_VISIBLE)		
         start_fade_timer()
     end
     dbg_bool("using_source", using_source)
@@ -1419,11 +1460,10 @@ function update_source_text()
 				title = prepared_songs[prepared_index]
 			end
 		else
-			dbg_custom("Load title from source")
+			dbg_custom("Load title from source: " .. source_song_title)
 			title = source_song_title
 		end
 	end
-    local mtitle = title -- save title for use with monitor
 
     local source = obs.obs_get_source_by_name(source_name)
     local alt_source = obs.obs_get_source_by_name(alternate_source_name)
@@ -1444,13 +1484,14 @@ function update_source_text()
 
         if link_text then
             if string.len(text) == 0 and string.len(alttext) == 0 then
-                static = ""
-                title = ""
+                --static = ""
+                --title = ""
             end
         end
     end
     -- update source texts
     if source ~= nil then
+	dbg_inner("Title Load")
         local settings = obs.obs_data_create()
         obs.obs_data_set_string(settings, "text", text)
         obs.obs_source_update(source, settings)
@@ -1569,7 +1610,7 @@ function update_monitor()
         text ..
         "</div><table bgcolor=" ..
             tableback .. " cellpadding='3' cellspacing='3' width=100% style = 'border-collapse: collapse;'>"
-    if mon_song ~= "" and Mon_song ~= nil then
+    if mon_song ~= "" and mon_song ~= nil then
         text =
             text ..
             "<tr style='border-bottom: 1px solid #ccc; border-top: 1px solid #ccc; border-color: #98AFC7;'><td bgcolor=#262626 style='border-right: 1px solid #ccc; border-color: #98AFC7; color: White; width: 50px; text-align: center;'>Song<br>Title</td>"
@@ -1688,7 +1729,7 @@ function script_properties()
 	obs.obs_properties_add_button(script_props, "expand_all_button", "▲░ HIDE ALL GROUPS ░▲", expand_all_groups)
 -----------
 	obs.obs_properties_add_button(script_props, "info_showing", "HIDE SONG INFORMATION",change_info_visible)
-	gp = obs.obs_properties_create()
+	local gp = obs.obs_properties_create()
     obs.obs_properties_add_text(gp, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
 	obs.obs_properties_add_button(gp, "show_help_button", "SHOW MARKUP SYNTAX HELP", show_help_button)	
     obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
@@ -1708,23 +1749,22 @@ function script_properties()
 		obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
 		obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
 		obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Songs by Meta Tags", filter_songs_clicked)		
-		gps = obs.obs_properties_create()
+		local gps = obs.obs_properties_create()
 		obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
 		obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_directory_button_clicked)
 		obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
 			gps = obs.obs_properties_create()
-			local prep_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
---			prepare_props = prep_prop
+			local prepare_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","Prepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 			for _, name in ipairs(prepared_songs) do
-				obs.obs_property_list_add_string(prep_prop, name, name)
+				obs.obs_property_list_add_string(prepare_prop, name, name)
 			end
-			obs.obs_property_set_modified_callback(prep_prop, prepare_selection_made)
+			obs.obs_property_set_modified_callback(prepare_prop, prepare_selection_made)
 			obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs", clear_prepared_clicked)
 			obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared Songs List",edit_prepared_clicked)
-			eps = obs.obs_properties_create()	
-				local edit_prop = obs.obs_properties_add_editable_list(eps, "prep_list", "Prepared Songs", obs.OBS_EDITABLE_LIST_TYPE_STRINGS,nil,nil )	
-			    obs.obs_property_set_modified_callback(edit_prop, setEditVis)				
-				obs.obs_properties_add_button(eps, "prop_save_button", "Save Changes",save_edits_clicked)
+			local eps = obs.obs_properties_create()	
+			local edit_prop = obs.obs_properties_add_editable_list(eps, "prep_list", "Prepared Songs", obs.OBS_EDITABLE_LIST_TYPE_STRINGS,nil,nil )	
+			obs.obs_property_set_modified_callback(edit_prop, setEditVis)				
+			obs.obs_properties_add_button(eps, "prop_save_button", "Save Changes",save_edits_clicked)
 			obs.obs_properties_add_group(gps,"edit_grp","Edit Prepared Songs", obs.OBS_GROUP_NORMAL,eps)	
 		obs.obs_properties_add_group(gp, "prep_grp", "Prepared Songs", obs.OBS_GROUP_NORMAL, gps)	
 	obs.obs_properties_add_group(script_props,"prep_grp","Manage Prepared Songs", obs.OBS_GROUP_NORMAL,gp)	
@@ -1741,7 +1781,7 @@ function script_properties()
     obs.obs_property_set_long_description(prop_lines, "Guarantees fixed number of lines per page")
 
     local link_prop =
-        obs.obs_properties_add_bool(gp, "link_text", "Only show title and static text with lyrics")
+        obs.obs_properties_add_bool(gp, "do_link_text", "Only show title and static text with lyrics")
     obs.obs_property_set_long_description(link_prop, "Hides title and static text at end of lyrics")
 
     local transition_prop =
@@ -1821,15 +1861,16 @@ function script_properties()
  	obs.obs_properties_add_group(script_props,"src_grp","Text Sources in Scenes", obs.OBS_GROUP_NORMAL,gp)
 ------------------		
 	obs.obs_properties_add_button(script_props, "ctrl_showing", "▲░ HIDE LYRIC CONTROLS ░▲",change_ctrl_visible)
-	gp = obs.obs_properties_create()	
-    obs.obs_properties_add_button(gp, "prop_prev_button", "Previous Lyric", prev_button_clicked)
-    obs.obs_properties_add_button(gp, "prop_next_button", "Next Lyric", next_button_clicked)
-    obs.obs_properties_add_button(gp, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
-    obs.obs_properties_add_button(gp, "prop_home_button", "Reset to Song Start", home_button_clicked)
-    obs.obs_properties_add_button(gp, "prop_prev_prep_button", "Previous Prepared", prev_prepared_clicked)
-    obs.obs_properties_add_button(gp, "prop_next_prep_button", "Next Prepared", next_prepared_clicked)
-    obs.obs_properties_add_button(gp,"prop_reset_button","Reset to First Prepared Song",reset_button_clicked)
-	obs.obs_properties_add_group(script_props,"ctrl_grp","Lyric Controls (Duplicated by Hot Keys)", obs.OBS_GROUP_NORMAL,gp)
+	hotkey_props = obs.obs_properties_create()	
+    obs.obs_properties_add_button(hotkey_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
+    obs.obs_properties_add_button(hotkey_props, "prop_next_button", "Next Lyric", next_button_clicked)
+    obs.obs_properties_add_button(hotkey_props, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
+    obs.obs_properties_add_button(hotkey_props, "prop_home_button", "Reset to Song Start", home_button_clicked)
+    obs.obs_properties_add_button(hotkey_props, "prop_prev_prep_button", "Previous Prepared", prev_prepared_clicked)
+    obs.obs_properties_add_button(hotkey_props, "prop_next_prep_button", "Next Prepared", next_prepared_clicked)
+    obs.obs_properties_add_button(hotkey_props,"prop_reset_button","Reset to First Prepared Song",reset_button_clicked)
+	ctrl_grp_prop = obs.obs_properties_add_group(script_props,"ctrl_grp","Lyric Controls (Duplicated by Hot Keys)", obs.OBS_GROUP_NORMAL,hotkey_props)
+	obs.obs_property_set_modified_callback(ctrl_grp_prop, name_hotkeys)	
 -----------------		
     if #prepared_songs > 0 then
         obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
@@ -2015,7 +2056,8 @@ function setEditVis(props, prop, settings) -- hides edit group on initial showin
 	obs.obs_property_set_visible(pp, false)	
 	pp = obs.obs_properties_get(props,"meta")	
 	obs.obs_property_set_visible(pp, false)		
-	editVisSet = true                        -- do this only once
+	editVisSet = true   
+	-- do this only once
 	end
 end
 
@@ -2153,19 +2195,20 @@ function script_update(settings)
         ensure_lines = cur_ensure_lines
         reload = true
     end
-    local cur_link_text = obs.obs_data_get_bool(settings, "link_text")
-    if cur_link_text ~= link_text then
-        link_text = cur_link_text
-        reload = true
-    end
+    link_text = obs.obs_data_get_bool(settings, "do_link_text")
+	dbg_bool("link Text and Title", link_text)
+
 
     if reload then
         if #prepared_songs > 0 and prepared_songs[prepared_index] ~= "" then
             prepare_selected(prepared_songs[prepared_index])
         end
     end
-
+	
+	name_hotkeys()
 end
+
+
 
 -- A function named script_defaults will be called to set the default settings
 function script_defaults(settings)
@@ -2215,42 +2258,78 @@ function script_save(settings)
     obs.obs_data_array_release(hotkey_save_array)
 end
 
+
+function get_hotkeys(hotkey_array, prefix)
+	item = obs.obs_data_array_item(hotkey_array, 0)
+	local key = obs.obs_data_get_string(item,"key")
+	local ctrl = obs.obs_data_get_bool(item,"control")
+	local alt = obs.obs_data_get_bool(item,"alt")
+	local shft = obs.obs_data_get_bool(item,"shift")
+	obs.obs_data_release(item)	
+    local val = prefix
+	if key ~= nil and key ~= "" then
+		val = val .. " ["
+		if ctrl then val = val.."Ctrl+" end
+		if alt then val = val.."Alt+" end
+		if shft then val = val.."Shft+"	end
+		val = val .. string.sub(key, 9) .. "]"
+	end
+	return val
+end
+
+function name_hotkeys()
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_prev_button"), hotkey_p_key)	
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_next_button"), hotkey_n_key)	
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_hide_button"), hotkey_c_key)
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_home_button"), hotkey_home_key)
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_prev_prep_button"), hotkey_p_p_key)
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_next_prep_button"), hotkey_n_p_key)
+	obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_reset_button"), hotkey_reset_key)
+end
+
+
 -- a function named script_load will be called on startup
 function script_load(settings)
     dbg_method("script_load")
     hotkey_n_id = obs.obs_hotkey_register_frontend("lyric_next_hotkey", "Advance Lyrics", next_lyric)
-    local hotkey_save_array = obs.obs_data_get_array(settings, "lyric_next_hotkey")
+    hotkey_save_array = obs.obs_data_get_array(settings, "lyric_next_hotkey")
+	hotkey_n_key = get_hotkeys(hotkey_save_array,"Previous Lyric")	
     obs.obs_hotkey_load(hotkey_n_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
     hotkey_p_id = obs.obs_hotkey_register_frontend("lyric_prev_hotkey", "Go Back Lyrics", prev_lyric)
     hotkey_save_array = obs.obs_data_get_array(settings, "lyric_prev_hotkey")
+	hotkey_p_key = get_hotkeys(hotkey_save_array,"Next Lyric")
     obs.obs_hotkey_load(hotkey_p_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
     hotkey_c_id = obs.obs_hotkey_register_frontend("lyric_clear_hotkey", "Show/Hide Lyrics", toggle_lyrics_visibility)
     hotkey_save_array = obs.obs_data_get_array(settings, "lyric_clear_hotkey")
+	hotkey_c_key = get_hotkeys(hotkey_save_array,"Show/Hide Lyrics")
     obs.obs_hotkey_load(hotkey_c_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
     hotkey_n_p_id = obs.obs_hotkey_register_frontend("next_prepared_hotkey", "Prepare Next", next_prepared)
     hotkey_save_array = obs.obs_data_get_array(settings, "next_prepared_hotkey")
+	hotkey_n_p_key = get_hotkeys(hotkey_save_array,"Next Lyric")	
     obs.obs_hotkey_load(hotkey_n_p_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
     hotkey_p_p_id = obs.obs_hotkey_register_frontend("previous_prepared_hotkey", "Prepare Previous", prev_prepared)
     hotkey_save_array = obs.obs_data_get_array(settings, "previous_prepared_hotkey")
+	hotkey_p_p_key = get_hotkeys(hotkey_save_array,"Previous Prepared")	
     obs.obs_hotkey_load(hotkey_p_p_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
     hotkey_home_id = obs.obs_hotkey_register_frontend("home_song_hotkey", "Reset to Song Start", home_song)
     hotkey_save_array = obs.obs_data_get_array(settings, "home_song_hotkey")
+	hotkey_home_key = get_hotkeys(hotkey_save_array,"Reset to Song Start")
     obs.obs_hotkey_load(hotkey_home_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
-    hotkey_reset_id =
-        obs.obs_hotkey_register_frontend("reset_prepared_hotkey", "Reset to First Prepared Song", home_prepared)
+    hotkey_reset_id = obs.obs_hotkey_register_frontend("reset_prepared_hotkey", "Reset to First Prepared Song", home_prepared)
     hotkey_save_array = obs.obs_data_get_array(settings, "reset_prepared_hotkey")
+	hotkey_reset_key = get_hotkeys(hotkey_save_array,"Reset to 1st Prepared")
     obs.obs_hotkey_load(hotkey_reset_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
