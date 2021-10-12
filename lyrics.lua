@@ -2266,6 +2266,7 @@ function get_hotkeys(hotkey_array, prefix)
 	local ctrl = obs.obs_data_get_bool(item,"control")
 	local alt = obs.obs_data_get_bool(item,"alt")
 	local shft = obs.obs_data_get_bool(item,"shift")
+	local cmd = obs.obs_data_get_bool(item,"command")
 	obs.obs_data_release(item)	
     local val = prefix
 	if key ~= nil and key ~= "" then
@@ -2273,6 +2274,7 @@ function get_hotkeys(hotkey_array, prefix)
 		if ctrl then val = val.."Ctrl + " end
 		if alt then val = val.."Alt + " end
 		if shft then val = val.."Shft + "	end
+		if cmd then val = val.."Cmd + "	end		
 		val = val .. key 
 	end
 	return val
