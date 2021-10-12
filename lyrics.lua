@@ -2254,10 +2254,12 @@ function get_hotkeys(hotkey_array, prefix)
 					["NUMMINUS"] = "Num -", ["NUMPLUS"] = "Num +", ["NUM1"] = "Num 1", ["NUM2"] = "Num 2",
 					["NUM3"] = "Num 3", ["NUM4"] = "Num 4", ["NUM5"] = "Num 5", ["NUM6"] = "Num 6",
 					["NUM7"] = "Num 7", ["NUM8"] = "Num 8", ["NUM9"] = "Num 9", ["NUM0"] = "Num 0",
-					["NUMPERIOD"] = "Num Del", ["INSERT"] = "Insert", ["PAGEDOWN"] = "Page Down",
-					["PAGEUP"] = "Page Up", ["HOME"] = "Home", ["END"] = "End",["RETURN"] = "Return",
+					["NUMPERIOD"] = "Num Del", ["INSERT"] = "Insert", ["PAGEDOWN"] = "Page-Down",
+					["PAGEUP"] = "Page-Up", ["HOME"] = "Home", ["END"] = "End",["RETURN"] = "Return",
 					["UP"] = "Up", ["DOWN"] = "Down", ["RIGHT"] = "Right", ["LEFT"] = "Left",
-					["SCROLLLOCK"] = "Scroll Lock", ["BACKSPACE"] = "Backspace"}
+					["SCROLLLOCK"] = "Scroll-Lock", ["BACKSPACE"] = "Backspace", ["ESCAPE"] = "Esc",
+					["MENU"] = "Menu", ["META"] = "Meta", ["PRINT"] = "Prt", ["TAB"] = "Tab", 
+					["DELETE"] = "Del", ["CAPSLOCK"] = Caps-Lock, ["NUMEQUAL"] = "Num =", ["PAUSE"] = "Pause"}
 	item = obs.obs_data_array_item(hotkey_array, 0)
 	local key = string.sub(obs.obs_data_get_string(item,"key"),9)
 	if Translate[key] ~= nil then
