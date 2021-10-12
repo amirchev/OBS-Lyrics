@@ -2092,7 +2092,6 @@ function edit_prepared_clicked(props, p)
 
     for i = 0, count-1 do
         local song = obs.obs_property_list_item_string(prop_prep_list, i)
-		print("song to move: " .. song)
 		local array_obj = obs.obs_data_create()				
 		obs.obs_data_set_string(array_obj, "value", song)
 		obs.obs_data_array_push_back(songNames,array_obj)
