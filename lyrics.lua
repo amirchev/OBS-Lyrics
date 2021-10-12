@@ -1,4 +1,4 @@
---- Copyright 2020 amirchev/dcstrato
+--- Copyright 2020 amirchev/wzaggle
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -117,11 +117,16 @@ source_saved = false    --  ick...  A saved toggle to keep from repeating the sa
 editVisSet = false
 
 -- simple debugging/print mechanism
-DEBUG = true -- on/off switch for entire debugging mechanism
+DEBUG = true -- on switch for entire debugging mechanism
+--DEBUG = false -- on switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
-DEBUG_INNER = true -- print inner method breakpoints
-DEBUG_CUSTOM = true -- print custom debugging messages
-DEBUG_BOOL = true -- print message with bool state true/false
+--DEBUG_METHODS = false -- print method names
+--DEBUG_INNER = true -- print inner method breakpoints
+DEBUG_INNER = false -- print inner method breakpoints
+--DEBUG_CUSTOM = true -- print custom debugging messages
+DEBUG_CUSTOM = false -- print custom debugging messages
+--DEBUG_BOOL = true -- print message with bool state true/false
+DEBUG_BOOL = false -- print message with bool state true/false
 
 --------
 ----------------
@@ -1735,9 +1740,9 @@ function script_properties()
 		obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
 		obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Songs by Meta Tags", filter_songs_clicked)		
 		local gps = obs.obs_properties_create()
-		obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+		obs.obs_properties_add_text(gps, "prop_edit_metatags", "\tFilter MetaTags", obs.OBS_TEXT_DEFAULT)
 		obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_directory_button_clicked)
-		obs.obs_properties_add_group(gp, "meta", "Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
+		obs.obs_properties_add_group(gp, "meta", "\t Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
 			gps = obs.obs_properties_create()
 			local prepare_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","\tPrepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 			for _, name in ipairs(prepared_songs) do
@@ -1869,7 +1874,7 @@ end
 -- the user
 
 function script_description()
-    return "<B style = 'color: #dddd22;'>Manage song Lyrics and Other Paged Text (Version: Nov 2021)<br>Authors: Amirchev & DC Strato; with significant contributions from Taxilian. </B>" 
+    return  description
 	end
 
 function vMode(vis)
@@ -2598,5 +2603,8 @@ function dbg_bool(name, value)
     end
 end
 
-
 obs.obs_register_source(source_def)
+
+description = [[
+<div style="text-align: center;"><img height="81" style="float: left; vertical-align: bottom;" src="data:image/png;base64,R0lGODlhlgBRAHcAACH5BAEAAAAALAAAAACWAFEAh/8A/wCw8Aqy6xSz5RgYGCQiGyEgICC13ykpKSq32TEpITMvIjIyMja50zkxKTw4Kzw5Lzo6OkFBQUC6zkpCOUpKMUtHOkxKQ0pKSky9xlFJM1JMOVJSQlNTU1a+wVhTQ1lVR1xYTFpaWmFcTGNeUGJiYmTAumtdM25gNG5hO2thQmhjVW1oV2pqam/BtHRlNnFlQHdtUXJuYXNzc3tyU3hzZXp6en7Eq4FzSYd7VoaGhot3PIx7OY16QIx7Uol9Wo6BWYyMjI3Ho5F+RpSFWZeJX5CMf5SUlJ+JRpuOZ5mPcJ6ajpubmqNl0adqzKSNSaOOUKWRVqeUWaWUX6ScgqWcnKSglaWlpKDKma1rzqxwxqqSSK2XVayXWK2cUq2ZW6ybZq6gdamhh62ljq2pnK6urrV7vLWcSrOaT7KfZLeiY7SmfLWte7WtlLa2truDtb+Jsb2hTr2lXb2lY76qa725rru7u7jOjcONrMeTpsKtbcOvc8TExMyZosmtWc+0ZM61acu3ec+6e9GfnNenldGyVdK0WNa1Y9m9adfCg9XSfd6vjNu8XeDDbN7Dcea5g+rHXubFYebHa+/GWu/OWvDMYe/ObPHHdvXRZPjUZvfUbP8AAP8A//8MBv8ZDP8lEf8yGP89Hf9KI/9XKf9iLv9uNP96Of+GP/+SRf+fS/+uUv/AWv7YZf3Yaf/eY//baf/pr//st//svAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj+AAEIHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNq3Mixo8ePIEOKHEmypMmGrFKqXMmypcuXMGPKnEmzZkpZJwfa3Mmzp8+fKmPlBAC0qNGjPoWeRMq0qdOVsJY+nUqV5apUNJWSrMp1qqlOm1TRjLq1q9mjpjapXVUT58izcH+iUrtJ1E63IePqtbkKrFpUPLV+3EtYJii6oJLmLcyYJSm6mwArHty4cirIiYHi5Vi58ifIkoEK1ti5sKpRkDeBWu2XbuiZmzOWPrvqFClQrVPrVs0z9sXKi7Q0gUN1VanDu5NDxtp7Y0tCTaJLx0NVePRBTlehVs5drV2fvin+Ppc+nSp56kxXfe7eXezP8BJdDiL/pqr1JtiZlmLf/btmjC+dV1Vwwzn1GHudrKYgcmEdBd9DAZY3m02peELXJ6GQktsmppj1IEouCTjhTqkwx0pakHXClocVRRgdeiyR9yIe5BFyySBwCIcHHE1osQgrl/TxhnCErPTIG05EZ0Z+QCLZhBNmCPeITBZC5h+LE7nYBIwrybgljdIRAmZ0SSrJihk1qtRHmQJewmaaMJ2im4lnfZiQllyqtAh5ZlxyppljevlnmCk98iZ5rLzhZXR9xCRKap4QZudBeL6EZnT1sQLmj4NGZ50WQN5XZKLSmdHpoPVdAmaeLG04SlP+lUQCyB5rjDFGJi5NWlClLvUhHah/AqupdHBcooUT+V3aRJGXpPkpK9bBKCSTLakyJ1Cx/kHHGmJYcUUZdtjBRx245goRry01K90i6hKX0pisKlskdNK92+OPinqKB6cxzZXiTpUwom0YVCzBRBluhKuwG26UQUa55jqEbkp5+NkpHr42wS+8LcnLCr3RueSmjFqMClNqmdEEiMHfMpywHS6XccUVTBwRhBEQR8zQxL4Cm3GPaAo77IsdEzpfvS49oiyhMIWCmU2BuCy1zDTbrIMNM7TQggyYyKQrusY2YSqQ5CXprr1Es+QxyE3E9IiQpcakHl2v1pQIzFTXHMT+1Vi3UIIIInSAQQhde71ziBKS2kQeKi2t8Uocq03oI+QxuUh9aPL780ymkFLKijQJcoXVV2f9d+AYYCCBBBFEYEHhhiukJXFKM83Kzz2yFPlKHneqhZ9r4iecE334CaYTVOnR9+kdCK466xEwwAACCEBQSVuyt3T0oiGrpG50Z6ekbKbe38f4x9yb6rh05DulRuDOr9669NVrkEIPaKBBwvXYIzQe956SXHT4NbTEdSo6o8Kdp/yULxk5YUpT6cLzoscACGwgBUNAgyEisRJGrIB//TPI/wAYvtsFEHIy4pLjTEYIMyRJC3iwGI3gcCknvAGCU4FCBDYAgwxuMCb+HgQhTVrhP6PsqUAjQkoUaJAzmQSRJ0UsSh4GmESkSCEHO3niTqK4EwIVSzhCqyJQrpjFD0KRUj0JVNrEWBQy2kSLNuGiTRQYRjb6xI01gWNN5GgTPAyvWHY0Ch5pokea8DGQhRnkTAo5k0Mici+KdKIZt4jGRzYmkkCcZBwraclEYvGNmtwjJzsJyU/mMZSGHCUp44JJlVTCD3KQgyFYwUiZOFIlCQiALnfJSw9MRREmyKUuDzCBO6hECLzk5QE8oIiVYKEBAtClABJgAmPSpJWsQEINjjCzIMTgCSwQYipFGBNhJnOXvnQKFqJ5zgBkICXIbOcwVXIDeaZzJq3+3AEDdMBPHQRhBgYAgTgbqUqWYCEDuxxAAhIwAF3eEynr3OU0G7pLE7BCEUJgZwAWykshpISiArjBDdj50JhgkhEFQIAIWjCDrGHAAAsYqC0LypJ4BiCdHnCoTRSBBZmYcwIqMYFEm8kKc6YEobr0KCt2CVRWILWkMMFkHAzAAAyIoAR/kwACYnpGcsbEplBNyR0mQNFlEtWcAVCEMFuChYSy5AC7dEFKjMqKBuzSmhK9AStyetOaYLIQBohAB0qgtRJ0gAEPsERXdyUTm/ZSJRFN5gGaiVa6rkSounznSvja16K2UwByTckEeJkApdoEk5rQAANKYAN+zqADCNj+gCMWS5CZOBadKgFpBuyqy6aO9pwt4WxJhTvXdg7gnoqAK2l76hJIcCEJSkgCFyDxBVOuRBM/QEAHdFCGMthAAgz4gWIp6VWY2FShCw0tWD+6y5RwNgP1DEBwcbtZ+ppzoRpFLlIlytyVxOEDQWCCgIPwARUAwSWt0EMIImDVDkjgAkWQRE9ueUz61jepxdWle3fZ3/nq9MKdpesdJMqSO/BWlwNgCUox0FKszeClOHhJKxqRBiL8gAhqkEQrfEJheFpYJZxVKl05+9VdHuCtHM6wfFPCSyZrmBUuaPJKekDVwfrtsAY4gUxeweWi9JgV62VJlD9c1g0/GSYU7Sz+lHeZAFy2lxUjfvObPXvmlLwAARIYLFYdjAAUnKXHWOBsaYmaEkWwUwAZMGdoT2zNlzhWocrVZU8xqlH8GtnJfW2rLtu8ki0YAAMlmAHWSgDjHXelx2jF8ErGLFklf/glLtAoL0PqY3mqWp4C6DArJAGBCMyAm/+MgAF+oAmzoPqcpj0mNId5z1SHdSV38MB9mVlheTbAtC5oQKQHUMyWOGIEDOiADY5gg8NegA6m5sqXVwkUTYAhBKtb3QVoAIh0q5um7EbKjNUwhSmoARHFhsu6803wgROc3QY/OCkTrnBLMrzhiHw4xO0o8YmLseIWTyLGMz6hoXj84yAPucgHR07ykpc8IAA7"/><div style="color: #FFD966;"><H2>OBS Lyrics+ Manages song lyrics and other paged text</H2></div><Strong><i>Version: 2.0</i></Strong> &nbsp; &bull; &nbsp;  Authors: Amirchev & DC Strato; with contributions from Taxilian.</div>
+]]
