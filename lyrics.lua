@@ -1,4 +1,4 @@
---- Copyright 2020 amirchev
+--- Copyright 2020 amirchev/dcstrato
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- added delete single prepared song (WZ)
+
 obs = obslua
 bit = require("bit")
 
@@ -28,33 +28,29 @@ source_name = ""
 alternate_source_name = ""
 static_source_name = ""
 static_text = ""
--- current_scene = ""
--- preview_scene = ""
 title_source_name = ""
 
 -- settings
 windows_os = false
 first_open = true
--- in_timer = false
--- in_Load = false
--- in_directory = false
--- pause_timer = false
+
 display_lines = 0
 ensure_lines = true
--- visible = false
 
--- lyrics status
--- TODO: removed displayed_song and use prepared_songs[prepared_index]
--- displayed_song = ""
+
+-- lyrics/alternate lyrics by page
 lyrics = {}
+alternate = {}
+
+-- verse indicies if marked
 verses = {}
 
--- refrain = {}
-alternate = {}
-page_index = 0
+page_index = 0  -- current page of lyrics being displayed
 prepared_index = 0 -- TODO: avoid setting prepared_index directly, use prepare_selected
-song_directory = {}
-prepared_songs = {}
+
+song_directory = {}  -- holds list of current songs from song directory TODO: Multiple Song Books (Directories)
+prepared_songs = {}  -- holds pre-prepared list of songs to use 
+
 link_text = false -- true if Title and Static should fade with text only during hide/show
 all_sources_fade = false -- Title and Static should only fade when lyrics are changing or during show/hide
 source_song_title = "" -- The song title from a source loaded song
@@ -62,8 +58,6 @@ using_source = false -- true when a lyric load song is being used instead of a p
 source_active = false -- true when a lyric load source is active in the current scene (song is loaded or available to load)
 
 load_scene = ""       -- name of scene loading a lyric with a source
-timer_exists = false
---forceNoFade = false  -- allows for instant opacity change even if fade is enabled - Reset each time by set_text_visibility
 
 -- hotkeys
 hotkey_n_id = obs.OBS_INVALID_HOTKEY_ID
@@ -780,17 +774,13 @@ function transition_lyric_text(force_show)
 end
 
 function start_fade_timer()
-    if not timer_exists then
-        timer_exists = true
         obs.timer_add(fade_callback, 50)
         dbg_inner("started fade timer")
-    end
 end
 
 function fade_callback()
     -- if not in a transitory state, exit callback
     if text_status == TEXT_HIDDEN or text_status == TEXT_VISIBLE then
-        timer_exists = false
         obs.remove_current_callback()
         all_sources_fade = false
     end
@@ -1805,7 +1795,7 @@ function script_properties()
     obs.obs_properties_add_int_slider(gp, "text_fade_speed", "\tFade Speed", 1, 10, 1)
 	obs.obs_properties_add_group(script_props,"disp_grp","Display Options", obs.OBS_GROUP_NORMAL,gp)
 -------------	
-	obs.obs_properties_add_button(script_props, "src_showing", "▲░ HIDE SOURCE TEXT SELECTIONS ░▲",change_src_visible)
+	obs.obs_properties_add_button(script_props, "src_showing", "▲- HIDE SOURCE TEXT SELECTIONS -▲",change_src_visible)
 	gp = obs.obs_properties_create()
     local source_prop =
         obs.obs_properties_add_list(
@@ -1862,7 +1852,7 @@ function script_properties()
         end
     end
     obs.source_list_release(sources)
-    obs.obs_properties_add_button(gp, "prop_refresh", "Refresh Sources", refresh_button_clicked)
+    obs.obs_properties_add_button(gp, "prop_refresh", "Refresh Text Sources", refresh_button_clicked)
  	obs.obs_properties_add_group(script_props,"src_grp","Text Sources in Scenes\t", obs.OBS_GROUP_NORMAL,gp)
 
 -----------------		
@@ -2225,19 +2215,15 @@ function get_hotkeys(hotkey_array, prefix, leader)
 	elseif string.sub(key,1,5) == "MOUSE" then
 	  key = "Mouse " .. string.sub(key,6)
 	end
-	
-	local ctrl = obs.obs_data_get_bool(item,"control")
-	local alt = obs.obs_data_get_bool(item,"alt")
-	local shft = obs.obs_data_get_bool(item,"shift")
-	local cmd = obs.obs_data_get_bool(item,"command")
+
 	obs.obs_data_release(item)	
     local val = prefix
 	if key ~= nil and key ~= "" then
 		val = val .. "  " .. leader .. "  "
-		if ctrl then val = val.."Ctrl + " end
-		if alt then val = val.."Alt + " end
-		if shft then val = val.."Shft + "	end
-		if cmd then val = val.."Cmd + "	end		
+		if obs.obs_data_get_bool(item,"control") then val = val.."Ctrl + " end
+		if obs.obs_data_get_bool(item,"alt") then val = val.."Alt + " end
+		if obs.obs_data_get_bool(item,"shift") then val = val.."Shift + "	end
+		if obs.obs_data_get_bool(item,"command") then val = val.."Cmd + "	end		
 		val = val .. key 
 	end
 	return val
