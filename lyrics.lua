@@ -13,7 +13,6 @@
 -- limitations under the License.
 
 -- added delete single prepared song (WZ)
-
 obs = obslua
 bit = require("bit")
 
@@ -2252,19 +2251,30 @@ end
 
 
 function get_hotkeys(hotkey_array, prefix)
+	local Translate = {["NUMLOCK"] = "Num Lock", ["NUMSLASH"] = "Num /", ["NUMASTERISK"] = "Num *",
+					["NUMMINUS"] = "Num -", ["NUMPLUS"] = "Num +", ["NUM1"] = "Num 1", ["NUM2"] = "Num 2",
+					["NUM3"] = "Num 3", ["NUM4"] = "Num 4", ["NUM5"] = "Num 5", ["NUM6"] = "Num 6",
+					["NUM7"] = "Num 7", ["NUM8"] = "Num 8", ["NUM9"] = "Num 9", ["NUM0"] = "Num 0",
+					["NUMPERIOD"] = "Num Del", ["INSERT"] = "Insert", ["PAGEDOWN"] = "Page Down",
+					["PAGEUP"] = "Page Up", ["HOME"] = "Home", ["END"] = "End",["RETURN"] = "Return",
+					["UP"] = "Up", ["DOWN"] = "Down", ["RIGHT"] = "Right", ["LEFT"] = "Left",
+					["SCROLLLOCK"] = "Scroll Lock", ["BACKSPACE"] = "Backspace"}
 	item = obs.obs_data_array_item(hotkey_array, 0)
-	local key = obs.obs_data_get_string(item,"key")
+	local key = string.sub(obs.obs_data_get_string(item,"key"),9)
+	if Translate[key] ~= nil then
+	   key = Translate[key]
+	end
 	local ctrl = obs.obs_data_get_bool(item,"control")
 	local alt = obs.obs_data_get_bool(item,"alt")
 	local shft = obs.obs_data_get_bool(item,"shift")
 	obs.obs_data_release(item)	
     local val = prefix
 	if key ~= nil and key ~= "" then
-		val = val .. " ["
-		if ctrl then val = val.."Ctrl+" end
-		if alt then val = val.."Alt+" end
-		if shft then val = val.."Shft+"	end
-		val = val .. string.sub(key, 9) .. "]"
+		val = val .. " ──► "
+		if ctrl then val = val.."Ctrl + " end
+		if alt then val = val.."Alt + " end
+		if shft then val = val.."Shft + "	end
+		val = val .. key 
 	end
 	return val
 end
