@@ -718,21 +718,6 @@ function set_text_visibility(end_status)
     if text_status == end_status then
         return
     end
-    -- change visibility immediately (fade or no fade)
-	if end_status == TEXT_HIDDEN then
-		text_opacity = 0
-		text_status = end_status
-	elseif end_status == TEXT_VISIBLE then
-		text_opacity = 100
-		text_status = end_status
-		all_sources_fade = true             -- prevent orphaned title/static if link is removed when hidden
-	end
-    if text_status == end_status then	
-		apply_source_opacity()	
-		update_source_text() 
-		all_sources_fade = false
-		return	
-	end
     if text_fade_enabled then 
         -- if fade enabled, begin fade in or out
         if end_status == TEXT_HIDDEN then
@@ -742,8 +727,19 @@ function set_text_visibility(end_status)
         end
 		all_sources_fade = true
         start_fade_timer()
-    else
-        update_source_text()
+    else   -- change visibility immediately (fade or no fade)
+		if end_status == TEXT_HIDDEN then
+			text_opacity = 0
+			text_status = end_status
+		elseif end_status == TEXT_VISIBLE then
+			text_opacity = 100
+			text_status = end_status
+			all_sources_fade = true             -- prevent orphaned title/static if link is removed when hidden
+		end
+		apply_source_opacity()	
+		update_source_text() 
+		all_sources_fade = false
+		return	
 	end
 end
 
