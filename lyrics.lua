@@ -478,7 +478,7 @@ end
 
 -- Called with ANY change to the prepared song list 
 function prepare_selection_made(props, prop, settings)
-	obs.obs_property_set_description(obs.obs_properties_get(props, "prep_grp"), "  Prepared Songs (" .. #prepared_songs .. ")")	
+	obs.obs_property_set_description(obs.obs_properties_get(props, "prep_grp"), "  Prepared Songs/Text (" .. #prepared_songs .. ")")	
     dbg_method("prepare_selection_made")
     local name = obs.obs_data_get_string(settings, "prop_prepared_list")
     using_source = false
@@ -1637,7 +1637,6 @@ local help = 	"▪▪▪▪▪ MARKUP SYNTAX HELP ▪▪▪▪▪▲- CLICK TO C
 				"Mark Verses     ##V        Override Title     #T: text\n\n" ..					
 				"Optional comma delimited meta tags follow '//meta ' on 1st line" 
 	
-
 function script_properties()
     dbg_method("script_properties")
 	editVisSet = false	
@@ -1663,27 +1662,27 @@ function script_properties()
 			obs.obs_property_list_add_string(prop_dir_list, name, name)
 		end
 		obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
-		obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song", prepare_song_clicked)
-		obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Songs by Meta Tags", filter_songs_clicked)		
+		obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song/Text", prepare_song_clicked)
+		obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Titles by Meta Tags", filter_songs_clicked)		
 		local gps = obs.obs_properties_create()
 		obs.obs_properties_add_text(gps, "prop_edit_metatags", "\tFilter MetaTags", obs.OBS_TEXT_DEFAULT)
 		obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_directory_button_clicked)
-		obs.obs_properties_add_group(gp, "meta", "\t Filter Songs", obs.OBS_GROUP_NORMAL, gps)	
+		obs.obs_properties_add_group(gp, "meta", "\t Filter Songs/Text", obs.OBS_GROUP_NORMAL, gps)	
 			gps = obs.obs_properties_create()
 			local prepare_prop = obs.obs_properties_add_list(gps,"prop_prepared_list","\tPrepared Songs",obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 			for _, name in ipairs(prepared_songs) do
 				obs.obs_property_list_add_string(prepare_prop, name, name)
 			end
 			obs.obs_property_set_modified_callback(prepare_prop, prepare_selection_made)
-			obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs", clear_prepared_clicked)
-			obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared Songs List",edit_prepared_clicked)
+			obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs/Text", clear_prepared_clicked)
+			obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared List",edit_prepared_clicked)
 			local eps = obs.obs_properties_create()	
-			local edit_prop = obs.obs_properties_add_editable_list(eps, "prep_list", "\tPrepared Songs", obs.OBS_EDITABLE_LIST_TYPE_STRINGS,nil,nil )	
+			local edit_prop = obs.obs_properties_add_editable_list(eps, "prep_list", "\tPrepared Songs/Text", obs.OBS_EDITABLE_LIST_TYPE_STRINGS,nil,nil )	
 			obs.obs_property_set_modified_callback(edit_prop, setEditVis)				
 			obs.obs_properties_add_button(eps, "prop_save_button", "Save Changes",save_edits_clicked)
-			obs.obs_properties_add_group(gps,"edit_grp","\tEdit Prepared Songs", obs.OBS_GROUP_NORMAL,eps)	
+			obs.obs_properties_add_group(gps,"edit_grp","\tEdit Prepared Songs - Manually entered Titles (Filenames) must be in directory", obs.OBS_GROUP_NORMAL,eps)	
 		obs.obs_properties_add_group(gp, "prep_grp", "  Prepared Songs", obs.OBS_GROUP_NORMAL, gps)	
-	obs.obs_properties_add_group(script_props,"mng_grp","Manage Prepared Songs", obs.OBS_GROUP_NORMAL,gp)	
+	obs.obs_properties_add_group(script_props,"mng_grp","Manage Prepared Songs/Text", obs.OBS_GROUP_NORMAL,gp)	
 ------------------		
 	obs.obs_properties_add_button(script_props, "ctrl_showing", "▲- HIDE LYRIC CONTROLS -▲",change_ctrl_visible)
 	hotkey_props = obs.obs_properties_create()	
@@ -1931,7 +1930,7 @@ function filter_songs_clicked(props, p)
 	if not obs.obs_property_visible(pp) then 
 		obs.obs_property_set_visible(pp, true)	
 		local mpb = obs.obs_properties_get(props, "filter_songs_button")	
-		obs.obs_property_set_description(mpb, "Clear Song Filters")		-- change button function	
+		obs.obs_property_set_description(mpb, "Clear Filters")		-- change button function	
 		meta_tags = obs.obs_data_get_string(script_sets, "prop_edit_metatags")	
 		refresh_directory()		
 	else
@@ -1939,7 +1938,7 @@ function filter_songs_clicked(props, p)
 		meta_tags = "" -- clear meta tags
 		refresh_directory()
 		local mpb = obs.obs_properties_get(props, "filter_songs_button") -- 	
-		obs.obs_property_set_description(mpb, "Filter Songs by Meta Tags")	-- reset button function		
+		obs.obs_property_set_description(mpb, "Filter Titles by Meta Tags")	-- reset button function		
 	end
 	return true		
 end
@@ -1949,15 +1948,13 @@ function edit_prepared_clicked(props, p)
 	if obs.obs_property_visible(pp) then 
 		obs.obs_property_set_visible(pp, false)	
 		local mpb = obs.obs_properties_get(props, "prop_manage_button")	
-		obs.obs_property_set_description(mpb, "Edit Prepared Songs List")			
+		obs.obs_property_set_description(mpb, "Edit Prepared List")			
 		return true	
 	end
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     local count = obs.obs_property_list_item_count(prop_prep_list)
-	dbg_inner("count: " .. count)
     local songNames =  obs.obs_data_get_array(script_sets, "prep_list")
     local count2 = obs.obs_data_array_count(songNames)
-	dbg_inner("count2: " .. count2)	
 	if count2 > 0 then
 		for i = 0, count2 do
 			obs.obs_data_array_erase(songNames,0)
@@ -1975,7 +1972,7 @@ function edit_prepared_clicked(props, p)
 	obs.obs_data_array_release(songNames)
 	obs.obs_property_set_visible(pp, true)	
     local mpb = obs.obs_properties_get(props, "prop_manage_button")	
-	obs.obs_property_set_description(mpb, "Cancel Prepared Song Edits")	
+	obs.obs_property_set_description(mpb, "Cancel Prepared Edits")	
     return true
 end
 
@@ -2024,52 +2021,18 @@ function change_transition_property(props, prop, settings)
     transition_enabled = transition_set
     return true
 end
--- A function named script_update will be called when settings are changed
+
+-- script_update is called when settings are changed
 function script_update(settings)
-    text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled") -- 	Fade Enable (WZ)
-    text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed") -- 	Fade Speed (WZ)
-    reload = false
-    local cur_display_lines = obs.obs_data_get_int(settings, "prop_lines_counter")
-    if display_lines ~= cur_display_lines then
-        display_lines = cur_display_lines
-        reload = true
-    end
-    local cur_source_name = obs.obs_data_get_string(settings, "prop_source_list")
-    if source_name ~= cur_source_name then
-        source_name = cur_source_name
-        reload = true
-    end
-    local alt_source_name = obs.obs_data_get_string(settings, "prop_alternate_list")
-    if alternate_source_name ~= alt_source_name then
-        alternate_source_name = alt_source_name
-        reload = true
-    end
-    local stat_source_name = obs.obs_data_get_string(settings, "prop_static_list")
-    if static_source_name ~= stat_source_name then
-        static_source_name = stat_source_name
-        reload = true
-    end
-    local cur_title_source = obs.obs_data_get_string(settings, "prop_title_list")
-    if title_source_name ~= cur_title_source then
-        title_source_name = cur_title_source
-        reload = true
-    end
-    local cur_ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
-    if cur_ensure_lines ~= ensure_lines then
-        ensure_lines = cur_ensure_lines
-        reload = true
-    end
+    text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled") 
+    text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")
+	display_lines = obs.obs_data_get_int(settings, "prop_lines_counter")
+    source_name = obs.obs_data_get_string(settings, "prop_source_list")
+    alternate_source_name = obs.obs_data_get_string(settings, "prop_alternate_list")
+    static_source_name = obs.obs_data_get_string(settings, "prop_static_list")
+    title_source_name = obs.obs_data_get_string(settings, "prop_title_list")
+    ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
     link_text = obs.obs_data_get_bool(settings, "do_link_text")
-	dbg_bool("link Text and Title", link_text)
-
-
-    if reload then
-        if #prepared_songs > 0 and prepared_songs[prepared_index] ~= "" then
-            prepare_selected(prepared_songs[prepared_index])
-        end
-    end
-	
-	name_hotkeys()
 end
 
 
@@ -2315,7 +2278,7 @@ function script_load(settings)
         --prepared_index = 1
         file:close()
     end
-
+	name_hotkeys()
     obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
 end
 
@@ -2670,6 +2633,6 @@ end
 
 obs.obs_register_source(source_def)
 
-description = [[
-<div style="text-align: center;"><img height="73" style="float: left;" src="data:image/png;base64,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"/><div style="color: #FFD966;"><H2>OBS Lyrics+ Manages song lyrics and other paged text</H2></div><Strong><i>Version: 2.0</i></Strong> &nbsp; &bull; &nbsp;  Authors: Amirchev & DC Strato; with contributions from Taxilian.</div>
+description = [[ 
+<span><div style="height:100px; text-align: center;"><img height="80" style="float: left;" src="data:image/gif;base64,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"/></div><span style="text-align: center;"><div style="color: #FFD966;"><H2>OBS Lyrics+<br>Manages song lyrics and other paged text</H2></div><Strong><i>Version: 2.0</i></Strong> &nbsp; &bull; &nbsp;  Authors: Amirchev & DC Strato; with contributions from Taxilian.</span>
 ]]
