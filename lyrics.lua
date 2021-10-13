@@ -324,6 +324,9 @@ function toggle_lyrics_visibility(pressed)
     if not pressed then
         return
     end
+	if link_text then 
+	  all_sources_fade = true
+	end
     if text_status ~= TEXT_HIDDEN then
         dbg_inner("hiding")
         set_text_visibility(TEXT_HIDDEN)
@@ -688,7 +691,7 @@ function apply_source_opacity()
     obs.obs_data_release(settings)	
 	dbg_bool("All Sources Fade:", all_sources_fade)
 	dbg_bool("Link Text:", link_text)	
-    if all_sources_fade or  link_text then
+    if all_sources_fade then
 		local settings = obs.obs_data_create()
 		obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
 		obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
@@ -725,7 +728,7 @@ function set_text_visibility(end_status)
         elseif end_status == TEXT_VISIBLE then
             text_status = TEXT_SHOWING
         end
-		all_sources_fade = true
+		--all_sources_fade = true
         start_fade_timer()
     else   -- change visibility immediately (fade or no fade)
 		if end_status == TEXT_HIDDEN then
