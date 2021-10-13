@@ -599,7 +599,7 @@ function prepare_selected(name)
 			all_sources_fade = true			
 		end
 
-		transition_lyric_text(using_source)
+		transition_lyric_text(using_source)  
 
 		
 	else
@@ -1694,9 +1694,9 @@ end
 -- A function named script_properties defines the properties that the user
 -- can change for the entire script module itself
 
-local help = 	"============ MARKUP SYNTAX HELP ============\n\n" ..
-				"Markup      Syntax        Markup       Syntax\n" ..
-				"==========  ==========    ==========  ==========\n" ..
+local help = 	"▪▪▪▪▪ MARKUP SYNTAX HELP ▪▪▪▪▪▲- CLICK TO CLOSE -▲▪▪▪▪▪\n\n" ..
+				" Markup      Syntax          Markup      Syntax \n" ..
+				"============ ==========   ============ ==========\n" ..
 				" Display n Lines    #L:n      End Page after Line   Line ###\n" .. 
 				"  Blank (Pad) Line  ##B or ##P     Blank(Pad) Lines   #B:n or #P:n\n" .. 
 				" External Refrain   #r[ and #r]      In-Line Refrain     #R[ and #R]\n" .. 
@@ -1705,8 +1705,8 @@ local help = 	"============ MARKUP SYNTAX HELP ============\n\n" ..
 				"Alternate Text    #A[ and #A]    Alt Line Repeat n Pages  #A:n Line \n" ..				
 				"Comment Line     // Line       Block Comments     //[ and //] \n" ..	
 				"Mark Verses     ##V        Override Title     #T: text\n\n" ..					
-				"Optional comma delimited meta tags follow '//meta ' on 1st line\n\n" ..
-				"▲-------- CLICK TO CLOSE --------▲"	
+				"Optional comma delimited meta tags follow '//meta ' on 1st line" 
+	
 
 function script_properties()
     dbg_method("script_properties")
