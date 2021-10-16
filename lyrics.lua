@@ -726,7 +726,7 @@ end
 -- transition to the next lyrics, use fade if enabled
 -- if lyrics are hidden, force_show set to true will make them visible
 function transition_lyric_text(force_show)
-    dbgsp("transition_lyric_text")
+    dbg_method("transition_lyric_text")
     dbg_bool("force show", force_show)
     -- update the lyrics display immediately on 2 conditions
     -- a) the text is hidden or hiding, and we will not force it to show
@@ -759,7 +759,6 @@ end
 function update_source_text()
     dbg_method("update_source_text")
 	dbg_custom("Page Index: " .. page_index)
-	dbg_traceback()
     local text = ""
     local alttext = ""
     local next_lyric = ""
@@ -1760,7 +1759,7 @@ function script_properties()
     local prop_lines = obs.obs_properties_add_bool(gp, "prop_lines_bool", "Strictly ensure number of lines")
     obs.obs_property_set_long_description(prop_lines, "Guarantees fixed number of lines per page")
     local link_prop =
-        obs.obs_properties_add_bool(gp, "do_link_text", "Link title & static text visibility with lyric text")
+        obs.obs_properties_add_bool(gp, "do_link_text", "Show/Hide All Sources with Lyric Text")
     obs.obs_property_set_long_description(link_prop, "Hides title and static text at end of lyrics")
     local transition_prop =
     obs.obs_properties_add_bool(gp, "transition_enabled", "Transition Preview to Program on lyric change")
@@ -1811,7 +1810,7 @@ function script_properties()
     )
 		obs.obs_properties_add_button(gp, "do_link_button", "Add Additional Linked Sources", do_linked_clicked)
 		xgp = obs.obs_properties_create()
-		obs.obs_properties_add_bool(xgp, "link_extra_with_text", "Also Link Sources to Lyrics Text Visibility")		
+		obs.obs_properties_add_bool(xgp, "link_extra_with_text", "Show/Hide Sources with Lyrics Text")		
 		local extra_linked_prop = obs.obs_properties_add_list(xgp,"extra_linked_list","Linked Sources      ",obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 		-- initialize previously loaded extra properties from table
 		for _, sourceName in ipairs(extra_sources) do
@@ -1820,7 +1819,7 @@ function script_properties()
 		local extra_source_prop = obs.obs_properties_add_list(xgp,"extra_source_list","  Select Source:",obs.OBS_COMBO_TYPE_LIST,obs.OBS_COMBO_FORMAT_STRING)
 		obs.obs_property_set_modified_callback(extra_source_prop, link_source_selected)	
 		local clearcall_prop = obs.obs_properties_add_button(xgp, "linked_clear_button", "Clear Linked Sources", clear_linked_clicked)
-	local extra_group_prop = obs.obs_properties_add_group(gp,"xtr_grp","Additional Hide/Show Visibility Linked Sources ", obs.OBS_GROUP_NORMAL,xgp)
+	local extra_group_prop = obs.obs_properties_add_group(gp,"xtr_grp","Additional Visibility Linked Sources ", obs.OBS_GROUP_NORMAL,xgp)
 	obs.obs_properties_add_group(script_props,"src_grp","Text Sources in Scenes", obs.OBS_GROUP_NORMAL,gp)
 	local count = obs.obs_property_list_item_count(extra_linked_prop)
 	if count > 0 then
@@ -1830,7 +1829,7 @@ function script_properties()
 	end
 
     local sources = obs.obs_enum_sources()
-    obs.obs_property_list_add_string(extra_source_prop, "", "")	
+    obs.obs_property_list_add_string(extra_source_prop, "List of Valid Sources", "")	
     if sources ~= nil then
         local n = {}
         for _, source in ipairs(sources) do
@@ -1900,8 +1899,8 @@ function isValid(source)
 	if source ~= nil then
 		local flags = obs.obs_source_get_output_flags(source)
 		print(obs.obs_source_get_name(source) .. " - " .. flags)
-		local targetFlag = obs.OBS_SOURCE_VIDEO+obs.OBS_SOURCE_CUSTOM_DRAW+obs.OBS_SOURCE_SRGB
-		if bit.band(flags, 32777) == 32777 then
+		local targetFlag = bit.bor(obs.OBS_SOURCE_VIDEO,obs.OBS_SOURCE_CUSTOM_DRAW)
+		if bit.band(flags, targetFlag) == targetFlag then
 			return true
 		end
 	end
