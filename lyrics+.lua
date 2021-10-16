@@ -615,6 +615,8 @@ function apply_source_opacity()
         local settings = obs.obs_data_create()
         obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
         obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
+        obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new text outline opacity 
+        obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new text outlin		
         local title_source = obs.obs_get_source_by_name(title_source_name)
         if title_source ~= nil then
             obs.obs_source_update(title_source, settings)
@@ -625,6 +627,8 @@ function apply_source_opacity()
         local settings = obs.obs_data_create()
         obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
         obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
+        obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new text outline opacity 
+        obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new text outlin		
         local static_source = obs.obs_get_source_by_name(static_source_name)
         if static_source ~= nil then
             obs.obs_source_update(static_source, settings)
@@ -644,8 +648,10 @@ function apply_source_opacity()
                     source_id = obs.obs_source_get_unversioned_id(extra_source)
                     if source_id == "text_gdiplus" or source_id == "text_ft2_source" then -- just another text object
                         local settings = obs.obs_data_create()
-                        obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
-                        obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
+                        obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity 
+                        obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity 
+                        obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new text outline opacity 
+                        obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new text outline opacity 						
                         obs.obs_source_update(extra_source, settings) -- merge new opacity values
                         obs.obs_data_release(settings)
                     else -- check for filter named "Color Correction"
@@ -1711,7 +1717,7 @@ function script_properties()
     local gp = obs.obs_properties_create()
     obs.obs_properties_add_text(gp, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_button(gp, "show_help_button", "SHOW MARKUP SYNTAX HELP", show_help_button)
-    obs.obs_properties_add_text(gp, "prop_edit_song_text", "\tSong Lyrics", obs.OBS_TEXT_MULTILINE)
+    obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
     obs.obs_properties_add_button(gp, "prop_save_button", "Save Song", save_song_clicked)
     obs.obs_properties_add_button(gp, "prop_delete_button", "Delete Song", delete_song_clicked)
     obs.obs_properties_add_button(gp, "prop_opensong_button", "Edit Song with System Editor", open_song_clicked)
@@ -1790,7 +1796,7 @@ function script_properties()
     ------------------
     obs.obs_properties_add_button(script_props, "ctrl_showing", "▲- HIDE LYRIC CONTROLS -▲", change_ctrl_visible)
     hotkey_props = obs.obs_properties_create()
-    local hktitletext = obs.obs_properties_add_text(hotkey_props, "hotkey-title", "\t", obs.OBS_TEXT_DEFAULT)
+    local hktitletext = obs.obs_properties_add_text(hotkey_props, "hotkey-title", "", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_button(hotkey_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
     obs.obs_properties_add_button(hotkey_props, "prop_next_button", "Next Lyric", next_button_clicked)
     obs.obs_properties_add_button(hotkey_props, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
@@ -1815,7 +1821,7 @@ function script_properties()
     ------
     obs.obs_properties_add_button(script_props, "options_showing", "▲- HIDE DISPLAY OPTIONS -▲", change_options_visible)
     gp = obs.obs_properties_create()
-    local lines_prop = obs.obs_properties_add_int_slider(gp, "prop_lines_counter", "\tLines to Display", 1, 50, 1)
+    local lines_prop = obs.obs_properties_add_int_slider(gp, "prop_lines_counter", "Lines to Display", 1, 50, 1)
     obs.obs_property_set_long_description(
         lines_prop,
         "Sets default lines per page of lyric, overwritten by Markup: #L:n"
@@ -1833,7 +1839,7 @@ function script_properties()
     )
     local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable text fade") -- Fade Enable (WZ)
     obs.obs_property_set_modified_callback(fade_prop, change_fade_property)
-    obs.obs_properties_add_int_slider(gp, "text_fade_speed", "\tFade Speed", 1, 10, 1)
+    obs.obs_properties_add_int_slider(gp, "text_fade_speed", "Fade Speed", 1, 10, 1)
     obs.obs_properties_add_group(script_props, "disp_grp", "Display Options", obs.OBS_GROUP_NORMAL, gp)
     -------------
     obs.obs_properties_add_button(script_props, "src_showing", "▲- HIDE SOURCE TEXT SELECTIONS -▲", change_src_visible)
