@@ -49,6 +49,7 @@ prepared_index = 0 -- TODO: avoid setting prepared_index directly, use prepare_s
 song_directory = {} -- holds list of current songs from song directory TODO: Multiple Song Books (Directories)
 prepared_songs = {} -- holds pre-prepared list of songs to use
 extra_sources = {} -- holder for extra sources settings
+max_opacity = {}  -- record maximum opacity settings for sources
 
 link_text = false -- true if Title and Static should fade with text only during hide/show
 link_extras = false -- extras fade with text always when true, only during hide/show when false
@@ -586,55 +587,28 @@ end
 ------------------------ PROGRAM FUNCTIONS
 ----------------
 --------
-
-function apply_source_opacity()
-    --    dbg_method("apply_source_visiblity")
-
+function setSourceOpacity(sourceName)
+	print("****** Opacity: " .. text_opacity)
     local settings = obs.obs_data_create()
     obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
     obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
-    local source = obs.obs_get_source_by_name(source_name)
+    obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new gradient opacity 
+    obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new background opacity		
+    local source = obs.obs_get_source_by_name(sourceName)
     if source ~= nil then
         obs.obs_source_update(source, settings)
     end
     obs.obs_source_release(source)
     obs.obs_data_release(settings)
+end
 
-    local settings = obs.obs_data_create()
-    obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
-    obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
-    local alt_source = obs.obs_get_source_by_name(alternate_source_name)
-    if alt_source ~= nil then
-        obs.obs_source_update(alt_source, settings)
-    end
-    obs.obs_source_release(alt_source)
-    obs.obs_data_release(settings)
-    dbg_bool("All Sources Fade:", all_sources_fade)
-    dbg_bool("Link Text:", link_text)
+
+function apply_source_opacity()
+	setSourceOpacity(source_name)
+	setSourceOpacity(alternate_source_name)
     if all_sources_fade then
-        local settings = obs.obs_data_create()
-        obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
-        obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
-        obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new text outline opacity 
-        obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new text outlin		
-        local title_source = obs.obs_get_source_by_name(title_source_name)
-        if title_source ~= nil then
-            obs.obs_source_update(title_source, settings)
-        end
-        obs.obs_source_release(title_source)
-        obs.obs_data_release(settings)
-
-        local settings = obs.obs_data_create()
-        obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
-        obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
-        obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new text outline opacity 
-        obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new text outlin		
-        local static_source = obs.obs_get_source_by_name(static_source_name)
-        if static_source ~= nil then
-            obs.obs_source_update(static_source, settings)
-        end
-        obs.obs_source_release(static_source)
-        obs.obs_data_release(settings)
+       setSourceOpacity(title_source_name)
+       setSourceOpacity(static_source_name)
     end
     if link_extras or all_sources_fade then
         local extra_linked_list = obs.obs_properties_get(script_props, "extra_linked_list")
@@ -642,18 +616,16 @@ function apply_source_opacity()
         if count > 0 then
             for i = 0, count - 1 do
                 local source_name = obs.obs_property_list_item_string(extra_linked_list, i) -- get extra source by name
-                print(source_name)
                 local extra_source = obs.obs_get_source_by_name(source_name)
                 if extra_source ~= nil then
                     source_id = obs.obs_source_get_unversioned_id(extra_source)
                     if source_id == "text_gdiplus" or source_id == "text_ft2_source" then -- just another text object
-                        local settings = obs.obs_data_create()
-                        obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity 
-                        obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity 
-                        obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new text outline opacity 
-                        obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new text outline opacity 						
-                        obs.obs_source_update(extra_source, settings) -- merge new opacity values
-                        obs.obs_data_release(settings)
+						local settings = obs.obs_data_create()
+						obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity 
+						obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity 
+						obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new gradient opacity 
+						obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- set new background opacity	
+						 obs.obs_source_update(source, settings)
                     else -- check for filter named "Color Correction"
                         local color_filter = obs.obs_source_get_filter_by_name(extra_source, "Color Correction")
                         if color_filter ~= nil then -- update filters opacity
@@ -681,6 +653,7 @@ function apply_source_opacity()
         end
     end
 end
+
 
 function set_text_visibility(end_status)
     dbg_method("set_text_visibility")
