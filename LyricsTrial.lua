@@ -113,6 +113,7 @@ text_fade_enabled = false
 load_source = nil
 expandcollapse = true
 showhelp = false
+use100percent = false
 
 transition_enabled = false -- transitions are a work in progress to support duplicate source mode (not very stable)
 transition_completed = false
@@ -122,8 +123,8 @@ source_saved = false --  ick...  A saved toggle to keep from repeating the save 
 editVisSet = false
 
 -- simple debugging/print mechanism
---DEBUG = true -- on switch for entire debugging mechanism
---DEBUG_METHODS = true -- print method names
+DEBUG = true -- on switch for entire debugging mechanism
+DEBUG_METHODS = true -- print method names
 --DEBUG_INNER = true -- print inner method breakpoints
 --DEBUG_CUSTOM = true -- print custom debugging messages
 --DEBUG_BOOL = true -- print message with bool state true/false
@@ -240,7 +241,6 @@ function toggle_lyrics_visibility(pressed)
         all_sources_fade = true
     end
     if text_status ~= TEXT_HIDDEN then
-		read_source_opacity()	           -- record maximum opacities for TEXT_VISIBLE condition.
         dbg_inner("hiding")
         set_text_visibility(TEXT_HIDDEN)
     else
@@ -591,11 +591,19 @@ end
 function setSourceOpacity(sourceName)
 	if sourceName ~= nil and sourceName ~= "" then 
 		local settings = obs.obs_data_create()
-		adj_text_opacity = text_opacity /100
-		obs.obs_data_set_int(settings, "opacity", adj_text_opacity * max_opacity[sourceName]["opacity"]) -- Set new text opacity to zero
-		obs.obs_data_set_int(settings, "outline_opacity", adj_text_opacity * max_opacity[sourceName]["outline"]) -- Set new text outline opacity to zero
-		obs.obs_data_set_int(settings, "gradient_opacity", adj_text_opacity * max_opacity[sourceName]["gradient"]) -- Set new gradient opacity 
-		obs.obs_data_set_int(settings, "bk_opacity", adj_text_opacity * max_opacity[sourceName]["background"]) -- Set new background opacity		
+		if not use100percent then
+			adj_text_opacity = text_opacity /100
+			obs.obs_data_set_int(settings, "opacity", adj_text_opacity * max_opacity[sourceName]["opacity"]) -- Set new text opacity to zero
+			obs.obs_data_set_int(settings, "outline_opacity", adj_text_opacity * max_opacity[sourceName]["outline"]) -- Set new text outline opacity to zero
+			obs.obs_data_set_int(settings, "gradient_opacity", adj_text_opacity * max_opacity[sourceName]["gradient"]) -- Set new gradient opacity 
+			obs.obs_data_set_int(settings, "bk_opacity", adj_text_opacity * max_opacity[sourceName]["background"]) -- Set new background opacity	
+		else
+			obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
+			obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero
+			obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new gradient opacity 
+			obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new background opacity		
+		end
+		
 		local source = obs.obs_get_source_by_name(sourceName)
 		if source ~= nil then
 			obs.obs_source_update(source, settings)
@@ -627,8 +635,12 @@ function apply_source_opacity()
                     else -- check for filter named "Color Correction"
                         local color_filter = obs.obs_source_get_filter_by_name(extra_source, "Color Correction")
                         if color_filter ~= nil then -- update filters opacity
-							local filter_settings = obs.obs_data_create()						
-                            obs.obs_data_set_double(filter_settings, "opacity", (text_opacity/100) * max_opacity[sourceName]["CC-opacity"])
+							local filter_settings = obs.obs_data_create()	
+							if not use100percent then
+								obs.obs_data_set_double(filter_settings, "opacity", (text_opacity/100) * max_opacity[sourceName]["CC-opacity"])
+							else
+								obs.obs_data_set_double(filter_settings, "opacity", text_opacity/100)
+							end	
                             obs.obs_source_update(color_filter, filter_settings)
                             obs.obs_data_release(filter_settings)
                             obs.obs_source_release(color_filter)
@@ -667,6 +679,7 @@ end
 
 
 function read_source_opacity()
+	dbg_method("read_source_opacity")
 	getSourceOpacity(source_name)
 	getSourceOpacity(alternate_source_name)
     getSourceOpacity(title_source_name)
@@ -1834,6 +1847,7 @@ function script_properties()
     obs.obs_property_set_long_description(prop_lines, "Guarantees fixed number of lines per page")
     local link_prop = obs.obs_properties_add_bool(gp, "do_link_text", "Show/Hide All Sources with Lyric Text")
     obs.obs_property_set_long_description(link_prop, "Hides title and static text at end of lyrics")
+
     local transition_prop =
         obs.obs_properties_add_bool(gp, "transition_enabled", "Transition Preview to Program on lyric change")
     obs.obs_property_set_modified_callback(transition_prop, change_transition_property)
@@ -1844,6 +1858,7 @@ function script_properties()
     local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable text fade") -- Fade Enable (WZ)
     obs.obs_property_set_modified_callback(fade_prop, change_fade_property)
     obs.obs_properties_add_int_slider(gp, "text_fade_speed", "Fade Speed", 1, 10, 1)
+		obs.obs_properties_add_bool(gp,"use100percent", "Always use 0-100% opacity for fades")
     obs.obs_properties_add_group(script_props, "disp_grp", "Display Options", obs.OBS_GROUP_NORMAL, gp)
     -------------
     obs.obs_properties_add_button(script_props, "src_showing", "▲- HIDE SOURCE TEXT SELECTIONS -▲", change_src_visible)
@@ -1881,7 +1896,8 @@ function script_properties()
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
-    obs.obs_properties_add_button(gp, "do_link_button", "Add Additional Linked Sources", do_linked_clicked)
+	obs.obs_properties_add_button(gp, "Opacity_refresh", "Mark Source Opacities if not 100%", read_source_opacity())
+	obs.obs_properties_add_button(gp, "do_link_button", "Add Additional Linked Sources", do_linked_clicked)
     xgp = obs.obs_properties_create()
     obs.obs_properties_add_bool(xgp, "link_extra_with_text", "Show/Hide Sources with Lyrics Text")
     local extra_linked_prop =
@@ -1949,6 +1965,7 @@ function script_properties()
     obs.obs_property_set_enabled(hktitletext, false)
     obs.obs_property_set_visible(edit_group_prop, false)
     obs.obs_property_set_visible(meta_group_prop, false)
+	read_source_opacity()
     return script_props
 end
 
@@ -1964,7 +1981,7 @@ function script_update(settings)
     ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
     link_text = obs.obs_data_get_bool(settings, "do_link_text")
     link_extras = obs.obs_data_get_bool(settings, "link_extra_with_text")
-	read_source_opacity()	-- update opacities if sources might have changed
+	use100percent = obs.obs_data_get_bool(settings, "use100percent")
 end
 
 -- A function named script_defaults will be called to set the default settings
@@ -2419,8 +2436,17 @@ function script_load(settings)
         end
         file:close()
     end
+	
     obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
 end
+
+function script_unload()
+all_sources_fade = true
+text_opacity = 100
+apply_source_opacity()
+
+end
+
 
 ---
 ------
@@ -2817,7 +2843,6 @@ end
 
 -- on_event setup when source load, detects when a scenes content changes or when the scene list changes, ignores other events
 function on_event(event)
-    print(event)
     if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then -- scene changed so update HTML monitor page
         dbg_bool("Active:", source_active)
         obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
