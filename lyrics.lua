@@ -844,7 +844,7 @@ function update_source_text()
     local next_prepared = ""
     if using_source then
         next_prepared = prepared_songs[prepared_index] -- plan to go to current prepared song
-    elseif prepared_index < #prepared_songs then
+    elseif prepared_index ~= nil and prepared_index < #prepared_songs then
         next_prepared = prepared_songs[prepared_index + 1] -- plan to go to next prepared song
     else
         if source_active then
@@ -1554,7 +1554,11 @@ function update_monitor()
     if using_source then
         text = text .. "From Source: <B style='color: #FFEF00;'>" .. load_scene .. "</B></div>"
     else
-        text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index
+		local indexText = "N/A"
+		if prepared_index ~= nil then
+			indexText = prepared_index
+		end
+        text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. indexText
         text =
             text ..
             "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
