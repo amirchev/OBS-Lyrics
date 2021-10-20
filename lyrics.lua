@@ -121,11 +121,11 @@ source_saved = false --  ick...  A saved toggle to keep from repeating the save 
 editVisSet = false
 
 -- simple debugging/print mechanism
-DEBUG = true -- on switch for entire debugging mechanism
+DEBUG = false -- on switch for entire debugging mechanism
 DEBUG_METHODS = true -- print method names
---DEBUG_INNER = true -- print inner method breakpoints
---DEBUG_CUSTOM = true -- print custom debugging messages
---DEBUG_BOOL = true -- print message with bool state true/false
+DEBUG_INNER = true -- print inner method breakpoints
+DEBUG_CUSTOM = true -- print custom debugging messages
+DEBUG_BOOL = true -- print message with bool state true/false
 
 --------
 ----------------
@@ -637,7 +637,7 @@ function apply_source_opacity()
         if count > 0 then
             for i = 0, count - 1 do
                 local source_name = obs.obs_property_list_item_string(extra_linked_list, i) -- get extra source by name
-                print(source_name)
+                dbg_inner(source_name)
                 local extra_source = obs.obs_get_source_by_name(source_name)
                 if extra_source ~= nil then
                     source_id = obs.obs_source_get_unversioned_id(extra_source)
@@ -656,7 +656,7 @@ function apply_source_opacity()
                             obs.obs_data_release(filter_settings)
                             obs.obs_source_release(color_filter)
                         else -- try to just change visibility in the scene
-                            print("No Filter")
+                            dbg_inner("No Filter")
                             local sceneSource = obs.obs_frontend_get_current_scene()
                             local sceneObj = obs.obs_scene_from_source(sceneSource)
                             local sceneItem = obs.obs_scene_find_source(sceneObj, source_name)
@@ -843,7 +843,7 @@ function update_source_text()
     local next_prepared = ""
     if using_source then
         next_prepared = prepared_songs[prepared_index] -- plan to go to current prepared song
-    elseif prepared_index < #prepared_songs then
+    elseif prepared_index ~= nil and prepared_index < #prepared_songs then
         next_prepared = prepared_songs[prepared_index + 1] -- plan to go to next prepared song
     else
         if source_active then
@@ -1541,7 +1541,11 @@ function update_monitor()
     if using_source then
         text = text .. "From Source: <B style='color: #FFEF00;'>" .. load_scene .. "</B></div>"
     else
-        text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index
+		local indexText = "N/A"
+		if prepared_index ~= nil then
+			indexText = prepared_index
+		end
+        text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. indexText
         text =
             text ..
             "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
@@ -1965,7 +1969,7 @@ end
 function isValid(source)
     if source ~= nil then
         local flags = obs.obs_source_get_output_flags(source)
-        print(obs.obs_source_get_name(source) .. " - " .. flags)
+        dbg_inner(obs.obs_source_get_name(source) .. " - " .. flags)
         local targetFlag = bit.bor(obs.OBS_SOURCE_VIDEO, obs.OBS_SOURCE_CUSTOM_DRAW)
         if bit.band(flags, targetFlag) == targetFlag then
             return true
