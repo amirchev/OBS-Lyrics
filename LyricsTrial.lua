@@ -123,8 +123,8 @@ source_saved = false --  ick...  A saved toggle to keep from repeating the save 
 editVisSet = false
 
 -- simple debugging/print mechanism
-DEBUG = true -- on switch for entire debugging mechanism
-DEBUG_METHODS = true -- print method names
+--DEBUG = true -- on switch for entire debugging mechanism
+--DEBUG_METHODS = true -- print method names
 --DEBUG_INNER = true -- print inner method breakpoints
 --DEBUG_CUSTOM = true -- print custom debugging messages
 --DEBUG_BOOL = true -- print message with bool state true/false
@@ -645,7 +645,7 @@ function apply_source_opacity()
                             obs.obs_data_release(filter_settings)
                             obs.obs_source_release(color_filter)
                         else -- try to just change visibility in the scene
-                            local sceneSource = obs.obs_frontend_get_current_scene()
+                            local sceneSource = obs.obs_frontend_get_current_preview_scene()
                             local sceneObj = obs.obs_scene_from_source(sceneSource)
                             local sceneItem = obs.obs_scene_find_source(sceneObj, source_name)
                             obs.obs_source_release(scene)
@@ -1825,7 +1825,7 @@ function script_properties()
     ------------------
     obs.obs_properties_add_button(script_props, "ctrl_showing", "▲- HIDE LYRIC CONTROLS -▲", change_ctrl_visible)
     hotkey_props = obs.obs_properties_create()
-    local hktitletext = obs.obs_properties_add_text(hotkey_props, "hotkey-title", "", obs.OBS_TEXT_DEFAULT)
+    local hktitletext = obs.obs_properties_add_text(hotkey_props, "hotkey-title", "+", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_button(hotkey_props, "prop_prev_button", "Previous Lyric", prev_button_clicked)
     obs.obs_properties_add_button(hotkey_props, "prop_next_button", "Next Lyric", next_button_clicked)
     obs.obs_properties_add_button(hotkey_props, "prop_hide_button", "Show/Hide Lyrics", toggle_button_clicked)
@@ -1834,6 +1834,7 @@ function script_properties()
     obs.obs_properties_add_button(hotkey_props, "prop_next_prep_button", "Next Prepared", next_prepared_clicked)
     obs.obs_properties_add_button(hotkey_props, "prop_reset_button", "Reset to First Prepared Song", reset_button_clicked)
     obs.obs_properties_add_group(script_props,"ctrl_grp","Lyric Control Buttons (with Assigned HotKeys)",obs.OBS_GROUP_NORMAL,hotkey_props)
+	 obs.obs_property_set_modified_callback(hktitletext, nameKeysCallback)
     name_hotkeys()
     ------
     obs.obs_properties_add_button(script_props, "options_showing", "▲- HIDE DISPLAY OPTIONS -▲", change_options_visible)
@@ -1981,7 +1982,12 @@ function script_update(settings)
     ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
     link_text = obs.obs_data_get_bool(settings, "do_link_text")
     link_extras = obs.obs_data_get_bool(settings, "link_extra_with_text")
+	fade_text = obs.obs_data_get_bool(settings, "use100percent")
 	use100percent = obs.obs_data_get_bool(settings, "use100percent")
+	use100percent = obs.obs_data_get_bool(settings, "use100percent")
+	use100percent = obs.obs_data_get_bool(settings, "use100percent")
+	use100percent = obs.obs_data_get_bool(settings, "use100percent")
+	use100percent = obs.obs_data_get_bool(settings, "use100percent")	
 end
 
 -- A function named script_defaults will be called to set the default settings
@@ -2046,7 +2052,7 @@ function clear_linked_clicked(props, p)
     obs.obs_property_list_clear(extra_linked_list)
     obs.obs_property_set_visible(obs.obs_properties_get(props, "xtr_grp"), false)
     obs.obs_property_set_visible(obs.obs_properties_get(props, "do_link_button"), true)
-    obs.obs_property_set_description(extra_linked_list, "Linked Sources      ")
+    obs.obs_property_set_description(extra_linked_list, "Linked Sources")
 
     return true
 end
@@ -2111,6 +2117,24 @@ function all_vis_equal(props)
             mode1 .. "ALL GROUPS" .. mode2
         )
     end
+end
+
+function updateProperties()
+	local p = obs.obs_properties_get(props, "hotkey-title")
+	local v = obs.obs_property_get_description(p)
+	if v == '+' then
+		v = '-'
+	else
+		v = '+'
+	end
+	print(v)
+    obs.obs_property_set_description(p,v)
+end
+
+function name_keys_callback(props, prop, settings)
+	print("Name")
+	name_hotkeys()
+    return true
 end
 
 function change_info_visible(props, prop, settings)
@@ -2350,6 +2374,8 @@ function script_save(settings)
     end
     obs.obs_data_set_array(settings, "extra_link_sources", extra_sources_array)
     obs.obs_data_array_release(extra_sources_array)
+	
+)
 end
 
 -- a function named script_load will be called on startup and mostly handles loading hotkey data to OBS
@@ -2436,7 +2462,7 @@ function script_load(settings)
         end
         file:close()
     end
-	
+	obs.timer_add(updateProperties, 1000)
     obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
 end
 
@@ -2603,6 +2629,7 @@ end
 -- name_hotkeys function renames the seven hotkeys to include their defined key text
 --
 function name_hotkeys()
+dbg_method("Name Hotkeys")
     obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_prev_button"), hotkey_p_key)
     obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_next_button"), hotkey_n_key)
     obs.obs_property_set_description(obs.obs_properties_get(hotkey_props, "prop_hide_button"), hotkey_c_key)

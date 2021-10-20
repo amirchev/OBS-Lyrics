@@ -413,7 +413,7 @@ function prepare_song_clicked(props, p)
     obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
 
     obs.obs_properties_apply_settings(props, script_sets)
-    save_prepared()
+
     return true
 end
 
@@ -508,7 +508,6 @@ function clear_prepared_clicked(props, p)
     obs.obs_property_list_clear(prep_prop)
     obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
     obs.obs_properties_apply_settings(props, script_sets)
-    save_prepared()
     return true
 end
 
@@ -1519,18 +1518,6 @@ function save_song(name, text)
     return false
 end
 
--- saves preprepared songs
-function save_prepared()
-    dbg_method("save_prepared")
-    local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
-    for i, name in ipairs(prepared_songs) do
-        -- if not scene_load_complete or i > 1 then  -- don't save scene prepared songs
-        file:write(name, "\n")
-        -- end
-    end
-    file:close()
-    return true
-end
 
 function update_monitor()
     dbg_method("update_monitor")
@@ -1785,6 +1772,8 @@ function script_properties()
         obs.OBS_GROUP_NORMAL,
         eps
     )
+	local saveExtProp = obs.obs_properties_add_bool(eps, "saveExternal", "Use external Prepared.dat file ")
+		    obs.obs_property_set_modified_callback(saveExtProp, reLoadPrepared)
     obs.obs_properties_add_group(gp, "prep_grp", "  Prepared Songs", obs.OBS_GROUP_NORMAL, gps)
     obs.obs_properties_add_group(script_props, "mng_grp", "Manage Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gp)
     ------------------
@@ -1954,6 +1943,7 @@ function script_update(settings)
     ensure_lines = obs.obs_data_get_bool(settings, "prop_lines_bool")
     link_text = obs.obs_data_get_bool(settings, "do_link_text")
     link_extras = obs.obs_data_get_bool(settings, "link_extra_with_text")
+	saveExternal = obs.obs_data_get_bool(settings, "saveExternal")
 end
 
 -- A function named script_defaults will be called to set the default settings
@@ -2277,6 +2267,69 @@ function change_transition_property(props, prop, settings)
     return true
 end
 
+-- reloads prepared songs if source , settings or file, is changed
+function reLoadPrepared(props, prop, settings)
+	saveExternal = obs.obs_data_get_bool(settings, "saveExternal")
+	load_prepared(settings)
+    return true
+end
+
+function load_prepared(settings)
+	if saveExternal then -- loads prepared songs from prepared.dat file
+		-- load prepared songs from stored file
+		--
+		if os.getenv("HOME") == nil then
+			windows_os = true
+		end -- must be set prior to calling any file functions
+		load_source_song_directory(false)
+		-- load prepared songs from previous
+		local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
+		if file ~= nil then
+			for line in file:lines() do
+				prepared_songs[#prepared_songs + 1] = line
+			end
+			file:close()
+		end
+	else
+		local prepared_songs_array = obs.obs_data_get_array(settings, "prepared_songs_list")
+		local count = obs.obs_data_array_count(prepared_songs_array)
+		if count > 0 then
+			for i = 0, count do
+				local item = obs.obs_data_array_item(prepared_songs_array, i)
+				local songName = obs.obs_data_get_string(item, "value")
+				if songName ~= "" then
+					prepared_songs[#prepared_songs + 1] = songName
+				end
+				obs.obs_data_release(item)
+			end
+		end
+		obs.obs_data_array_release(prepared_songs_array)
+	end
+end
+
+function save_prepared(settings)
+		if saveExternal then -- saves preprepared songs in prepared.dat file
+			local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
+			for i, name in ipairs(prepared_songs) do
+				-- if not scene_load_complete or i > 1 then  -- don't save scene prepared songs
+				file:write(name, "\n")
+				-- end
+			end
+			file:close()
+		else  -- saves prepared songs in settings array
+			local prepared_songs_array = obs.obs_data_array_create()
+			local prepared_songs_list = obs.obs_properties_get(script_props, "prop_prepared_list")
+			for i, song_name in ipairs(prepared_songs) do
+				local array_obj = obs.obs_data_create()
+				obs.obs_data_set_string(array_obj, "value", song_name)
+				obs.obs_data_array_push_back(prepared_songs_array, array_obj)
+				obs.obs_data_release(array_obj)
+			end
+			obs.obs_data_set_array(settings, "Prepared_songs_list", prepared_songs_array)
+			obs.obs_data_array_release(prepared_songs_array)
+		end
+end
+
 -- A function named script_save will be called when the script is saved
 function script_save(settings)
     dbg_method("script_save")
@@ -2323,6 +2376,9 @@ function script_save(settings)
     end
     obs.obs_data_set_array(settings, "extra_link_sources", extra_sources_array)
     obs.obs_data_array_release(extra_sources_array)
+	
+	save_prepared(settings)
+
 end
 
 -- a function named script_load will be called on startup and mostly handles loading hotkey data to OBS
@@ -2376,8 +2432,6 @@ function script_load(settings)
     script_sets = settings
     source_name = obs.obs_data_get_string(settings, "prop_source_list")
 
-    extra_sources_array = obs.obs_data_get_array(settings, "extra_link_sources")
-
     -- load previously defined extra sources from settings array into table
     -- script_properties function will take them from the table and restore them as UI properties
     --
@@ -2395,20 +2449,8 @@ function script_load(settings)
     end
     obs.obs_data_array_release(extra_sources_array)
 
-    -- load prepared songs from stored file
-    --
-    if os.getenv("HOME") == nil then
-        windows_os = true
-    end -- must be set prior to calling any file functions
-    load_source_song_directory(false)
-    -- load prepared songs from previous
-    local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "r")
-    if file ~= nil then
-        for line in file:lines() do
-            prepared_songs[#prepared_songs + 1] = line
-        end
-        file:close()
-    end
+	load_prepared(settings)
+
     name_hotkeys()
 
     obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
