@@ -119,6 +119,7 @@ fade_title_back = false
 fade_alternate_back = false
 fade_static_back = false
 fade_extra_back = false
+allow_back_fade = false
 
 transition_enabled = false -- transitions are a work in progress to support duplicate source mode (not very stable)
 transition_completed = false
@@ -1776,9 +1777,9 @@ function script_properties()
     -----------
     obs.obs_properties_add_button(script_props, "info_showing", "▲- HIDE SONG INFORMATION -▲", change_info_visible)
     local gp = obs.obs_properties_create()
-    obs.obs_properties_add_text(gp, "prop_edit_song_title", "Song Title (Filename)", obs.OBS_TEXT_DEFAULT)
+    obs.obs_properties_add_text(gp, "prop_edit_song_title", "<font color=#FFD966>Song Title (Filename)</font>", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_button(gp, "show_help_button", "SHOW MARKUP SYNTAX HELP", show_help_button)
-    obs.obs_properties_add_text(gp, "prop_edit_song_text", "Song Lyrics", obs.OBS_TEXT_MULTILINE)
+    obs.obs_properties_add_text(gp, "prop_edit_song_text", "<font color=#FFD966>Song Lyrics</font>", obs.OBS_TEXT_MULTILINE)
     obs.obs_properties_add_button(gp, "prop_save_button", "Save Song", save_song_clicked)
     obs.obs_properties_add_button(gp, "prop_delete_button", "Delete Song", delete_song_clicked)
     obs.obs_properties_add_button(gp, "prop_opensong_button", "Edit Song with System Editor", open_song_clicked)
@@ -1802,7 +1803,7 @@ function script_properties()
         obs.obs_properties_add_list(
         gp,
         "prop_directory_list",
-        "Song Directory",
+        "<font color=#FFD966>Song Directory</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -1822,7 +1823,7 @@ function script_properties()
         obs.obs_properties_add_list(
         gps,
         "prop_prepared_list",
-        "Prepared ",
+        "<font color=#FFD966>Prepared </font>",
         obs.OBS_COMBO_TYPE_EDITABLE,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -1833,7 +1834,7 @@ function script_properties()
     obs.obs_property_set_modified_callback(prepare_prop, prepare_selection_made)
     local count = obs.obs_property_list_item_count(prepare_prop)
     if count > 0 then
-		obs.obs_property_set_description( prepare_prop, "Prepared (" .. count .. ")")
+		obs.obs_property_set_description( prepare_prop, "<font color=#FFD966>Prepared (" .. count .. ")</font>")
     end	
     obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs/Text", clear_prepared_clicked)
     obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared List", edit_prepared_clicked)
@@ -1860,7 +1861,7 @@ function script_properties()
 	local saveExtProp = obs.obs_properties_add_bool(eps, "saveExternal", "Use external Prepared.dat file ")
 	obs.obs_property_set_modified_callback(saveExtProp, reLoadPrepared)
 	
-    obs.obs_properties_add_group(gp, "prep_grp", "Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gps)
+    obs.obs_properties_add_group(gp, "prep_grp", "<font color=#FFD966>Prepared Songs/Text</font>", obs.OBS_GROUP_NORMAL, gps)
     obs.obs_properties_add_group(script_props, "mng_grp", "Manage Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gp)
     ------------------
     obs.obs_properties_add_button(script_props, "ctrl_showing", "▲- HIDE LYRIC CONTROLS -▲", change_ctrl_visible)
@@ -1878,7 +1879,7 @@ function script_properties()
     ------
     obs.obs_properties_add_button(script_props, "options_showing", "▲- HIDE DISPLAY OPTIONS -▲", change_options_visible)
     gp = obs.obs_properties_create()
-    local lines_prop = obs.obs_properties_add_int_slider(gp, "prop_lines_counter", "Lines to Display", 1, 50, 1)
+    local lines_prop = obs.obs_properties_add_int_slider(gp, "prop_lines_counter", "<font color=#FFD966>Lines to Display</font>", 1, 50, 1)
     obs.obs_property_set_long_description(
         lines_prop,
         "Sets default lines per page of lyric, overwritten by Markup: #L:n"
@@ -1893,13 +1894,15 @@ function script_properties()
     obs.obs_property_set_modified_callback(transition_prop, change_transition_property)
     obs.obs_property_set_long_description(
         transition_prop,
-        "Use with Studio Mode, duplicate sources, and OBS source transitions"
+        "Use with Studio Mode, duplicate sources, and OBS source transitions (beta)"
     )
-    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable text fade") -- Fade Enable (WZ)
+    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable Fade Transitions") -- Fade Enable (WZ)
     obs.obs_property_set_modified_callback(fade_prop, change_fade_property)
-    local fp1 = obs.obs_properties_add_int_slider(gp, "text_fade_speed", "Fade Speed", 1, 10, 1)
+    local fp1 = obs.obs_properties_add_int_slider(gp, "text_fade_speed", "<font color=#FFD966>Fade Speed</font>", 1, 10, 1)
 	local fp2 = obs.obs_properties_add_bool(gp,"use100percent", "Use 0-100% opacity for fades")
+	local fp3 = obs.obs_properties_add_bool(gp,"allowBackFade", "Enable Background Fading")	
     obs.obs_property_set_modified_callback(fp2, change_100percent_property)	
+    obs.obs_property_set_modified_callback(fp3, change_back_fade_property)		
 	local oprefprop = obs.obs_properties_add_button(gp, "refreshOP", "Mark Max Opacity for Source Fades", read_source_opacity_clicked)
     obs.obs_properties_add_group(script_props, "disp_grp", "Display Options", obs.OBS_GROUP_NORMAL, gp)
     -------------
@@ -1909,7 +1912,7 @@ function script_properties()
         obs.obs_properties_add_list(
         gp,
         "prop_source_list",
-        "Text Source",
+        "<font color=#FFD966>Text Source</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -1918,7 +1921,7 @@ function script_properties()
         obs.obs_properties_add_list(
         gp,
         "prop_title_list",
-        "Title Source",
+        "<font color=#FFD966>Title Source</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -1927,7 +1930,7 @@ function script_properties()
         obs.obs_properties_add_list(
         gp,
         "prop_alternate_list",
-        "Alternate Source",
+        "<font color=#FFD966>Alternate Source</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -1936,7 +1939,7 @@ function script_properties()
         obs.obs_properties_add_list(
         gp,
         "prop_static_list",
-        "Static Source",
+        "<font color=#FFD966>Static Source</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -2018,6 +2021,7 @@ function script_properties()
     obs.obs_property_set_visible(meta_group_prop, false)
 	obs.obs_property_set_visible(fp1, text_fade_enabled)
 	obs.obs_property_set_visible(fp2, text_fade_enabled)
+	obs.obs_property_set_visible(fp3, text_fade_enabled)	
 	obs.obs_property_set_visible(flbprop, text_fade_enabled)
 	obs.obs_property_set_visible(ftbprop, text_fade_enabled)
 	obs.obs_property_set_visible(fabprop, text_fade_enabled)
@@ -2042,11 +2046,13 @@ function script_update(settings)
     link_text = obs.obs_data_get_bool(settings, "do_link_text")
     link_extras = obs.obs_data_get_bool(settings, "link_extra_with_text")
 	use100percent = obs.obs_data_get_bool(settings, "use100percent")
-	fade_text_back = obs.obs_data_get_bool(settings, "fade_text_back")
-	fade_title_back = obs.obs_data_get_bool(settings, "fade_title_back")
-	fade_alternate_back = obs.obs_data_get_bool(settings, "fade_alternate_back")
-	fade_static_back = obs.obs_data_get_bool(settings, "fade_static_back")
-	fade_extra_back = obs.obs_data_get_bool(settings, "fade_extra_back")
+	allow_back_fade = obs.obs_data_get_bool(settings, "allowBackFade")
+	fade_text_back = obs.obs_data_get_bool(settings, "fade_text_back") and allow_back_fade
+	fade_title_back = obs.obs_data_get_bool(settings, "fade_title_back") and allow_back_fade
+	fade_alternate_back = obs.obs_data_get_bool(settings, "fade_alternate_back") and allow_back_fade
+	fade_static_back = obs.obs_data_get_bool(settings, "fade_static_back") and allow_back_fade
+	fade_extra_back = obs.obs_data_get_bool(settings, "fade_extra_back") and allow_back_fade
+
 end
 
 -- A function named script_defaults will be called to set the default settings
@@ -2245,11 +2251,12 @@ function change_fade_property(props, prop, settings)
     local text_fade_set = obs.obs_data_get_bool(settings, "text_fade_enabled")
     obs.obs_property_set_visible(obs.obs_properties_get(props, "text_fade_speed"), text_fade_set)
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "use100percent"), text_fade_set)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), text_fade_set)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), text_fade_set)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), text_fade_set)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), text_fade_set)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_set)		
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "allowBackFade"), text_fade_set)	
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), text_fade_set and allow_back_fade)
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), text_fade_set and allow_back_fade)
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), text_fade_set and allow_back_fade)
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), text_fade_set and allow_back_fade)
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_set and allow_back_fade)		
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "refreshOP"), text_fade_enabled and not use100percent)	
     local transition_set_prop = obs.obs_properties_get(props, "transition_enabled")
     obs.obs_property_set_enabled(transition_set_prop, not text_fade_set)
@@ -2259,6 +2266,24 @@ end
 function change_100percent_property(props, prop, settings)
     use100percent = obs.obs_data_get_bool(settings, "use100percent")
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "refreshOP"), not use100percent)
+    return true
+end
+
+function change_back_fade_property(props, prop, settings)
+    allow_back_fade = obs.obs_data_get_bool(settings, "allowBackFade")
+	if allow_back_fade then 
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), text_fade_enabled)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), text_fade_enabled)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), text_fade_enabled)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), text_fade_enabled)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_enabled)	
+	else
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), false)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), false)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), false)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), false)
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), false)	
+	end
     return true
 end
 
