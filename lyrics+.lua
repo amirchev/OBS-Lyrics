@@ -128,8 +128,8 @@ source_saved = false --  ick...  A saved toggle to keep from repeating the save 
 editVisSet = false
 
 -- simple debugging/print mechanism
-DEBUG = true -- on switch for entire debugging mechanism
-DEBUG_METHODS = true -- print method names
+--DEBUG = true -- on switch for entire debugging mechanism
+--DEBUG_METHODS = true -- print method names
 --DEBUG_INNER = true -- print inner method breakpoints
 --DEBUG_CUSTOM = true -- print custom debugging messages
 --DEBUG_BOOL = true -- print message with bool state true/false
