@@ -89,6 +89,10 @@ Try it:
 ```
 ### Define refrain and show it right away (`#R[` and `#R]`)
 Use this notation to define a refrain that will be displayed right away as well. 
+### Define refrain but DON'T show it right away (`#r[` and `#r]`)
+Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` or `##r` is called.
+### Play refrain (`##R`)
+Use this annotation to show where a refrain should be inserted. See above.
 Try it:
 ```
 #R[ optional comment
@@ -106,11 +110,6 @@ it will also continue with three lines per verse.
 Now hit the refrain again!
 ##R
 ```
-### Play refrain (`##R`)
-Use this annotation to show where a refrain should be inserted. See above.
-### Define refrain but DON'T show it right away (`#r[` and `#r]`)
-Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` or `##r` is called.
-
 ### Static Text (`#S[` and `#S]`)
 Use this anotation to define a block of text lines shown in the selected Static Source that remain constant during the scene (no paging).
 Try it:
@@ -125,6 +124,12 @@ Use this to define a simple single line of Static text
 Try it:
 ```
 #S: The song Amazing Grace was written by John Newton who was a former Slave Trader
+```
+### Override Title/filename (`#T: new title`)
+Use this to specifically define the song title.  This is useful if title has special characters, not valid as a filename
+Try it:
+```
+#T: How Great Thou Art (주하나님지으신모든세계)
 ```
 ### Alternate Text Block (`#A[` and `#A]`)
 Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
