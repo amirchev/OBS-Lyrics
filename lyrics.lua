@@ -359,6 +359,8 @@ function save_song_clicked(props, p)
     return true
 end
 
+-- callback for the delete song button
+-- deletes the selected song and updates the UI
 function delete_song_clicked(props, p)
     dbg_method("delete_song_clicked")
     -- call delete song function
@@ -511,6 +513,7 @@ function clear_prepared_clicked(props, p)
     return true
 end
 
+-- prepares the song with the title {name}
 function prepare_selected(name)
     dbg_method("prepare_selected")
     -- try to prepare song
@@ -556,6 +559,8 @@ function preview_selection_made(props, prop, settings)
     return true
 end
 
+-- callback for when open song in editor button is clicked
+-- opens the song in the native text editor
 function open_song_clicked(props, p)
     local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
     if testValid(name) then
@@ -571,6 +576,8 @@ function open_song_clicked(props, p)
     return true
 end
 
+-- callback for when open songs folder button is clicked
+-- opens the folder containing files of all the saved songs
 function open_button_clicked(props, p)
     local path = get_songs_folder_path()
     if windows_os then
@@ -580,12 +587,7 @@ function open_button_clicked(props, p)
     end
 end
 
---------
-----------------
------------------------- PROGRAM FUNCTIONS
-----------------
---------
-
+-- applies current source opacity to the necessary sources
 function apply_source_opacity()
     --    dbg_method("apply_source_visiblity")
 
@@ -675,6 +677,8 @@ function apply_source_opacity()
     end
 end
 
+-- changes the visibility of the text; called EVERY time text is to be
+-- hidden or made visible; not called during transition
 function set_text_visibility(end_status)
     dbg_method("set_text_visibility")
     -- if already at desired visibility, then exit
@@ -719,7 +723,7 @@ function set_text_visibility(end_status)
 end
 
 -- transition to the next lyrics, use fade if enabled
--- if lyrics are hidden, force_show set to true will make them visible
+-- if lyrics are hidden, force_show set to trued will make them visible
 function transition_lyric_text(force_show)
     dbg_method("transition_lyric_text")
     dbg_bool("force show", force_show)
@@ -870,11 +874,13 @@ function update_source_text()
     update_monitor()
 end
 
+-- starts the fade timer
 function start_fade_timer()
     dbgsp("started fade timer")
     obs.timer_add(fade_callback, 50)
 end
 
+-- function is called by the fade timer to increment/decrement opacity value manually
 function fade_callback()
     -- if not in a transitory state, exit callback
     if text_status == TEXT_HIDDEN or text_status == TEXT_VISIBLE then
@@ -1483,6 +1489,7 @@ function dec(data)
     ))
 end
 
+-- checks to see if {filename} is a valid name for a file
 function testValid(filename)
     if string.find(filename, "[\128-\255]") ~= nil then
         return false
@@ -1518,7 +1525,7 @@ function save_song(name, text)
     return false
 end
 
-
+-- updates the HTML monitor file with current status information
 function update_monitor()
     dbg_method("update_monitor")
     local tableback = "black"
@@ -1675,9 +1682,6 @@ end
 -- --------------
 --------
 
--- A function named script_properties defines the properties that the user
--- can change for the entire script module itself
-
 local help =
     "▪▪▪▪▪ MARKUP SYNTAX HELP ▪▪▪▪▪▲- CLICK TO CLOSE -▲▪▪▪▪▪\n\n" ..
     " Markup      Syntax          Markup      Syntax \n" ..
@@ -1691,7 +1695,9 @@ local help =
                                     "Comment Line     // Line       Block Comments     //[ and //] \n" ..
                                         "Mark Verses     ##V        Override Title     #T: text\n\n" ..
                                             "Optional comma delimited meta tags follow '//meta ' on 1st line"
-
+											
+-- A function named script_properties defines the properties that the user
+-- can change for the entire script module itself
 function script_properties()
     dbg_method("script_properties")
     editVisSet = false
@@ -2278,6 +2284,7 @@ function reLoadPrepared(props, prop, settings)
     return true
 end
 
+-- loads prepared songs from external file or internal settings array
 function load_prepared(settings)
 	if saveExternal then -- loads prepared songs from prepared.dat file
 		-- load prepared songs from stored file
@@ -2311,6 +2318,9 @@ function load_prepared(settings)
 	end
 end
 
+-- saves prepared files for use next time OBS is opened
+-- can save into an external file called "Prepared.dat" in the songs folder
+-- or into internal settings array
 function save_prepared(settings)
 		if saveExternal then -- saves preprepared songs in prepared.dat file
 			local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
@@ -2631,7 +2641,6 @@ end
 --------
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with * and Color change
---
 function rename_source()
     -- pause_timer = true
     local sources = obs.obs_enum_sources()
@@ -2709,7 +2718,6 @@ function rename_source()
 end
 
 -- Names the initial "Prepare Lyric" source (prior to being renamed to "Load Lyrics for: {song name}
---
 source_def.get_name = function()
     return "Prepare Lyric"
 end
