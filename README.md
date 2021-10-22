@@ -184,7 +184,7 @@ Now hit the refrain again!
 
 ### Song Title (filename) and Lyrics Information
 
-![image-20211022011756528](C:\Users\willi\AppData\Roaming\Typora\typora-user-images\image-20211022011756528.png)
+![Title Lyrics](\images\Title Lyrics.gif)
 
 The song Title is also used as a filename to store the lyrics.  If the text of the title is not a valid OS filename then the filename will be encoded to create a valid filename.   Alternately providing a valid filename for this field, the actual Title can be included using the ##T markup.  Song lyrics can be added in the dialog, saved, and deleted.  Songs can also be opened with the default system text editor.  
 
