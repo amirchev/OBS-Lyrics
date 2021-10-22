@@ -186,7 +186,7 @@ Now hit the refrain again!
 
 ![Title Lyrics](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Title%20Lyrics.gif)
 
-The song Title is also used as a filename to store the lyrics.  If the text of the title is not a valid OS filename then the filename will be encoded to create a valid filename.   Alternately providing a valid filename for this field, the actual Title can be included using the ##T markup.  Song lyrics can be added in the dialog, saved, and deleted.  Songs can also be opened with the default system text editor.  
+The song Title is also used as a filename to store the lyrics.  If the text of the title is not a valid OS filename then the filename will be encoded to create a valid filename.   Providing a valid filename for this field instead of a song Title the actual Title can be included using the ##T markup.  Song lyrics can be added in the dialog, saved, and deleted.  Songs can also be opened and edited with the default system text editor.  
 
 ### Manage Prepared Songs/Text
 
