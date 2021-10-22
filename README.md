@@ -19,8 +19,8 @@ Manage and display lyrics to any text source in your OBS scene.
 - Prepared songs are stored in the Settings for the scene collection unless the option to use an external Prepared.dat file is selected in the Edit Prepared Songs subgroup.  
 
 ## Notation
-### Mark songs with with 'meta' tags for filtering on future selection  (`//meta *tag1*, *tag2*, ... , *tag n*`)
-Using //meta tags on the __1st line__ of lyrics allows song files to be labeled as belonging to different genre.  Example genre are Hymn, Contemporary, Gospel, Country, Blues, Spritual, Rock, Chant, Reggae, Metal, or HipHop.  However, any tag can be used to organize and cross organize Lyric/Text files into categories. Other meta groups could be Call/Response or Scripture.  Meta tags must match exactly, so the tag __*hymn*__ is different from the tag __*Hymn*__
+### Mark songs with with 'meta' tags for filtering on future selection  (`//meta tag1, tag2, ... , tag n`)
+Using //meta tags on the __1st line__ of lyrics allows song files to be labeled as belonging to different genre.  Example genre are Hymn, Contemporary, Gospel, Country, Blues, Spritual, Rock, Chant, Reggae, Metal, or HipHop.  However, any tag can be used to organize and cross organize Lyric/Text files into categories. Other meta groups could be Call/Response or Scripture.  Meta tags must match exactly, so the tag __*hymn*__ is different from the tag __*Hymn*__. 
 Try it: 
 ```
 //meta Hymn, Blues, Spiritual
