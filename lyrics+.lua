@@ -420,13 +420,14 @@ function prepare_song_clicked(props, p)
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
 
-    obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
     if #prepared_songs > 0 then
-		obs.obs_property_set_description(prop_prep_list, "Prepared (" .. #prepared_songs .. ")")
+		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared (" .. #prepared_songs .. ")</font>")
     else 
-		obs.obs_property_set_description(prop_prep_list, "Prepared")
+		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared</font>")
 	end
     obs.obs_properties_apply_settings(props, script_sets)
+	save_prepared(script_sets)
     return true
 end
 
@@ -517,10 +518,15 @@ function clear_prepared_clicked(props, p)
     -- clear the list
     local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_clear(prep_prop)
-
 	obs.obs_property_set_description(obs.obs_properties_get(props, "prop_prepared_list"), "Prepared")
 	obs.obs_property_list_add_string(obs.obs_properties_get(props, "prop_prepared_list"), "", "")
-    --s.obs_properties_apply_settings(props, script_sets)
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", "")	
+    local pp = obs.obs_properties_get(props, "edit_grp")
+    if obs.obs_property_visible(pp) then
+        obs.obs_property_set_visible(pp, false)
+        local mpb = obs.obs_properties_get(props, "prop_manage_button")
+        obs.obs_property_set_description(mpb, "Edit Prepared List")
+    end
     return true
 end
 
@@ -1815,7 +1821,7 @@ function script_properties()
     obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song/Text", prepare_song_clicked)
     obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Titles by Meta Tags", filter_songs_clicked)
     local gps = obs.obs_properties_create()
-    obs.obs_properties_add_text(gps, "prop_edit_metatags", "Filter MetaTags", obs.OBS_TEXT_DEFAULT)
+    obs.obs_properties_add_text(gps, "prop_edit_metatags", "<font color=#FFD966>Filter MetaTags</font>", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_directory_button_clicked)
     local meta_group_prop = obs.obs_properties_add_group(gp, "meta", " Filter Songs/Text", obs.OBS_GROUP_NORMAL, gps)
     gps = obs.obs_properties_create()
@@ -1827,14 +1833,15 @@ function script_properties()
         obs.OBS_COMBO_TYPE_EDITABLE,
         obs.OBS_COMBO_FORMAT_STRING
     )
-	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
+	obs.obs_property_list_add_string(prepare_prop, "", "")
     for _, name in ipairs(prepared_songs) do
         obs.obs_property_list_add_string(prepare_prop, name, name)
     end
+	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")	
     obs.obs_property_set_modified_callback(prepare_prop, prepare_selection_made)
     local count = obs.obs_property_list_item_count(prepare_prop)
-    if count > 0 then
-		obs.obs_property_set_description( prepare_prop, "<font color=#FFD966>Prepared (" .. count .. ")</font>")
+    if count > 1 then
+		obs.obs_property_set_description( prepare_prop, "<font color=#FFD966>Prepared (" .. count-1 .. ")</font>")
     end	
     obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs/Text", clear_prepared_clicked)
     obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared List", edit_prepared_clicked)
@@ -1843,7 +1850,7 @@ function script_properties()
         obs.obs_properties_add_editable_list(
         eps,
         "prep_list",
-        "Prepared Songs/Text",
+        "<font color=#FFD966>Prepared Songs/Text</font>",
         obs.OBS_EDITABLE_LIST_TYPE_STRINGS,
         nil,
         nil
@@ -1861,7 +1868,7 @@ function script_properties()
 	local saveExtProp = obs.obs_properties_add_bool(eps, "saveExternal", "Use external Prepared.dat file ")
 	obs.obs_property_set_modified_callback(saveExtProp, reLoadPrepared)
 	
-    obs.obs_properties_add_group(gp, "prep_grp", "<font color=#FFD966>Prepared Songs/Text</font>", obs.OBS_GROUP_NORMAL, gps)
+    obs.obs_properties_add_group(gp, "prep_grp", "Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gps)
     obs.obs_properties_add_group(script_props, "mng_grp", "Manage Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gp)
     ------------------
     obs.obs_properties_add_button(script_props, "ctrl_showing", "▲- HIDE LYRIC CONTROLS -▲", change_ctrl_visible)
@@ -1896,7 +1903,8 @@ function script_properties()
         transition_prop,
         "Use with Studio Mode, duplicate sources, and OBS source transitions (beta)"
     )
-    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable Fade Transitions") -- Fade Enable (WZ)
+	
+    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable Fade Transitions") 
     obs.obs_property_set_modified_callback(fade_prop, change_fade_property)
     local fp1 = obs.obs_properties_add_int_slider(gp, "text_fade_speed", "<font color=#FFD966>Fade Speed</font>", 1, 10, 1)
 	local fp2 = obs.obs_properties_add_bool(gp,"use100percent", "Use 0-100% opacity for fades")
@@ -1905,9 +1913,11 @@ function script_properties()
     obs.obs_property_set_modified_callback(fp3, change_back_fade_property)		
 	local oprefprop = obs.obs_properties_add_button(gp, "refreshOP", "Mark Max Opacity for Source Fades", read_source_opacity_clicked)
     obs.obs_properties_add_group(script_props, "disp_grp", "Display Options", obs.OBS_GROUP_NORMAL, gp)
+	
     -------------
     obs.obs_properties_add_button(script_props, "src_showing", "▲- HIDE SOURCE TEXT SELECTIONS -▲", change_src_visible)
     gp = obs.obs_properties_create()
+	
     local source_prop =
         obs.obs_properties_add_list(
         gp,
@@ -1952,7 +1962,7 @@ function script_properties()
         obs.obs_properties_add_list(
         xgp,
         "extra_linked_list",
-        "Linked Sources",
+        "<font color=#FFD966>Linked Sources</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -1964,7 +1974,7 @@ function script_properties()
         obs.obs_properties_add_list(
         xgp,
         "extra_source_list",
-        "  Select Source:",
+        "<font color=#FFD966>  Select Source:</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
@@ -2094,7 +2104,7 @@ function link_source_selected(props, prop, settings)
         obs.obs_data_set_string(script_sets, "extra_source_list", "")
         obs.obs_property_set_description(
             extra_linked_list,
-            "Linked Sources (" .. obs.obs_property_list_item_count(extra_linked_list) .. ")"
+            "<font color=#FFD966>Linked Sources (" .. obs.obs_property_list_item_count(extra_linked_list) .. ")</font>"
         )
     end
     return true
@@ -2118,7 +2128,7 @@ function clear_linked_clicked(props, p)
     obs.obs_property_list_clear(extra_linked_list)
     obs.obs_property_set_visible(obs.obs_properties_get(props, "xtr_grp"), false)
     obs.obs_property_set_visible(obs.obs_properties_get(props, "do_link_button"), true)
-    obs.obs_property_set_description(extra_linked_list, "Linked Sources")
+    obs.obs_property_set_description(extra_linked_list, "<font color=#FFD966>Linked Sources</font>")
 
     return true
 end
@@ -2345,8 +2355,7 @@ function edit_prepared_clicked(props, p)
             obs.obs_data_array_erase(songNames, 0)
         end
     end
-
-    for i = 0, count - 1 do
+    for i = 1, count do
         local song = obs.obs_property_list_item_string(prop_prep_list, i)
         local array_obj = obs.obs_data_create()
         obs.obs_data_set_string(array_obj, "value", song)
@@ -2367,6 +2376,7 @@ function save_edits_clicked(props, p)
     prepared_songs = {}
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_clear(prop_prep_list)
+	obs.obs_property_list_add_string(prop_prep_list, "", "")
     local songNames = obs.obs_data_get_array(script_sets, "prep_list")
     local count2 = obs.obs_data_array_count(songNames)
     if count2 > 0 then
@@ -2382,17 +2392,18 @@ function save_edits_clicked(props, p)
     end
     obs.obs_data_array_release(songNames)
     save_prepared()
-    if #prepared_songs > 0 then
-        obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
-        prepared_index = 1
-    else
-        obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
-        prepared_index = 0
-    end
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
+    prepared_index = 0
     pp = obs.obs_properties_get(script_props, "edit_grp")
     obs.obs_property_set_visible(pp, false)
     local mpb = obs.obs_properties_get(props, "prop_manage_button")
     obs.obs_property_set_description(mpb, "Edit Prepared Songs List")
+    
+    if #prepared_songs > 0 then
+		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared (" .. #prepared_songs .. ")</font>")
+    else 
+		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared</font>")
+	end
     obs.obs_properties_apply_settings(props, script_sets)
     return true
 end
