@@ -10,16 +10,21 @@ Manage and display lyrics to any text source in your OBS scene.
 6. Advance lyrics as needed using the buttons or appropriate hotkeys. You can also advance to the next prepared song using hotkeys.
 7. When you're finished with the current song, hide the lyrics and select the next song from the "Prepared Songs" list. 
 
-There is a much more in-depth guide [here](https://obsproject.com/forum/resources/display-lyrics-as-subtitles.1005/).
-
 ## Things to know
 - To display a specific song when a scene is activated, add a "Source" to the scene by clicking the + sign in the scene, adding a "Prepare Lyric" source, and selecting the song to open.
 - Use "Home" hotkey to return to the beginning of your prepared songs, perhaps after practicing the songs.
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
 - Ensure a constant number of lines displayed using the checkbox, e.g., if the song ends and only one line is left, lyrics will be padded with blank lines to ensure you hava a minimum number of lines.
 - A Monitor.htm file is created with current/next song, lyrics and alternate lyrics that can be docked in OBS with custom browser docks. Use Open Songs Folder button, open Monitor.htm with browser, copy url and paste it into an OBS custom browser dock.
+- Prepared songs are stored in the Settings for the scene collection unless the option to use an external Prepared.dat file is selected in the Edit Prepared Songs subgroup.  
 
 ## Notation
+### Mark songs with with 'meta' tags for filtering on future selection  (`//meta *tag1*, *tag2*, ... , *tag n*`)
+Using //meta tags on the __1st line__ of lyrics allows song files to be labeled as belonging to different genre.  Example genre are Hymn, Contemporary, Gospel, Country, Blues, Spritual, Rock, Chant, Reggae, Metal, or HipHop.  However, any tag can be used to organize and cross organize Lyric/Text files into categories. Other meta groups could be Call/Response or Scripture.  Meta tags must match exactly, so the tag __*hymn*__ is different from the tag __*Hymn*__
+Try it: 
+```
+//meta Hymn, Blues, Spiritual
+```
 ### Single blank line/padding (`##P` or `##B`)
 Use on any line that you want to keep as an empty line (for line padding, etc.)
 Try it: 
