@@ -184,13 +184,13 @@ Now hit the refrain again!
 
 ### Song Title (filename) and Lyrics Information
 
-![Title Lyrics](\images\Title Lyrics.gif)
+![Title Lyrics](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Title%20Lyrics.gif)
 
-The song Title is also used as a filename to store the lyrics.  If the text of the title is not a valid OS filename then the filename will be encoded to create a valid filename.   Alternately providing a valid filename for this field, the actual Title can be included using the ##T markup.  Song lyrics can be added in the dialog, saved, and deleted.  Songs can also be opened with the default system text editor.  
+The song Title is also used as a filename to store the lyrics.  If the text of the title is not a valid OS filename then the filename will be encoded to create a valid filename.   Providing a valid filename for this field instead of a song Title the actual Title can be included using the ##T markup.  Song lyrics can be added in the dialog, saved, and deleted.  Songs can also be opened and edited with the default system text editor.  
 
 ### Manage Prepared Songs/Text
 
-![image-20211022010733511](C:\Users\willi\AppData\Roaming\Typora\typora-user-images\image-20211022010733511.png)
+![image-20211022010733511](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Manage%20Prepared.gif)
 
 Songs saved in the Song Title and Lyrics Information can be selected in the Manage Prepared section to be added to the Prepared Songs/Text list.  Selecting a song from this Prepared List loads the contents of the Song/Text into the selected Text Sources.  If songs are marked with //meta tags, they can be filtered by specifying one or more tags and refreshing the directory.  Prepared songs can be edited as a list where they can be individually ordered or deleted.  *(New songs can be typed into the edit list manually if they exist in the directory exactly as typed)*
 
@@ -198,23 +198,23 @@ Songs saved in the Song Title and Lyrics Information can be selected in the Mana
 
 Control Buttons perform the seven different functions of the Lyrics Script.   Additionally, Hot Keys can be assigned within OBS to perform these same functions.
 
-![img](file:///C:/Users/willi/AppData/Local/Temp/SNAGHTML11109d6a.PNG)
+![img](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Lyric%20Control%20Buttons.gif)
 
 ### Display Options
 
-![image-20211021232744449](C:\Users\willi\AppData\Roaming\Typora\typora-user-images\image-20211021232744449.png)
+![image-20211021232744449](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Display%20Options.gif)
 
 Enabling Fade Transitions will offer additional options to cause lyrics and other sources to fade to transparent before changing to a different page and fading back to opaque.  The Use 0-100% option is set by default.  Unchecking this option will cause Lyrics to restore faded sources back to their "marked" original opacity levels if specific graphic effects have been applied to text.   Background color fading is optional and can be further configured per text source if enabled.  
 
 ### Text Sources in Scenes
 
-![image-20211021234545740](C:\Users\willi\AppData\Roaming\Typora\typora-user-images\image-20211021234545740.png)
+![image-20211021234545740](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Text%20Sources.gif)
 
 Lyrics will modify the text content of existing text sources within OBS and a given scene.  These Text, Title, Alternate and Static text sources are defined in the Text Sources in Scenes section.  New text sources added to OBS while the script properties window is open, can be included by clicking the Refresh All Sources button. Additional visual sources can be added and linked to show/hide/fade with the Title and Static text sources if desired, such as with a background image for Lyrics, etc.  Optionally, these sources can be faded with the Lyrics and Alternate text.    
 
 ### Lyrics Monitor Browser Dock
 
-![image-20211021235826735](C:\Users\willi\AppData\Roaming\Typora\typora-user-images\image-20211021235826735.png)
+![image-20211021235826735](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/monitor.gif)
 
 A Lyrics Monitor Page updated in HTML is available in the Songs Folder as Monitor.htm.  Press the Open Songs Folder to find the file and open it in a browser.  It is also possible to add this url as a dockable window in OBS/View/Docks/Custom Browser Docks. The page shows:
 
