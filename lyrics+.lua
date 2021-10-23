@@ -2032,12 +2032,12 @@ function script_properties()
 	obs.obs_property_set_visible(fp1, text_fade_enabled)
 	obs.obs_property_set_visible(fp2, text_fade_enabled)
 	obs.obs_property_set_visible(fp3, text_fade_enabled)	
-	obs.obs_property_set_visible(flbprop, text_fade_enabled)
-	obs.obs_property_set_visible(ftbprop, text_fade_enabled)
-	obs.obs_property_set_visible(fabprop, text_fade_enabled)
-	obs.obs_property_set_visible(fsbprop, text_fade_enabled)
-	obs.obs_property_set_visible(febprop, text_fade_enabled)
-	obs.obs_property_set_visible(oprefprop, (text_fade_enabled and (not use100percent)))
+	obs.obs_property_set_visible(flbprop, text_fade_enabled and allow_back_fade)
+	obs.obs_property_set_visible(ftbprop, text_fade_enabled and allow_back_fade)
+	obs.obs_property_set_visible(fabprop, text_fade_enabled and allow_back_fade)
+	obs.obs_property_set_visible(fsbprop, text_fade_enabled and allow_back_fade)
+	obs.obs_property_set_visible(febprop, text_fade_enabled and allow_back_fade)
+	obs.obs_property_set_visible(oprefprop, not use100percent)
 	
 	read_source_opacity()
     return script_props
@@ -2607,7 +2607,7 @@ function script_load(settings)
 	load_source_song_directory(false)
 
 	load_prepared(settings)
-
+	script_update(settings)
     obs.obs_frontend_add_event_callback(on_event) -- Setup Callback for event capture
 end
 
