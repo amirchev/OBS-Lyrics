@@ -108,12 +108,12 @@ TEXT_SHOW = 8 -- turn on the text and ignore fade if selected
 
 text_status = TEXT_VISIBLE
 text_opacity = 100
-text_fade_speed = 1
+text_fade_speed = 5
 text_fade_enabled = false
 load_source = nil
 expandcollapse = true
 showhelp = false
-use100percent = false
+use100percent = true
 fade_text_back = false
 fade_title_back = false
 fade_alternate_back = false
@@ -607,9 +607,10 @@ end
 ----------------
 --------
 function setSourceOpacity(sourceName, fadeBackground)
+	dbg_method("set_Opacity")
 	if sourceName ~= nil and sourceName ~= "" then 
 		if text_fade_enabled then
-			local settings = obs.obs_data_create()		
+		local settings = obs.obs_data_create()		
 			if use100percent then -- try to honor preset maximum opacities
 				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
 				obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero
@@ -633,9 +634,11 @@ function setSourceOpacity(sourceName, fadeBackground)
 			obs.obs_source_release(source)
 			obs.obs_data_release(settings)			
         else
-			local sceneSource = obs.obs_frontend_get_current_scene()
+		dbg_inner("use on/off")
+			--  do preview scene item		
+            local sceneSource = obs.obs_frontend_get_current_preview_scene()
 			local sceneObj = obs.obs_scene_from_source(sceneSource)
-			local sceneItem = obs.obs_scene_find_source(sceneObj, sourceName)
+			local sceneItem = obs.obs_scene_find_source_recursive(sceneObj, sourceName)
 			obs.obs_source_release(sceneSource)
 			if text_opacity > 50 then
 				obs.obs_sceneitem_set_visible(sceneItem, true)
@@ -643,11 +646,12 @@ function setSourceOpacity(sourceName, fadeBackground)
 				obs.obs_sceneitem_set_visible(sceneItem, false)
 			end
 		end
+		update_monitor()
 	end
 end
 
-
 function apply_source_opacity()
+dbg_method("Apply Opacity")
 	setSourceOpacity(source_name, fade_text_back)
 	setSourceOpacity(alternate_source_name, fade_alternate_back)
     if all_sources_fade then
@@ -680,13 +684,13 @@ function apply_source_opacity()
                         else -- try to just change visibility in the scene
                             local sceneSource = obs.obs_frontend_get_current_preview_scene()
                             local sceneObj = obs.obs_scene_from_source(sceneSource)
-                            local sceneItem = obs.obs_scene_find_source(sceneObj, sourceName)
+                            local sceneItem = obs.obs_scene_find_source_recursive(sceneObj, sourceName)
                             obs.obs_source_release(sceneSource)
                             if text_opacity > 50 then
                                 obs.obs_sceneitem_set_visible(sceneItem, true)
                             else
                                 obs.obs_sceneitem_set_visible(sceneItem, false)
-                            end
+                            end							
                         end
                     end
                 end
@@ -2037,7 +2041,7 @@ function script_properties()
 	obs.obs_property_set_visible(fabprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(fsbprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(febprop, text_fade_enabled and allow_back_fade)
-	obs.obs_property_set_visible(oprefprop, not use100percent)
+	obs.obs_property_set_visible(oprefprop, text_fade_enabled and not use100percent)
 	
 	read_source_opacity()
     return script_props
@@ -2062,7 +2066,7 @@ function script_update(settings)
 	fade_alternate_back = obs.obs_data_get_bool(settings, "fade_alternate_back") and allow_back_fade
 	fade_static_back = obs.obs_data_get_bool(settings, "fade_static_back") and allow_back_fade
 	fade_extra_back = obs.obs_data_get_bool(settings, "fade_extra_back") and allow_back_fade
-
+	update_monitor()
 end
 
 -- A function named script_defaults will be called to set the default settings
@@ -2070,6 +2074,9 @@ function script_defaults(settings)
     dbg_method("script_defaults")
     obs.obs_data_set_default_int(settings, "prop_lines_counter", 2)
     obs.obs_data_set_default_string(settings, "hotkey-title", "Button Function\t\tAssigned Hotkey Sequence")
+	obs.obs_data_set_default_bool(settings,"use100percent", true)
+	obs.obs_data_set_default_bool(settings,"text_fade_enabled", false)	
+	obs.obs_data_set_default_int(settings,"text_fade_speed", 5)		
     if os.getenv("HOME") == nil then
         windows_os = true
     end -- must be set prior to calling any file functions
