@@ -451,6 +451,30 @@ function preview_clicked(props, p)
     return true
 end
 
+-- called when selection is made from directory list
+function preview_selection_made(props, prop, settings)
+    local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
+
+    if get_index_in_list(song_directory, name) == nil then
+        return false
+    end -- do nothing if invalid name
+
+    obs.obs_data_set_string(settings, "prop_edit_song_title", name)
+    local song_lines = get_song_text(name)
+    local combined_text = ""
+    for i, line in ipairs(song_lines) do
+        if (i < #song_lines) then
+            combined_text = combined_text .. line .. "\n"
+        else
+            combined_text = combined_text .. line
+        end
+    end
+    obs.obs_data_set_string(settings, "prop_edit_song_text", combined_text)
+	
+	preview_clicked(props,prop)
+    return true
+end
+
 function refresh_button_clicked(props, p)
     local source_prop = obs.obs_properties_get(props, "prop_source_list")
     local alternate_source_prop = obs.obs_properties_get(props, "prop_alternate_list")
@@ -575,27 +599,6 @@ function prepare_selected(name)
     return true
 end
 
--- called when selection is made from directory list
-function preview_selection_made(props, prop, settings)
-    local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
-
-    if get_index_in_list(song_directory, name) == nil then
-        return false
-    end -- do nothing if invalid name
-
-    obs.obs_data_set_string(settings, "prop_edit_song_title", name)
-    local song_lines = get_song_text(name)
-    local combined_text = ""
-    for i, line in ipairs(song_lines) do
-        if (i < #song_lines) then
-            combined_text = combined_text .. line .. "\n"
-        else
-            combined_text = combined_text .. line
-        end
-    end
-    obs.obs_data_set_string(settings, "prop_edit_song_text", combined_text)
-    return true
-end
 
 function open_song_clicked(props, p)
     local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
@@ -1847,7 +1850,7 @@ function script_properties()
     end
     obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
     obs.obs_properties_add_button(gp, "prop_prepare_button", "Add Song/Text to Prepared List", prepare_song_clicked)
-	obs.obs_properties_add_button(gp, "prop_preview_button", "Preview Songs/Text", preview_clicked)
+	--obs.obs_properties_add_button(gp, "prop_preview_button", "Preview Songs/Text", preview_clicked)
     obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Titles by Meta Tags", filter_songs_clicked)
     local gps = obs.obs_properties_create()
     obs.obs_properties_add_text(gps, "prop_edit_metatags", "<font color=#FFD966>Filter MetaTags</font>", obs.OBS_TEXT_DEFAULT)
