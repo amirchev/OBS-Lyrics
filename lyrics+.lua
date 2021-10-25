@@ -419,8 +419,8 @@ function prepare_song_clicked(props, p)
     prepared_songs[#prepared_songs + 1] = obs.obs_data_get_string(script_sets, "prop_directory_list")
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
-
-    obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
+	-- next line PREPARES the newly Added Song
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
     if #prepared_songs > 0 then
 		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared (" .. #prepared_songs .. ")</font>")
     else 
