@@ -56,6 +56,7 @@ link_extras = false -- extras fade with text always when true, only during hide/
 all_sources_fade = false -- Title and Static should only fade when lyrics are changing or during show/hide
 source_song_title = "" -- The song title from a source loaded song
 using_source = false -- true when a lyric load song is being used instead of a pre-prepared song
+preview = false -- true if song is not in prepared list nor from a source load
 source_active = false -- true when a lyric load source is active in the current scene (song is loaded or available to load)
 
 load_scene = "" -- name of scene loading a lyric with a source
@@ -420,7 +421,8 @@ function prepare_song_clicked(props, p)
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_add_string(prop_prep_list, prepared_songs[#prepared_songs], prepared_songs[#prepared_songs])
 	-- next line PREPARES the newly Added Song
-    obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
+ --   obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[#prepared_songs])
+	obs.obs_data_set_string(script_sets, "prop_prepared_list", "List of Prepared Songs")
     if #prepared_songs > 0 then
 		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared (" .. #prepared_songs .. ")</font>")
     else 
@@ -428,6 +430,24 @@ function prepare_song_clicked(props, p)
 	end
     obs.obs_properties_apply_settings(props, script_sets)
 	save_prepared(script_sets)
+    return true
+end
+
+-- preview song clicked
+-- Prepares the selected song without adding it to the prepared list
+--
+function preview_clicked(props, p)
+    dbg_method("preview_song_clicked")
+	local song = obs.obs_data_get_string(script_sets, "prop_directory_list")
+	using_source = true
+	preview = true
+	all_sources_fade = true -- fade title and source the first time
+	set_text_visibility(TEXT_HIDE) -- if this is a transition turn it off so it can fade in
+	if song ~= last_prepared_song then -- skips prepare if song already prepared just to save some processing cycles
+		prepare_selected(song)
+	end
+	transition_lyric_text(true)
+	preview = false
     return true
 end
 
@@ -518,9 +538,9 @@ function clear_prepared_clicked(props, p)
     -- clear the list
     local prep_prop = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_clear(prep_prop)
-	obs.obs_property_set_description(obs.obs_properties_get(props, "prop_prepared_list"), "Prepared")
-	obs.obs_property_list_add_string(obs.obs_properties_get(props, "prop_prepared_list"), "", "")
-    obs.obs_data_set_string(script_sets, "prop_prepared_list", "")	
+	obs.obs_property_set_description(obs.obs_properties_get(props, "prop_prepared_list"), "<font color=#FFD966>Prepared</font>")
+	obs.obs_property_list_add_string(obs.obs_properties_get(props, "prop_prepared_list"), "List of Prepared Songs", "")
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", "List of Prepared Songs")	
     local pp = obs.obs_properties_get(props, "edit_grp")
     if obs.obs_property_visible(pp) then
         obs.obs_property_set_visible(pp, false)
@@ -1630,7 +1650,11 @@ function update_monitor()
         text ..
         "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; ; margin: 2px; margin-right: 20px; '>"
     if using_source then
-        text = text .. "From Source: <B style='color: #FFEF00;'>" .. load_scene .. "</B></div>"
+		if preveiw then 
+			text = text .. "From Source: <B style='color: #FFEF00;'>" .. load_scene .. "</B></div>"
+		else
+			text = text .. "From Preview <B style='color: #FFEF00;'>" .. load_scene .. "</B></div>"		
+		end
     else
         text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index
         text =
@@ -1822,7 +1846,8 @@ function script_properties()
         obs.obs_property_list_add_string(prop_dir_list, name, name)
     end
     obs.obs_property_set_modified_callback(prop_dir_list, preview_selection_made)
-    obs.obs_properties_add_button(gp, "prop_prepare_button", "Prepare Selected Song/Text", prepare_song_clicked)
+    obs.obs_properties_add_button(gp, "prop_prepare_button", "Add Song/Text to Prepared List", prepare_song_clicked)
+	obs.obs_properties_add_button(gp, "prop_preview_button", "Preview Songs/Text", preview_clicked)
     obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Titles by Meta Tags", filter_songs_clicked)
     local gps = obs.obs_properties_create()
     obs.obs_properties_add_text(gps, "prop_edit_metatags", "<font color=#FFD966>Filter MetaTags</font>", obs.OBS_TEXT_DEFAULT)
@@ -1837,11 +1862,11 @@ function script_properties()
         obs.OBS_COMBO_TYPE_EDITABLE,
         obs.OBS_COMBO_FORMAT_STRING
     )
-	obs.obs_property_list_add_string(prepare_prop, "", "")
+	obs.obs_property_list_add_string(prepare_prop, "List of Prepared Songs","")
     for _, name in ipairs(prepared_songs) do
         obs.obs_property_list_add_string(prepare_prop, name, name)
     end
-	obs.obs_data_set_string(script_sets, "prop_prepared_list", "")	
+	obs.obs_data_set_string(script_sets, "prop_prepared_list", "List of Prepared Songs")	
     obs.obs_property_set_modified_callback(prepare_prop, prepare_selection_made)
     local count = obs.obs_property_list_item_count(prepare_prop)
     if count > 1 then
@@ -2383,7 +2408,7 @@ function save_edits_clicked(props, p)
     prepared_songs = {}
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     obs.obs_property_list_clear(prop_prep_list)
-	obs.obs_property_list_add_string(prop_prep_list, "", "")
+	obs.obs_property_list_add_string(prop_prep_list, "List of Prepared Songs", "")
     local songNames = obs.obs_data_get_array(script_sets, "prep_list")
     local count2 = obs.obs_data_array_count(songNames)
     if count2 > 0 then
@@ -2399,7 +2424,7 @@ function save_edits_clicked(props, p)
     end
     obs.obs_data_array_release(songNames)
     save_prepared()
-    obs.obs_data_set_string(script_sets, "prop_prepared_list", "")
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", "List of Prepared Songs")
     prepared_index = 0
     pp = obs.obs_properties_get(script_props, "edit_grp")
     obs.obs_property_set_visible(pp, false)
@@ -3044,7 +3069,7 @@ function load_source_song(source, preview)
         if song ~= last_prepared_song then -- skips prepare if song already prepared just to save some processing cycles
             prepare_selected(song)
         end
-        transition_lyric_text()
+        transition_lyric_text(true)
         if obs.obs_data_get_bool(settings, "source_home_on_active") then
             home_prepared(true)
         end
