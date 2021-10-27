@@ -1,3 +1,10 @@
+--     __   _    __  _______  ______  ____   ____      ___
+--    / /  | |  / / / ___  / /_  __/ / ___\ / ___\  __/  /_
+--   / /   | |_/ / / /__/ /   / /   / /     \ \    /_   __/
+--  / /___ |_  _/ /  __  | __/ /__ | |__   __\ \    /__/
+-- /______/ /_/  /_/   |_|/______/ |____\ /____/ 
+--        
+--     
 --- Copyright 2020 amirchev/wzaggle
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +34,6 @@
 -- Title Source ------>  The text source that will contain the Title of the current song
 -- Alternate Source -->  The text source that will contain the Pages of Alternate song lyrics
 -- Static Source ----->  The text source that will contain any Static Text that will be shown along with lyrics
-
 
 ---------------------------------------------------------------------------------------------------------------------
 
@@ -164,6 +170,25 @@ the active window. --]]
  
 transition_enabled = false 
 transition_completed = false
+
+-------------------------------------------------------------------------------------------------------------------------
+-- Help Button Text
+-- Text shown when user selects toggles the Help Button to see valid Lyric Markup syntax
+------------------------------------------------------------------------------------------------------------------------
+
+help =
+    "▪▪▪▪▪ MARKUP SYNTAX HELP ▪▪▪▪▪▲- CLICK TO CLOSE -▲▪▪▪▪▪\n\n" ..
+    " Markup      Syntax          Markup      Syntax \n" ..
+    "============ ==========   ============ ==========\n" ..
+    " Display n Lines    #L:n      End Page after Line   Line ###\n" ..
+     "  Blank (Pad) Line  ##B or ##P     Blank(Pad) Lines   #B:n or #P:n\n" ..
+    " External Refrain   #r[ and #r]      In-Line Refrain     #R[ and #R]\n" ..
+    " Repeat Refrain   ##r or ##R    Duplicate Line n times   #D:n Line\n" ..
+    " Static Lines    #S[ and #s]      Single Static Line      #S: Line \n" ..
+    "Alternate Text    #A[ and #A]    Alt Line Repeat n Pages  #A:n Line \n" ..
+    "Comment Line     // Line       Block Comments     //[ and //] \n" ..
+    "Mark Verses     ##V        Override Title     #T: text\n\n" ..
+    "Optional comma delimited meta tags follow '//meta ' on 1st line"
 
 -- SIMPLE DEBUGGING/PRINT MECHANISM
 DEBUG = true -- on switch for entire debugging mechanism
@@ -1085,7 +1110,7 @@ end
 
 --------
 ----------------
------------------------- SCRIPT WORKING FUNCTIONS
+------------------------ SCRIPT WORKING FUNCTIONS (These form the bulk of the Effort)
 ----------------
 --------
 -------------------------------------------------------------------------------------------------------------------------
@@ -1544,6 +1569,7 @@ function prepare_song_by_index(index)
 end
 
 ---------------------------------------------------------------------------------------------------------------------
+-- PREPARE SONG BY NAME
 -- Function to parse and process markups within the lyrics and break the text into defined pages and verses
 -- The first line of song/text files can contain an optional list of meta tags that organize the files into 
 -- user defined genre or categories for later filtering during selection 
@@ -1605,49 +1631,49 @@ function prepare_song_by_name(name)
     for _, line in ipairs(song_lines) do
         local new_lines = 1
         local single_line = false
-        local comment_index = line:find("//%[") -- Look for comment block Set
+        local comment_index = line:find("//%[") -- Look for Comment Block Set
         if comment_index ~= nil then
             commentBlock = true
             line = line:sub(comment_index + 3)
         end
-        comment_index = line:find("//]") -- Look for comment block Clear
+        comment_index = line:find("//]") -- Look for Comment Block Clear
         if comment_index ~= nil then
             commentBlock = false
             line = line:sub(1, comment_index - 1)
             new_lines = 0
         end
         if not commentBlock then
-            local comment_index = line:find("%s*//")
+            local comment_index = line:find("%s*//") -- Single line comment
             if comment_index ~= nil then
                 line = line:sub(1, comment_index - 1)
                 new_lines = 0
             end
-            local alternate_index = line:find("#A%[")
+            local alternate_index = line:find("#A%[") -- Alternate Block set
             if alternate_index ~= nil then
                 use_alternate = true
                 line = line:sub(1, alternate_index - 1)
                 new_lines = 0
             end
-            alternate_index = line:find("#A]")
+            alternate_index = line:find("#A]") -- Alternate Block clear
             if alternate_index ~= nil then
                 use_alternate = false
                 line = line:sub(1, alternate_index - 1)
                 new_lines = 0
             end
-            local static_index = line:find("#S%[")
+            local static_index = line:find("#S%[") -- Static Block Set
             if static_index ~= nil then
                 use_static = true
                 line = line:sub(1, static_index - 1)
                 new_lines = 0
             end
-            static_index = line:find("#S]")
+            static_index = line:find("#S]") -- Static Block Clear
             if static_index ~= nil then
                 use_static = false
                 line = line:sub(1, static_index - 1)
                 new_lines = 0
             end
 
-            local newcount_index = line:find("#L:")
+            local newcount_index = line:find("#L:") -- Lines per Page
             if newcount_index ~= nil then
                 local iS, iE = line:find("%d+", newcount_index + 3)
                 local newLines = tonumber(line:sub(iS, iE))
@@ -1663,20 +1689,20 @@ function prepare_song_by_name(name)
                 line = line:sub(1, newcount_index - 1)
                 new_lines = 0 -- ignore line
             end
-            local static_index = line:find("#S:")
+            local static_index = line:find("#S:") -- Single Static
             if static_index ~= nil then
                 line = line:sub(static_index + 3)
                 static_text = line
                 new_lines = 0
             end
-            local title_index = line:find("#T:")
+            local title_index = line:find("#T:")  -- Set Title
             if title_index ~= nil then
                 local title_indexEnd = line:find("%s+", title_index + 1)
                 line = line:sub(title_indexEnd + 1)
                 alt_title = line
                 new_lines = 0
             end
-            local alt_index = line:find("#A:")
+            local alt_index = line:find("#A:") -- Single Alternate
             if alt_index ~= nil then
                 local alt_indexStart, alt_indexEnd = line:find("%d+", alt_index + 3)
                 new_lines = tonumber(line:sub(alt_indexStart, alt_indexEnd))
@@ -1684,18 +1710,18 @@ function prepare_song_by_name(name)
                 line = line:sub(alt_indexEnd + 1)
                 singleAlternate = true
             end
-            if line:find("###") ~= nil then -- Look for single line
+            if line:find("###") ~= nil then -- End of Page
                 line = line:gsub("%s*###%s*", "")
                 single_line = true
             end
-            local newcount_index = line:find("#D:")
+            local newcount_index = line:find("#D:") -- Duplicate Lines
             if newcount_index ~= nil then
                 local newcount_indexStart, newcount_indexEnd = line:find("%d+", newcount_index + 3)
                 new_lines = tonumber(line:sub(newcount_indexStart, newcount_indexEnd))
                 _, newcount_indexEnd = line:find("%s+", newcount_indexEnd + 1)
                 line = line:sub(newcount_indexEnd + 1)
             end
-            local refrain_index = line:find("#R%[")
+            local refrain_index = line:find("#R%[") -- Start In-Line Refrain
             if refrain_index ~= nil then
                 if next(refrain) ~= nil then
                     for i, _ in ipairs(refrain) do
@@ -1707,7 +1733,7 @@ function prepare_song_by_name(name)
                 line = line:sub(1, refrain_index - 1)
                 new_lines = 0
             end
-            refrain_index = line:find("#r%[")
+            refrain_index = line:find("#r%[") -- Start External Refrain
             if refrain_index ~= nil then
                 if next(refrain) ~= nil then
                     for i, _ in ipairs(refrain) do
@@ -1719,14 +1745,14 @@ function prepare_song_by_name(name)
                 line = line:sub(1, refrain_index - 1)
                 new_lines = 0
             end
-            refrain_index = line:find("#R]")
+            refrain_index = line:find("#R]") -- End In-Line Refrain
             if refrain_index ~= nil then
                 recordRefrain = false
                 showText = true
                 line = line:sub(1, refrain_index - 1)
                 new_lines = 0
             end
-            refrain_index = line:find("#r]")
+            refrain_index = line:find("#r]") -- End External Refrain
             if refrain_index ~= nil then
                 recordRefrain = false
                 showText = true
@@ -1734,9 +1760,9 @@ function prepare_song_by_name(name)
                 new_lines = 0
             end
 
-            refrain_index = line:find("##R")
+            refrain_index = line:find("##R")  -- Repeat Refrain
             if refrain_index == nil then
-                refrain_index = line:find("##r")
+                refrain_index = line:find("##r") -- Repeat Refrain
             end
             if refrain_index ~= nil then
                 playRefrain = true
@@ -1745,25 +1771,25 @@ function prepare_song_by_name(name)
             else
                 playRefrain = false
             end
-            newcount_index = line:find("#P:")
+            newcount_index = line:find("#P:")  -- Add Blank Lines
             if newcount_index ~= nil then
                 new_lines = tonumber(line:sub(newcount_index + 3))
                 line = line:sub(1, newcount_index - 1)
             end
-            newcount_index = line:find("#B:")
+            newcount_index = line:find("#B:") -- Add Blank Lines
             if newcount_index ~= nil then
                 new_lines = tonumber(line:sub(newcount_index + 3))
                 line = line:sub(1, newcount_index - 1)
             end
-            local phantom_index = line:find("##P")
+            local phantom_index = line:find("##P") -- Single Blank Line
             if phantom_index ~= nil then
                 line = line:sub(1, phantom_index - 1)
             end
-            phantom_index = line:find("##B")
+            phantom_index = line:find("##B") -- Single Blank Line
             if phantom_index ~= nil then
                 line = line:gsub("%s*##B%s*", "") .. "\n"
             end
-            local verse_index = line:find("##V")
+            local verse_index = line:find("##V") -- Mark Start of Verse
             if verse_index ~= nil then
                 line = line:sub(1, verse_index - 1)
                 new_lines = 0
@@ -1771,14 +1797,14 @@ function prepare_song_by_name(name)
                 dbg_inner("Verse: " .. #lyrics)
             end
             if line ~= nil then
-                if use_static then
+                if use_static then  -- Text goes to Static Source
                     if static_text == "" then
                         static_text = line
                     else
                         static_text = static_text .. "\n" .. line
                     end
                 else
-                    if use_alternate or singleAlternate then
+                    if use_alternate or singleAlternate then -- Text goes to Alternate Source
                         if recordRefrain then
                             displaySize = refrain_display_lines
                         else
@@ -1824,26 +1850,26 @@ function prepare_song_by_name(name)
                             end
                         end
                         singleAlternate = false
-                    else
-                        if recordRefrain then
-                            displaySize = refrain_display_lines
+                    else  -- Text goes to Refrain or Verse Lyrics 
+                        if recordRefrain then   
+                            displaySize = refrain_display_lines   -- display lines controlled by Refrain Size
                         else
-                            displaySize = adjusted_display_lines
+                            displaySize = adjusted_display_lines  -- display lines controlled by Lyric Size
                         end
                         if new_lines > 0 then
                             while (new_lines > 0) do
-                                if recordRefrain then
+                                if recordRefrain then   -- Recording Refrain ?
                                     if (cur_line == 1) then
-                                        refrain[#refrain + 1] = line
+                                        refrain[#refrain + 1] = line  -- Start new page
                                     else
-                                        refrain[#refrain] = refrain[#refrain] .. "\n" .. line
+                                        refrain[#refrain] = refrain[#refrain] .. "\n" .. line  -- Add to page
                                     end
                                 end
                                 if showText and line ~= nil then
                                     if (cur_line == 1) then
-                                        lyrics[#lyrics + 1] = line
+                                        lyrics[#lyrics + 1] = line  -- Start new page
                                     else
-                                        lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line
+                                        lyrics[#lyrics] = lyrics[#lyrics] .. "\n" .. line  -- Add to Page
                                     end
                                 end
                                 cur_line = cur_line + 1
@@ -1852,10 +1878,10 @@ function prepare_song_by_name(name)
                                         for i = cur_line, displaySize, 1 do
                                             cur_line = i
                                             if showText and lyrics[#lyrics] ~= nil then
-                                                lyrics[#lyrics] = lyrics[#lyrics] .. "\n"
+                                                lyrics[#lyrics] = lyrics[#lyrics] .. "\n"  -- pad new lines
                                             end
                                             if recordRefrain then
-                                                refrain[#refrain] = refrain[#refrain] .. "\n"
+                                                refrain[#refrain] = refrain[#refrain] .. "\n"  -- pad new lines
                                             end
                                         end
                                     end
@@ -1867,14 +1893,14 @@ function prepare_song_by_name(name)
                     end
                     if playRefrain == true and not recordRefrain then -- no recursive call of Refrain within Refrain Record
                         for _, refrain_line in ipairs(refrain) do
-                            lyrics[#lyrics + 1] = refrain_line
+                            lyrics[#lyrics + 1] = refrain_line     -- add play refrain line
                         end
                     end
                 end
             end
         end
     end
-    if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then
+    if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then  -- pad lines 
         for i = cur_line, displaySize, 1 do
             cur_line = i
             if use_alternate then
@@ -1891,8 +1917,7 @@ function prepare_song_by_name(name)
             end
         end
     end
-    lyrics[#lyrics + 1] = ""
-    -- pause_timer = false
+    lyrics[#lyrics + 1] = ""  -- Add blank page at end of lyrics
     return true
 end
 
@@ -1925,8 +1950,8 @@ function delete_song(name)
     else
         path = get_song_file_path(enc(name), ".enc")
     end
-    os.remove(path)
-    table.remove(song_directory, get_index_in_list(song_directory, name))
+    os.remove(path)  -- delete from OS
+    table.remove(song_directory, get_index_in_list(song_directory, name)) -- delete from table
     source_filter = false
     load_source_song_directory(false)
 end
@@ -2016,7 +2041,7 @@ end
 function readTags(name)
     local meta = ""
     local path = {}
-    if testValid(name) then
+    if testValid(name) then -- get the full file path
         path = get_song_file_path(name, ".txt")
     else
         path = get_song_file_path(enc(name), ".enc")
@@ -2024,13 +2049,13 @@ function readTags(name)
     local file = io.open(path, "r")
     if file ~= nil then
         for line in file:lines() do
-            meta = line
+            meta = line  -- read one line and stop
             break
         end
         file:close()
     end
     local meta_index = meta:find("//meta ") -- Look for meta block Set
-    if meta_index ~= nil then
+    if meta_index ~= nil then  
         meta = meta:sub(meta_index + 7)
         return ParseCSVLine(meta)
     end
@@ -2205,9 +2230,7 @@ function save_prepared()
     dbg_method("save_prepared")
     local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
     for i, name in ipairs(prepared_songs) do
-        -- if not scene_load_complete or i > 1 then  -- don't save scene prepared songs
         file:write(name, "\n")
-        -- end
     end
     file:close()
     return true
@@ -2334,7 +2357,6 @@ end
 -- GET SONG FILE PATH
 -- Working function that returns the full OS path of the given song name and suffix
 -------------------------------------------------------------------------------------------------------------------------
-
 function get_song_file_path(name, suffix)
     if name == nil then
         return nil
@@ -2364,17 +2386,17 @@ end
 function get_song_text(name)
     local song_lines = {}
     local path = {}
-    if testValid(name) then
+    if testValid(name) then -- get file path
         path = get_song_file_path(name, ".txt")
     else
         path = get_song_file_path(enc(name), ".enc")
     end
-    local file = io.open(path, "r")
+    local file = io.open(path, "r")  -- open the file
     if file ~= nil then
         for line in file:lines() do
-            song_lines[#song_lines + 1] = line
+            song_lines[#song_lines + 1] = line  -- read lines into song_lines table
         end
-        file:close()
+        file:close()  -- close file
     else
         return nil
     end
@@ -2394,24 +2416,7 @@ end
 function script_description()
     return description
 end
--------------------------------------------------------------------------------------------------------------------------
--- Help Button Text
--- Text shown when user selects toggles the Help Button to see valid Lyric Markup syntax
-------------------------------------------------------------------------------------------------------------------------
 
-local help =
-    "▪▪▪▪▪ MARKUP SYNTAX HELP ▪▪▪▪▪▲- CLICK TO CLOSE -▲▪▪▪▪▪\n\n" ..
-    " Markup      Syntax          Markup      Syntax \n" ..
-    "============ ==========   ============ ==========\n" ..
-    " Display n Lines    #L:n      End Page after Line   Line ###\n" ..
-     "  Blank (Pad) Line  ##B or ##P     Blank(Pad) Lines   #B:n or #P:n\n" ..
-    " External Refrain   #r[ and #r]      In-Line Refrain     #R[ and #R]\n" ..
-    " Repeat Refrain   ##r or ##R    Duplicate Line n times   #D:n Line\n" ..
-    " Static Lines    #S[ and #s]      Single Static Line      #S: Line \n" ..
-    "Alternate Text    #A[ and #A]    Alt Line Repeat n Pages  #A:n Line \n" ..
-    "Comment Line     // Line       Block Comments     //[ and //] \n" ..
-    "Mark Verses     ##V        Override Title     #T: text\n\n" ..
-    "Optional comma delimited meta tags follow '//meta ' on 1st line"
 	
 -------------------------------------------------------------------------------------------------------------------------
 -- OBS PROPERTIES FUNCTION (See OBS Documentation)
@@ -2731,7 +2736,7 @@ function script_defaults(settings)
 end
 
 -------------------------------------------------------------------------------------------------------------------------
--- Working function to return if a source is Valid to be included (excludes non-visible sources like Audio)
+-- Working function to return if a source is Valid to be included as extra (excludes non-visible sources like Audio)
 ------------------------------------------------------------------------------------------------------------------------
 function isValid(source)
     if source ~= nil then
@@ -2953,6 +2958,7 @@ end
 ---------  Return true if sourcename given is showing anywhere or on in the Active scene
 ------
 ---
+-- Function returns true if SourceName is Showing anywhere in Preview or Active
 function isShowing(sourceName)
     local source = obs.obs_get_source_by_name(sourceName)
     local showing = false
@@ -2962,7 +2968,7 @@ function isShowing(sourceName)
     obs.obs_source_release(source)
     return showing
 end
-
+-- Function returns true if SourceName is visible in the Active Window
 function isActive(sourceName)
     local source = obs.obs_get_source_by_name(sourceName)
     local active = false
@@ -2972,45 +2978,45 @@ function isActive(sourceName)
     obs.obs_source_release(source)
     return active
 end
-
+-- Function returns true if ANY of the sources are showing in OBS
 function anythingShowing()
     return isShowing(source_name) or isShowing(alternate_source_name) or isShowing(title_source_name) or
         isShowing(static_source_name)
 end
-
+-- Function returns true if Lyric Source is showing
 function sourceShowing()
     return isShowing(source_name)
 end
-
+-- Function returns true if Alternate Source is showing
 function alternateShowing()
     return isShowing(alternate_source_name)
 end
-
+-- Function returns true if Title Source is showing
 function titleShowing()
     return isShowing(title_source_name)
 end
-
+-- Function returns true if Static Source is showing
 function staticShowing()
     return isShowing(static_source_name)
 end
-
+-- Function returns true if ANY of the sources are ACTIVE in OBS
 function anythingActive()
     return isActive(source_name) or isActive(alternate_source_name) or isActive(title_source_name) or
         isActive(static_source_name)
 end
-
+-- Function returns true if Lyric Source is Active
 function sourceActive()
     return isActive(source_name)
 end
-
+-- Function returns true if Alternate Source is Active
 function alternateActive()
     return isActive(alternate_source_name)
 end
-
+-- Function returns true if Title Source is Active
 function titleActive()
     return isActive(title_source_name)
 end
-
+-- Function returns true if Static Source is Active
 function staticActive()
     return isActive(static_source_name)
 end
@@ -3031,6 +3037,7 @@ end
 ----------------------------------------------------------------------------------------------------------
 
 function get_hotkeys(hotkey_array, prefix, leader)
+--Hotkey Translation Table
     local Translate = {
         ["NUMLOCK"] = "NumLock",
         ["NUMSLASH"] = "Num/",
@@ -3070,6 +3077,7 @@ function get_hotkeys(hotkey_array, prefix, leader)
 
     item = obs.obs_data_array_item(hotkey_array, 0)
     local key = string.sub(obs.obs_data_get_string(item, "key"), 9)
+-- Globally change any NUM to Num or MOUSE to Mouse
     if Translate[key] ~= nil then
         key = Translate[key]
     elseif string.sub(key, 1, 3) == "NUM" then
@@ -3080,7 +3088,7 @@ function get_hotkeys(hotkey_array, prefix, leader)
 
     obs.obs_data_release(item)
     local val = prefix
-    if key ~= nil and key ~= "" then
+    if key ~= nil and key ~= "" then  -- Add key modifiers Ctrl, Alt, Shift and Command
         val = val .. "  " .. leader .. "  "
         if obs.obs_data_get_bool(item, "control") then
             val = val .. "Ctrl + "
@@ -3483,6 +3491,7 @@ end
 
 obs.obs_register_source(source_def)
 
+-- Base64 Lyrics+ Icon
 description =
     [[ 
 <div><img style="float: left; margin: 0px 0px 0px 0px;" width="68"   src="data:image/gif;base64,R0lGODlhRAAoAHcAACH5BAEAAAAALAAAAABEACgAh/8A/wGu9wCr/gC19wmw7wi19w+x7Buy5hi17yC04ym13Sm15zQzMDU4QzC22jO41Tg2LTk5Ozk9SjxASji41ENANkVIUkK6zkC500xFM0tLTEtNVEtOWEtQXE27yEm7zFRLMVVOOlJQSVRWXlZaZ1K8xlK9zlhaY19fYlm9wmFXOmdaNWO/vGPBt2PGvW9xd2nBuXZpQnRpSXJydXJ0fHd5fnLCsHPCsnxtPXl6e33HpHzErIZ0O4J2T4GCg4bFpoLEqo9L6It9Uo7HopVT4ZF/R5KCUZeNcpSVmJPHn5PJnZTOpZdV35xS55xc2JlY3J9f1p+NU5yZk5ueqZrHoZzJmqNm0KFj06ZpzaaSVqWTWKCRYqOWbKafg6Cip6aptKbLlKpuyK1rzq5yxK6aWq6cZK2fdKuiia+xt621tarLkrVzxrR7vLCYTrWcUrafXLWlWrSyrrOztbTNjL17vbuEtL2Evb2Mtb2lXLuxlby2ob29pb7QhL3WhMKMrMiUpMaUrcWsX8W8n8S7ocbWe8bQg8uYos6cnsyZocywVs+7e8y8i9DSfMzRgNacnNanlNKhmdi8YtbBf9bWc9bTeduvjN6tlOCziNq7Wd3AYeHDYd/Ecd/Vc97We+K3hOe1jOi/fuW7geTFXefIYujXa+bVcezBfO+9hO/IdezDee/OWvDPY/LNce/Xae/Wc+/eY+/ea/XRYvjRbfTNcPjXY/jVaffeY/fea/8AAP8A//8JBP8OBv8XC/8hCP8iEP8pEP8vFv85GP9AHv9MJP9SIf9TJ/9cLP9lL/9zMf90N/+EPv+LQf+URf+dSv+mTv+tSv+vUv+0Vf+9Wf/GXf/OWv/MYP/WWv7ZZfzWaP/eVf/dXP7cZP7gaf/lWv/nY/7obf3jev7lgf/tU//vWv/tb//ucP7soP/2dP/3pf731f723P766f//c///1v//3v//5/767f/99QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj+AAEIHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNCjJeuo8ePIEOKHEnSIzyJ6r5948aypcuXMGPKfKmS5bdw6iKqY7mtp8+fQIMKHfrz27Rq3LZd+wYu58OdSq9JnUq1qtWrWKV+c8aL2bepTJ02hJq1rFmsRnntmsaNaliHZM/KLbttpTBcys6pjLq06dik13zO3aZNbt2V15Lh0rWMmTJlSMH6XQi1FqtZs7Cd3RbqUS2+V1lCSybMF67TqIFdaytZLEKoqcJYYSML9NVtbIJcsk21rTHUwFE7+1r1bUKo2/wQ+RNVm7aezwlLf+RnFvTngZ1v4yZNF65du07+Ays2TNgxwFaNH4Ta7RCRQz1lVap0yVMlUKg8hfJUC1Wo2rPQVxso9KWilDPNQGPaLtKUsxJraE1mEFTa/EEEIj2xYgURdfjxhCFsOCHiI2M4AYosJTpRxyVWWMFEHT19c04zpw2DGF9AXUMLLX25NhCFFmK4TXtEPHJJGLX4oSIboNThRCqIMHHIGGP4AYUnkCACVjGnLUMcVbSsMsomkiwiyCC19DhhUhVe2I0soKQCBRsddvPHE7ttUwcUoTiZCn6hYGGFHwZqxSUu0nwplSJ56BGHHGh8MYUUqyilnkDsuXeIOH+wQUuIV3hi5xOVdKMnn3U8AYo4sqRyCST+swW2WjTAABMZVXp84QUSPsyAggUijMLapcj58aIhT/zRHhNjfGbsI91cw8YTnXF4CJ1jVDJGGLRExU011fB2BAkbTBBBBBWEoIKwrf2YlCnbCoqFJ+LIqewsbAy6DSpjWHEILX9YMe8jYWARRiWgsVTVNrTIEEIMRbSRiCi04JEJaEytg2lS2MjisSy1yMJKKlhcok3HHl+Dcm3byILNNtiE/Nlmq2RRaU0svXExVXWls7FSP3VTiRNYsDGzYIH1JJXSPxm2ChmyTrWNzqBt51RcUqPiRx2FzuX10k93yzPVPHNzNXo8a/f12tuEjePUO0tt9s9TOWf3XHYXdk3+3s05t7DbqzG8jcVVzw0AWdtwwgILKaQAAydn1ZJECSlUsc0cKTDOQiHaNAJDCjcwwrPbbZdxhhlGjFL42VGR8oAADzwQACPa8KgULWlORUsJAlCggAA2FEJAABcE4AApDhDAAvB6B+b2NzxIQMMJEIgCYWCGx6XNDwK0kMQctezgAAVgNEIBBh6wQNgcAlygTSsHEFBKCQboYEAJrSRgQBIszKFUUjsiQ7e+gYMG5OAEDNDE9axGt739IAAGUAAnwCCAElAgAIW4gAAOUALCJEEANyjMBRlRggAcIAAloAUfEiCAD1AiMJjgQhe2EAWpcCMQGqgBCnowM7mxTir+2xNAFbqVAgEwQgkCKAQLDMCJNGlDDRXMBi0SQIBW0I8UvOMDFdRgAwGwoHYg6MALJrACpXEjEniIBNqWlj30kEKD+NPGBy+QgAMwQgEB4IPeWkEBAXigj0CghAFQaAAC8IEAFxgCCLURiwyMwAcTUAF6tqO0hbURaJQogSYZwbAffKAEhchkCYAgtVLs4AIfUMI21KDJC5RgiD/Q5A1KsR0hcIAGGtDC9bLCwMOh7W5AVJvfqpK3YN5NO3rbRivwQAY1DuaSa4umVbbzDd7wEprSzGY2e5mOcpBDJeAMpzjHSc5ymvOc4yRHOXwGgHWY453wjKc850nPetrznvYI1JhG9vmQgAAAOw=="/></div><span style="text-align: center;"><span style="color: #FFD966;"><b>OBS Lyrics+</b></span><span style="color: #B69DBB;"><b> Manages lyrics & other paged text</b></span><br><i>Ver: 2.0</i>&nbsp;&bull;&nbsp;Authors: Amirchev & DC Strato<br>with contributions from Taxilian</span>
