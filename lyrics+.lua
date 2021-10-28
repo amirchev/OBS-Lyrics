@@ -2857,7 +2857,6 @@ function script_save(settings)
     end
     obs.obs_data_set_array(settings, "extra_link_sources", extra_sources_array)
     obs.obs_data_array_release(extra_sources_array)
-	
 	save_prepared(settings)
 end
 
@@ -2893,7 +2892,7 @@ function script_load(settings)
 
     hotkey_p_p_id = obs.obs_hotkey_register_frontend("previous_prepared_hotkey", "Prepare Previous", prev_prepared)
     hotkey_save_array = obs.obs_data_get_array(settings, "previous_prepared_hotkey")
-    hotkey_p_p_key = get_hotkeys(hotkey_save_array, "Previous Prepared", "............")
+    hotkey_p_p_key = get_hotkeys(hotkey_save_array, "Previous Prepared", " ............")
     obs.obs_hotkey_load(hotkey_p_p_id, hotkey_save_array)
     obs.obs_data_array_release(hotkey_save_array)
 
@@ -3284,7 +3283,7 @@ source_def.get_properties = function(data)
         obs.obs_properties_add_list(
         source_props,
         "songs",
-        "Song Directory",
+        "<font color=#FFD966>Song Directory</font>",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
