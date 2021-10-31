@@ -1,7 +1,14 @@
 # OBS-Lyrics
 Manage and display lyrics to any text source in your OBS scene. 
 
-## How to use
+## Table of Contents
+1. [Basic usage](#basic-usage)
+2. [Random facts](#random-facts)
+3. [Notation](#notation)
+4. [The UI](#the-ui)
+5. [That's it](#thats-it)
+
+## Basic usage
 1. Download the script and open it with OBS.
 2. Add some songs to the script and save them.
 3. Select the text source for displaying the lyrics. Set the amount of lines to display, default is 2. Optionally, you can setup hotkeys to control the lyrics display. 
@@ -10,7 +17,7 @@ Manage and display lyrics to any text source in your OBS scene.
 6. Advance lyrics as needed using the buttons or appropriate hotkeys. You can also advance to the next prepared song using hotkeys.
 7. When you're finished with the current song, hide the lyrics and select the next song from the "Prepared Songs" list. 
 
-## Things to know
+## Random facts
 - To display a specific song when a scene is activated, add a "Source" to the scene by clicking the + sign in the scene, adding a "Prepare Lyric" source, and selecting the song to open.
 - Use "Home" hotkey to return to the beginning of your prepared songs, perhaps after practicing the songs.
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
@@ -182,6 +189,7 @@ Now hit the refrain again!
 ##R
 ```
 
+## The UI
 ### Song Title (filename) and Lyrics Information
 
 ![Title Lyrics](https://github.com/amirchev/OBS-Lyrics/blob/cleanup/images/Title%20Lyrics.gif)
