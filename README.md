@@ -18,7 +18,7 @@ An OBS Lua script for managing and displaying lyrics to any text source in your 
     11. [Play refrain](#play-refrain)
     12. [Static text](#static-text)
     13. [Single static text line](#single-static-text-line)
-    14. [Override title/filename](#override-titlefilename)
+    14. [Override title](#override-titlefilename)
     15. [Alternate text block](#alternate-text-block)
     16. [Single line alternate text repeated for `n` pages](#single-line-alternate-text-repeated-for-n-pages)
     17. [Mark verses](#mark-verses)
@@ -198,7 +198,7 @@ Try it:
 #S: The song Amazing Grace was written by John Newton who was a former Slave Trader
 ```
 [Back to Top](#table-of-contents)
-### Override title/filename
+### Override title
 (`#T: new title`)
 
 Use this to specifically define the song title. This is useful if title has special characters, not valid as a filename.
