@@ -18,7 +18,7 @@ Manage and display lyrics to any text source in your OBS scene.
     11. [Play refrain](#play-refrain)
     12. [Static text](#static-text)
     13. [Single static text line](#single-static-text-line)
-    14. [Override title/filename](override-titlefilename)
+    14. [Override title/filename](#override-titlefilename)
     15. [Alternate text block](#alternate-text-block)
     16. [Single line alternate text repeated for `n` pages](#single-line-alternate-text-repeated-for-n-pages)
     17. [Mark verses](#mark-verses)
