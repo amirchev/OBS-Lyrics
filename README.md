@@ -5,6 +5,23 @@ Manage and display lyrics to any text source in your OBS scene.
 1. [Basic usage](#basic-usage)
 2. [Random facts](#random-facts)
 3. [Notation](#notation)
+    1. [Mark songs with with 'meta' tags for filtering on future selection](#mark-songs-with-with-meta-tags-for-filtering-on-future-selection)
+    2. [Single blank line/padding](#single-blank-linepadding)
+    3. [Multiple blank lines/padding](#multiple-blank-linespadding)
+    4. [End the current page](#end-the-current-page)
+    5. [Repeat line](#repeat-line)
+    6. [Set number of lines to be displayed per page](#set-number-of-lines-to-be-displayed-per-page)
+    7. [Comment out line of text](#comment-out-line-of-text)
+    8. [Comment out block of text](#comment-out-block-of-text)
+    9. [Define refrain and show it right away](#define-refrain-and-show-it-right-away)
+    10. [Define refrain but DON'T show it right away](#define-refrain-but-dont-show-it-right-away)
+    11. [Play refrain](#play-refrain)
+    12. [Static text](#static-text)
+    13. [Single static text line](#single-static-text-line)
+    14. [Override title/filename](override-titlefilename)
+    15. [Alternate text block](#alternate-text-block)
+    16. [Single line alternate text repeated for `n` pages](#single-line-alternate-text-repeated-for-n-pages)
+    17. [Mark verses](#mark-verses)
 4. [The UI](#the-ui)
 5. [That's it](#thats-it)
 
@@ -91,16 +108,16 @@ But in the chorus,
 it needs to show
 all three!
 ```
-### Comment out text
+### Comment out line of text
 (`//`)
 Use `//` to write a comment that will not display to your viewers.
 Try it:
 ```
 We sing to you God //long pause/guitar solo after this
 ```
-### Comment out text
-(`//`)
-Use `//` to write a comment that will not display to your viewers.
+### Comment out block of text
+(`//[` and `//]`)
+Use these blocks to write a comment that will not display to your viewers.
 Try it:
 ```
 //[ 
