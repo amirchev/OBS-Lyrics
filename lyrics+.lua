@@ -75,7 +75,7 @@ verses = {}
 
 -- MISC FLAGS AND TABLES
 page_index = 0 			-- current page of lyrics being displayed
-prepared_index = 0 		-- TODO: avoid setting prepared_index directly, use prepare_selected
+prepared_index = 1 		-- TODO: avoid setting prepared_index directly, use prepare_selected
 
 song_directory = {}		-- holds list of current songs from song directory TODO: Multiple Song Books (Directories)
 prepared_songs = {} 	-- holds pre-prepared list of songs to use
@@ -303,7 +303,6 @@ function next_prepared(pressed)
     if using_source then
         using_source = false
         dbg_custom("do current prepared")
-		print("INDEX: " .. prepared_index)
         prepare_selected(prepared_songs[prepared_index]) -- if source load song showing then goto curren prepared song
         return
     end
@@ -1132,11 +1131,11 @@ function prepare_selected(name)
         transition_lyric_text(using_source)
     else
         -- hide everything if unable to prepare song
-        -- TODO: clear lyrics entirely after text is hidden
-        set_text_visibility(TEXT_HIDDEN)
+        -- Read current text in sources so monitor is correct
+		get_text()
+		all_sources_fade = true
+        set_text_visibility(TEXT_HIDE)
     end
-
-    --update_source_text()
     return true
 end
 
@@ -1184,7 +1183,7 @@ function setSourceOpacity(sourceName, fadeBackground)
 				obs.obs_sceneitem_set_visible(sceneItem, false)
 			end
 		end
-		update_monitor()
+--		update_monitor()
 	end
 end
 
@@ -1309,14 +1308,15 @@ function set_text_visibility(end_status)
     if text_status == end_status then
         return
     end
+	print("text_status: " .. text_status)
     if end_status == TEXT_HIDE then
         text_opacity = 0
-        text_status = end_status
+        text_status = TEXT_HIDDEN
         apply_source_opacity()
         return
     elseif end_status == TEXT_SHOW then
         text_opacity = 100
-        text_status = end_status
+        text_status = TEXT_VISIBLE
         all_sources_fade = true -- prevent orphaned title/static if link is removed when hidden
         apply_source_opacity()
         return
@@ -2236,6 +2236,41 @@ function save_prepared()
     return true
 end
 
+-- GET_TEXT Function
+-- Gets current ACTUAL text contained in the text sources.  This allows the monitor to display whatever is
+-- really there when starting up.
+--
+function get_text()
+    local source = obs.obs_get_source_by_name(source_name)
+	if source ~= nil then 
+		local settings = obs.obs_source_get_settings(source)
+		if settings ~= nil then 
+			mon_lyric = obs.obs_data_get_string(settings,"text"):gsub("\n", "<br>&bull; ")
+			obs.obs_data_release(settings)
+		end
+	    obs.obs_source_release(source)
+	end
+    local alt_source = obs.obs_get_source_by_name(alternate_source_name)
+	if alt_source ~= nil then 
+		local settings = obs.obs_source_get_settings(alt_source)
+		if settings ~= nil then 
+			mon_alt = obs.obs_data_get_string(settings,"text"):gsub("\n", "<br>&bull; ")
+			obs.obs_data_release(settings)
+		end
+	    obs.obs_source_release(alt_source)
+	end	
+    local title_source = obs.obs_get_source_by_name(title_source_name)	
+	if title_source ~= nil then 
+		local settings = obs.obs_source_get_settings(title_source)
+		if settings ~= nil then 
+			mon_song = obs.obs_data_get_string(settings,"text")
+			obs.obs_data_release(settings)
+		end
+	    obs.obs_source_release(title_source)
+	end
+end
+
+
 
 -------------------------------------------------------------------------------------------------------------------------
 -- UPDATE MONITOR
@@ -2244,6 +2279,7 @@ end
 -------------------------------------------------------------------------------------------------------------------------
 function update_monitor()
     dbg_method("update_monitor")
+	get_text()  -- read actual text in sources
     local tableback = "black"
     local text = ""
     text = text .. "<!DOCTYPE html><html>"
@@ -3349,7 +3385,6 @@ end
 
 -- on_event setup when source load, detects when a scenes content changes or when the scene list changes, ignores other events
 function on_event(event)
-print(event)
     if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then -- scene changed so update HTML monitor page
         dbg_bool("Active:", source_active)
         obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
