@@ -740,8 +740,8 @@ function read_source_opacity_clicked(props, p)
 end
 
 
--------------------------------------------------------------------------------------------------------------------------- -- ADD LINKED Source  Callback 
--- adds an extra linked source to the linked sources list.
+--------------------------------------------------------------------------------------------------------------------------
+-- Callback to add an extra linked source to the linked sources list.
 -- Source must be text source, or have 'Color Correction' Filter applied
 ------------------------------------------------------------------------------------------------------------------------
 function link_source_selected(props, prop, settings)
@@ -1148,7 +1148,7 @@ function setSourceOpacity(sourceName, fadeBackground)
 	dbg_method("set_Opacity")
 	if sourceName ~= nil and sourceName ~= "" then 
 		if text_fade_enabled then
-		local settings = obs.obs_data_create()		
+			local settings = obs.obs_data_create()		
 			if use100percent then -- try to honor preset maximum opacities
 				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
 				obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero
@@ -1172,7 +1172,7 @@ function setSourceOpacity(sourceName, fadeBackground)
 			obs.obs_source_release(source)
 			obs.obs_data_release(settings)			
         else
-		dbg_inner("use on/off")
+			dbg_inner("use on/off")
 			--  do preview scene item		
             local sceneSource = obs.obs_frontend_get_current_preview_scene()
 			local sceneObj = obs.obs_scene_from_source(sceneSource)
@@ -1476,7 +1476,7 @@ function update_source_text()
     local next_prepared = ""
     if using_source then
         next_prepared = prepared_songs[prepared_index] -- plan to go to current prepared song
-    elseif prepared_index < #prepared_songs then
+    elseif prepared_index ~= nil and prepared_index < #prepared_songs then
         next_prepared = prepared_songs[prepared_index + 1] -- plan to go to next prepared song
     else
         if source_active then
@@ -2266,7 +2266,11 @@ function update_monitor()
 	elseif using_source then
 			text = text .. "From <B style='color: #FFEF00;'>Source: <i><font color=#DDDDDD>" .. load_scene .. "</i></font></B></div>"		
     else
-        text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. prepared_index
+		local indexText = "N/A"
+		if prepared_index ~= nil then
+			indexText = prepared_index
+		end
+        text = text .. "Prepared Song: <B style='color: #FFEF00;'>" .. indexText
         text =
             text ..
             "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. #prepared_songs .. "</B></div>"
