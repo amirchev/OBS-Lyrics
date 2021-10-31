@@ -3,7 +3,7 @@ Manage and display lyrics to any text source in your OBS scene.
 
 ## Table of Contents
 1. [Basic usage](#basic-usage)
-2. [Random facts](#random-facts)
+2. [Useful facts](#useful-facts)
 3. [Notation](#notation)
     1. [Mark songs with with `meta` tags for filtering on future selection](#mark-songs-with-with-meta-tags-for-filtering-on-future-selection)
     2. [Single blank line/padding](#single-blank-linepadding)
@@ -35,7 +35,7 @@ Manage and display lyrics to any text source in your OBS scene.
 7. When you're finished with the current song, hide the lyrics and select the next song from the "Prepared Songs" list.
 
 [Back to Top](#table-of-contents)
-## Random facts
+## Useful facts
 - To display a specific song when a scene is activated, add a "Source" to the scene by clicking the + sign in the scene, adding a "Prepare Lyric" source, and selecting the song to open.
 - Use "Home" hotkey to return to the beginning of your prepared songs, perhaps after practicing the songs.
 - Continue clicking `Advance lyrics` after the end of a song to begin the next prepared song.
