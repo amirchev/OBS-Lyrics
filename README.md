@@ -5,7 +5,7 @@ Manage and display lyrics to any text source in your OBS scene.
 1. [Basic usage](#basic-usage)
 2. [Random facts](#random-facts)
 3. [Notation](#notation)
-    1. [Mark songs with with 'meta' tags for filtering on future selection](#mark-songs-with-with-meta-tags-for-filtering-on-future-selection)
+    1. [Mark songs with with `meta` tags for filtering on future selection](#mark-songs-with-with-meta-tags-for-filtering-on-future-selection)
     2. [Single blank line/padding](#single-blank-linepadding)
     3. [Multiple blank lines/padding](#multiple-blank-linespadding)
     4. [End the current page](#end-the-current-page)
@@ -45,7 +45,7 @@ Manage and display lyrics to any text source in your OBS scene.
 
 [Back to Top](#table-of-contents)
 ## Notation
-### Mark songs with with 'meta' tags for filtering on future selection
+### Mark songs with with `meta` tags for filtering on future selection
 (`//meta tag1, tag2, ... , tag n`)
 Using //meta tags on the __1st line__ of lyrics allows song files to be labeled as belonging to different genre.  Example genre are Hymn, Contemporary, Gospel, Country, Blues, Spritual, Rock, Chant, Reggae, Metal, or HipHop.  However, any tag can be used to organize and cross organize Lyric/Text files into categories. Other meta groups could be Call/Response or Scripture.  Meta tags must match exactly, so the tag __*hymn*__ is different from the tag __*Hymn*__. 
 Try it: 
