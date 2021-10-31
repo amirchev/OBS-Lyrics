@@ -47,6 +47,7 @@ Manage and display lyrics to any text source in your OBS scene.
 ## Notation
 ### Mark songs with with `meta` tags for filtering on future selection
 (`//meta tag1, tag2, ... , tag n`)
+
 Using //meta tags on the __1st line__ of lyrics allows song files to be labeled as belonging to different genre.  Example genre are Hymn, Contemporary, Gospel, Country, Blues, Spritual, Rock, Chant, Reggae, Metal, or HipHop.  However, any tag can be used to organize and cross organize Lyric/Text files into categories. Other meta groups could be Call/Response or Scripture.  Meta tags must match exactly, so the tag __*hymn*__ is different from the tag __*Hymn*__. 
 Try it: 
 ```
@@ -55,6 +56,7 @@ Try it:
 [Back to Top](#table-of-contents)
 ### Single blank line/padding
 (`##P` or `##B`)
+
 Use on any line that you want to keep as an empty line (for line padding, etc.)
 Try it: 
 ```
@@ -65,6 +67,7 @@ This is line 3
 [Back to Top](#table-of-contents)
 ### Multiple blank lines/padding
 (`#B:3` or `#P:3`)
+
 Use on any line to create 3 empty lines (you may use any number)
 Try it: 
 ```
@@ -75,6 +78,7 @@ This is line 4!!
 [Back to Top](#table-of-contents)
 ### End the current page
 (`###`)
+
 Append `###` to the end of any line to end the current page with this line.
 Try it: 
 ```
@@ -85,6 +89,7 @@ This line will be the only one on the 2nd page ###
 [Back to Top](#table-of-contents)
 ### Repeat line
 (`#D:3`)
+
 Duplicate a line multiple times.
 Try it: 
 ```
@@ -93,6 +98,7 @@ Try it:
 [Back to Top](#table-of-contents)
 ### Set number of lines to be displayed per page
 (`#L:3`)
+
 Change the amount of lines displayed at one time throughout the same song.
 Try it:
 ```
@@ -118,6 +124,7 @@ all three!
 [Back to Top](#table-of-contents)
 ### Comment out line of text
 (`//`)
+
 Use `//` to write a comment that will not display to your viewers.
 Try it:
 ```
@@ -126,6 +133,7 @@ We sing to you God //long pause/guitar solo after this
 [Back to Top](#table-of-contents)
 ### Comment out block of text
 (`//[` and `//]`)
+
 Use these blocks to write a comment that will not display to your viewers.
 Try it:
 ```
@@ -137,16 +145,19 @@ Try it:
 [Back to Top](#table-of-contents)
 ### Define refrain and show it right away
 (`#R[` and `#R]`)
+
 Use this notation to define a refrain that will be displayed right away as well. 
 
 [Back to Top](#table-of-contents)
 ### Define refrain but DON'T show it right away
 (`#r[` and `#r]`)
+
 Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` or `##r` is called.
 
 [Back to Top](#table-of-contents)
 ### Play refrain
 (`##R`)
+
 Use this annotation to show where a refrain should be inserted. See above.
 Try it:
 ```
@@ -168,6 +179,7 @@ Now hit the refrain again!
 [Back to Top](#table-of-contents)
 ### Static text
 (`#S[` and `#S]`)
+
 Use this anotation to define a block of text lines shown in the selected Static Source that remain constant during the scene (no paging).
 Try it:
 ```
@@ -179,6 +191,7 @@ who was a former Slave Trader
 [Back to Top](#table-of-contents)
 ### Single static text line
 (`#S: line`)
+
 Use this to define a simple single line of Static text
 Try it:
 ```
@@ -187,6 +200,7 @@ Try it:
 [Back to Top](#table-of-contents)
 ### Override title/filename
 (`#T: new title`)
+
 Use this to specifically define the song title. This is useful if title has special characters, not valid as a filename.
 Try it:
 ```
@@ -195,6 +209,7 @@ Try it:
 [Back to Top](#table-of-contents)
 ### Alternate text block
 (`#A[` and `#A]`)
+
 Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
 Note: The page length will be governed by text in the main block if it exists and its Text Source exists in the scene.
       The alternate block should have the same number of lines per page as the main block if both are used.
@@ -213,6 +228,7 @@ Estuve ciego pero ahora veo
  [Back to Top](#table-of-contents)
 ### Single line alternate text repeated for `n` pages
 (`#A:n line`)
+
 Use this annotation to include a simple single line of Alternate Text to be used for n pages.
 Try it:
 ```
