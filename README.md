@@ -26,13 +26,15 @@ Manage and display lyrics to any text source in your OBS scene.
 - Prepared songs are stored in the Settings for the scene collection unless the option to use an external Prepared.dat file is selected in the Edit Prepared Songs subgroup.  
 
 ## Notation
-### Mark songs with with 'meta' tags for filtering on future selection  (`//meta tag1, tag2, ... , tag n`)
+### Mark songs with with 'meta' tags for filtering on future selection
+(`//meta tag1, tag2, ... , tag n`)
 Using //meta tags on the __1st line__ of lyrics allows song files to be labeled as belonging to different genre.  Example genre are Hymn, Contemporary, Gospel, Country, Blues, Spritual, Rock, Chant, Reggae, Metal, or HipHop.  However, any tag can be used to organize and cross organize Lyric/Text files into categories. Other meta groups could be Call/Response or Scripture.  Meta tags must match exactly, so the tag __*hymn*__ is different from the tag __*Hymn*__. 
 Try it: 
 ```
 //meta Hymn, Blues, Spiritual
 ```
-### Single blank line/padding (`##P` or `##B`)
+### Single blank line/padding
+(`##P` or `##B`)
 Use on any line that you want to keep as an empty line (for line padding, etc.)
 Try it: 
 ```
@@ -40,7 +42,8 @@ This is line 1
 ##B
 This is line 3
 ```
-### Multiple blank lines/padding (`#B:3` or `#P:3`)
+### Multiple blank lines/padding
+(`#B:3` or `#P:3`)
 Use on any line to create 3 empty lines (you may use any number)
 Try it: 
 ```
@@ -48,7 +51,8 @@ This is line 1
 #B:2
 This is line 4!!
 ```
-### End the current page (`###`)
+### End the current page
+(`###`)
 Append `###` to the end of any line to end the current page with this line.
 Try it: 
 ```
@@ -56,13 +60,15 @@ This line will show first
 This line will be the last one regardless of page size ###
 This line will be the only one on the 2nd page ###
 ```
-### Repeat line (`#D:3`)
+### Repeat line
+(`#D:3`)
 Duplicate a line multiple times.
 Try it: 
 ```
 #D3: Sing this line 3 times!!!
 ```
-### Set number of lines to be displayed per page (`#L:3`)
+### Set number of lines to be displayed per page
+(`#L:3`)
 Change the amount of lines displayed at one time throughout the same song.
 Try it:
 ```
@@ -74,7 +80,8 @@ But in the chorus,
 it needs to show
 all three!
 ```
-### Another way would be to use a page break
+
+Another way would be to use a page break
 Try it:
 ```
 #L:3
@@ -84,13 +91,15 @@ But in the chorus,
 it needs to show
 all three!
 ```
-### Comment out text (`//`)
+### Comment out text
+(`//`)
 Use `//` to write a comment that will not display to your viewers.
 Try it:
 ```
 We sing to you God //long pause/guitar solo after this
 ```
-### Comment out text (`//`)
+### Comment out text
+(`//`)
 Use `//` to write a comment that will not display to your viewers.
 Try it:
 ```
@@ -99,11 +108,16 @@ Try it:
     Note 3rd verse of this song is not Public Domain
 //]
 ```
-### Define refrain and show it right away (`#R[` and `#R]`)
+### Define refrain and show it right away
+(`#R[` and `#R]`)
 Use this notation to define a refrain that will be displayed right away as well. 
-### Define refrain but DON'T show it right away (`#r[` and `#r]`)
+
+### Define refrain but DON'T show it right away
+(`#r[` and `#r]`)
 Used in the same way as `#R[` and `#R]`, but the refrain is not shown in the beginning. It will only be displayed when `##R` or `##r` is called.
-### Play refrain (`##R`)
+
+### Play refrain
+(`##R`)
 Use this annotation to show where a refrain should be inserted. See above.
 Try it:
 ```
@@ -122,7 +136,8 @@ it will also continue with three lines per verse.
 Now hit the refrain again!
 ##R
 ```
-### Static Text (`#S[` and `#S]`)
+### Static text
+(`#S[` and `#S]`)
 Use this anotation to define a block of text lines shown in the selected Static Source that remain constant during the scene (no paging).
 Try it:
 ```
@@ -131,19 +146,22 @@ The song Amazing Grace was written by John Newton
 who was a former Slave Trader
 #S]
 ```
-### Single static text line (`#S: line`)
+### Single static text line
+(`#S: line`)
 Use this to define a simple single line of Static text
 Try it:
 ```
 #S: The song Amazing Grace was written by John Newton who was a former Slave Trader
 ```
-### Override Title/filename (`#T: new title`)
-Use this to specifically define the song title.  This is useful if title has special characters, not valid as a filename
+### Override title/filename
+(`#T: new title`)
+Use this to specifically define the song title. This is useful if title has special characters, not valid as a filename.
 Try it:
 ```
 #T: How Great Thou Art (주하나님지으신모든세계)
 ```
-### Alternate Text Block (`#A[` and `#A]`)
+### Alternate text block
+(`#A[` and `#A]`)
 Use this annotation to mark additional verses or text to show and page in the selected Alternate Source.
 Note: The page length will be governed by text in the main block if it exists and its Text Source exists in the scene.
       The alternate block should have the same number of lines per page as the main block if both are used.
@@ -159,13 +177,15 @@ Alguna vez estuve perdido, pero ahora me he encontrado
 Estuve ciego pero ahora veo
 #A]
  ```
-### Single Line Alternate Text repeated for n pages (`#A:n line`)
+### Single line alternate text repeated for `n` pages
+(`#A:n line`)
 Use this annotation to include a simple single line of Alternate Text to be used for n pages.
 Try it:
 ```
 #A:2 This alaternate line shows for the next two pages of Lyrics.  
 ```
-### Mark Verses (`##V`)
+### Mark verses
+(`##V`)
 
 Use this annotation to mark where new verses start.  Verse number will be displayed in the monitor.
 Try it:
