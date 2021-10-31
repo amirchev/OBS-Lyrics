@@ -1,5 +1,5 @@
 # OBS-Lyrics
-Manage and display lyrics to any text source in your OBS scene. 
+An OBS Lua script for managing and displaying lyrics to any text source in your OBS scene. 
 
 ## Table of Contents
 1. [Basic usage](#basic-usage)
