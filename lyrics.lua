@@ -107,6 +107,8 @@ current_scene = ""
 preview_scene = ""
 title_source_name = ""
 windows_os = false
+mac_os = false
+linux_os = false
 first_open = true
 in_timer = false
 in_Load = false
@@ -683,6 +685,8 @@ function open_song_clicked(props, p)
 	print (path)
 	if windows_os then
 		os.execute("explorer \"" .. path .. "\"")
+	elseif mac_os then
+		os.execute("open -t \"" .. path .. "\"")
 	else
 		os.execute("xdg-open \"" .. path .. "\"")
 	end
@@ -693,6 +697,8 @@ function open_button_clicked(props, p)
 	local path = get_songs_folder_path() 
 	if windows_os then
 		os.execute("explorer \"" .. path .. "\"")
+	elseif mac_os then
+		os.execute("open \"" .. path .. "\"")
 	else
 		os.execute("xdg-open \"" .. path .. "\"")
 	end
@@ -732,7 +738,7 @@ function update_lyrics_display()
 		alttext = mon_altext
 	end	
 	if link_text then
-		if string.len(text) == 0 and string.len(alttext) == 0 then
+		if (text == nil or string.len(text) == 0) and (alttext == nil or string.len(alttext) == 0) then
 			static = ""
 			title = ""
 		end
@@ -1280,8 +1286,9 @@ end
 
 -- returns path of the given song name
 function get_song_file_path(name, suffix)
+	local sep = package.config:sub(1,1)
 	if name == nil then return nil end
-    return get_songs_folder_path() .. "\\" .. name .. suffix
+    return get_songs_folder_path() .. sep .. name .. suffix
 end
 
 -- returns path of the lyrics songs folder
@@ -1502,8 +1509,7 @@ function script_defaults(settings)
 	else
 		displayed_song = ""
 	end
-	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
-	if windows_os then
+	if getPlatform() == "win" then
 		os.execute("mkdir \"" .. get_songs_folder_path() .. "\"")
 	else
 		os.execute("mkdir -p \"" .. get_songs_folder_path() .. "\"")
@@ -1588,7 +1594,11 @@ function script_load(settings)
 
 	script_sets = settings
 	source_name = obs.obs_data_get_string(settings, "prop_source_list")
-	if os.getenv("HOME") == nil then windows_os = true end -- must be set prior to calling any file functions
+	platform = getPlatform()
+	if platform == "win" then windows_os = true
+	elseif platform == "linux" then linux_os = true
+	elseif platform == "mac" then mac_os = true
+	end
 	load_song_directory()
 	load_prepared()
 	if #prepared_songs ~= 0 then
@@ -1596,6 +1606,16 @@ function script_load(settings)
 	end
 	obs.obs_frontend_add_event_callback(on_event)    -- Setup Callback for Source * Marker (WZ)
 	obs.timer_add(timer_callback, 100)	-- Setup callback for text fade effect
+end
+
+function getPlatform()
+	-- checking for windows is easy
+	if os.getenv("HOME") == nil then return "win"
+	-- xdg-open may work on other platforms too, but we can treat them as linux
+	elseif os.execute("which xdg-open") == 0 then return "linux"
+	-- xdg-open doesn't work on mac, need to use open
+	elseif os.execute("which open") == 0 then return "mac"
+	end
 end
 
 -- Function renames source to a unique descriptive name and marks duplicate sources with *  (WZ)
