@@ -1286,8 +1286,9 @@ end
 
 -- returns path of the given song name
 function get_song_file_path(name, suffix)
+	local sep = package.config:sub(1,1)
 	if name == nil then return nil end
-    return get_songs_folder_path() .. "\\" .. name .. suffix
+    return get_songs_folder_path() .. sep .. name .. suffix
 end
 
 -- returns path of the lyrics songs folder
