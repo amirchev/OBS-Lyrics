@@ -738,7 +738,7 @@ function update_lyrics_display()
 		alttext = mon_altext
 	end	
 	if link_text then
-		if string.len(text) == 0 and string.len(alttext) == 0 then
+		if (text == nil or string.len(text) == 0) and (alttext == nil or string.len(alttext) == 0) then
 			static = ""
 			title = ""
 		end
