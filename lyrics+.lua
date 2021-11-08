@@ -2,9 +2,9 @@
 --    / /  | |  / / / ___  / /_  __/ / ___\ / ___\  __/  /_
 --   / /   | |_/ / / /__/ /   / /   / /     \ \    /_   __/
 --  / /___ |_  _/ /  __  | __/ /__ | |__   __\ \    /__/
--- /______/ /_/  /_/   |_|/______/ |____\ /____/ 
---        
---     
+-- /______/ /_/  /_/   |_|/______/ |____\ /____/
+--
+--
 --- Copyright 2020 amirchev/wzaggle
 
 -- Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,14 +20,14 @@
 -- limitations under the License.
 ---------------------------------------------------------------------------------------------------------------------
 -- Lyrics or Lyrics+ is a joint effort started by amirchev and joined by wzaggle (DC Strato)
--- The lua script breaks up text stored in files to be shown as pages in an OBS stream and is designed to be used 
+-- The lua script breaks up text stored in files to be shown as pages in an OBS stream and is designed to be used
 -- with songs, scripture, responsive reading, or any text that needs to have managed pages.
 
 -- Songs or Text files can be created and edited within the script or with an external text editor
 -- Files can be either A) Previewed to the scene, B) Pre-loaded into a "Prepared List" queue to be displayed in
 -- the order of the list, or C) loaded on the fly when a scene loads, using a Prepare Lyric source within the scene.
 
--- The general function of the script is to modify the contents, visibility, and opacity levels for text sources 
+-- The general function of the script is to modify the contents, visibility, and opacity levels for text sources
 -- that have been created within OBS scenes.  Currently only a single Global set of text sources are supported for
 
 -- Text Source ------->  The text source that will contain the Pages of song lyrics
@@ -40,7 +40,7 @@
 -- NOTES ON INTERNAL DOCUMENTATION
 -- Effort has been made to try and lay out the general function of the script for those wishing to contribute or just
 -- follow its operation.  The terms Text File, Song, or Lyric all refer to the text that is the content to be
--- paged by the script, and are used interchangeably within the internal documentation, whatever the purpose or 
+-- paged by the script, and are used interchangeably within the internal documentation, whatever the purpose or
 -- intent of that text might be to the user.
 
 
@@ -129,12 +129,15 @@ mon_alt = ""
 mon_nextalt = ""
 mon_nextsong = ""
 meta_tags = ""
-source_meta_tags = ""
 
+-- META TAG VARIABLES 
+source_meta_tags = ""   -- Current Filter Tags
+use_meta_tags = false  -- flag to use/not use filter
+filtering = false      -- set to keep user informed of background process
 
 -- FLAGS USED IN USER INTERFACE
 expandcollapse = true -- flag used in UI progressive disclosure
-showhelp = false  -- flag used to open and close markup HELP button text 
+showhelp = false  -- flag used to open and close markup HELP button text
 
 -- TEXT STATUS & FADE
 TEXT_VISIBLE = 0 -- text is visible
@@ -146,7 +149,7 @@ TEXT_TRANSITION_IN = 6 -- fade in transition after lyric change
 TEXT_HIDE = 7 -- turn off the text and ignore fade if selected
 TEXT_SHOW = 8 -- turn on the text and ignore fade if selected
 
--- GENERAL TEXT FADING 
+-- GENERAL TEXT FADING
 text_fade_enabled = false  	-- fading effect enabled (if false then source visibility is toggled rather than opacity changed)
 all_sources_fade = false 	-- Title and Static fade when lyrics are changing or during show/hide
 text_status = TEXT_VISIBLE  -- current state of desired source visibility, one of above states VISIBLE thru SHOW
@@ -156,7 +159,7 @@ text_fade_speed = 5			-- speed used to fade text
 -- FLAGS TO CONTROL BACKGROUND FADING
 allow_back_fade = false  	-- overall fading is performed for text source background colors
 use100percent = true 		--  Fading is 0-100% of opacity or 0 to Marked opacity
-fade_text_back = false 		-- Text Background should fade 
+fade_text_back = false 		-- Text Background should fade
 fade_title_back = false		-- Title Background should fade
 fade_alternate_back = false	-- Alternate Lyric Background should fade
 fade_static_back = false	-- Static Text Background should fade
@@ -165,10 +168,10 @@ fade_extra_back = false		-- Extra Linked Source Background should fade (if text 
 --[[ transitions are a work in progress to support duplicate source mode (not very stable)
 in this mode OBS keeps separate sources in preview and active windows. Only pointers to the preview window are
 accessable to the API.  Changing the Active window requires both changing the Preview Window Text sources then
-transitioning those changes to the Active Window.  Fading is disabled because its effects are not visible in 
+transitioning those changes to the Active Window.  Fading is disabled because its effects are not visible in
 the active window. --]]
- 
-transition_enabled = false 
+
+transition_enabled = false
 transition_completed = false
 
 -------------------------------------------------------------------------------------------------------------------------
@@ -191,8 +194,8 @@ help =
     "Optional comma delimited meta tags follow '//meta ' on 1st line"
 
 -- SIMPLE DEBUGGING/PRINT MECHANISM
-DEBUG = true -- on switch for entire debugging mechanism
-DEBUG_METHODS = true -- print method names
+--DEBUG = true -- on switch for entire debugging mechanism
+--DEBUG_METHODS = true -- print method names
 --DEBUG_INNER = true -- print inner method breakpoints
 --DEBUG_CUSTOM = true -- print custom debugging messages
 --DEBUG_BOOL = true -- print message with bool state true/false
@@ -202,7 +205,7 @@ DEBUG_METHODS = true -- print method names
 ------------------------ PAGING FUNCTIONS
 ----------------
 --------
--- 
+--
 ---------------------------------------------------------------------------------------------------------------------
 -- Function to move to Next page (lyric) of a song or text (HOTKEY ENABLED)
 -- contents of text sources are only changed if they are showing to prevent accidental background paging
@@ -265,7 +268,7 @@ function prev_prepared(pressed)
     if #prepared_songs == 0 then
         return
     end
-	using_preview = false	
+	using_preview = false
     if using_source then
         using_source = false
         prepare_selected(prepared_songs[prepared_index])
@@ -299,7 +302,7 @@ function next_prepared(pressed)
     if #prepared_songs == 0 then
         return
     end
-	using_preview = false	
+	using_preview = false
     if using_source then
         using_source = false
         dbg_custom("do current prepared")
@@ -335,7 +338,7 @@ function home_prepared(pressed)
     dbg_method("home_prepared")
     using_source = false
     page_index = 0
-	using_preview = false	
+	using_preview = false
     local prop_prep_list = obs.obs_properties_get(props, "prop_prepared_list")
     if #prepared_songs > 0 then
         obs.obs_data_set_string(script_sets, "prop_prepared_list", prepared_songs[1])
@@ -495,7 +498,7 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 -- PREPARE SONG
 -- Adds the currently selected song from the directory to the prepared list.  Sets index to first song.
------------------------------------------------------------------------------------------------------------------------ 
+-----------------------------------------------------------------------------------------------------------------------
 
 function prepare_song_clicked(props, p)
     dbg_method("prepare_song_clicked")
@@ -509,7 +512,7 @@ function prepare_song_clicked(props, p)
 	obs.obs_data_set_string(script_sets, "prop_prepared_list", "*** LIST OF PREPARED SONGS ***")
     if #prepared_songs > 0 then
 		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared (" .. #prepared_songs .. ")</font>")
-    else 
+    else
 		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared</font>")
 	end
     obs.obs_properties_apply_settings(props, script_sets)
@@ -520,17 +523,17 @@ end
 -------------------------------------------------------------------------------------------------------------------------
 -- PREVIEW SONG  (Preveiw Mode)
 -- Prepares the selected song into text sources without adding it to the prepared list
-------------------------------------------------------------------------------------------------------------------------- 
+-------------------------------------------------------------------------------------------------------------------------
 function preview_clicked(props, p)
     dbg_method("preview_song_clicked")
 	if using_preview then
 		using_preview = false
 		if source_active then
 			load_source_song(load_source, false)
-		elseif #prepared_songs > 0 then 
+		elseif #prepared_songs > 0 then
 			prepare_song_by_index(prepared_index)
 		end
-		transition_lyric_text()	
+		transition_lyric_text()
 		return true
 	end
 	local song = obs.obs_data_get_string(script_sets, "prop_directory_list")
@@ -549,7 +552,7 @@ end
 -- LOAD SONG FROM DIRECTORY
 -- Loads the text from the selected song into the Lyrics Edit window for editing within  properties
 -- Selects the current song for possible addition to prepared list
-------------------------------------------------------------------------------------------------------------------------- 
+-------------------------------------------------------------------------------------------------------------------------
 function load_song_from_directory(props, prop, settings)
     local name = obs.obs_data_get_string(script_sets, "prop_directory_list")
 
@@ -638,8 +641,7 @@ end
 function refresh_directory()
     local prop_dir_list = obs.obs_properties_get(script_props, "prop_directory_list")
     local source_prop = obs.obs_properties_get(props, "prop_source_list")
-    source_filter = false
-    load_source_song_directory(true)
+    load_source_song_directory(use_meta_tags)
     table.sort(song_directory)
     obs.obs_property_list_clear(prop_dir_list) -- clear directories
     for _, name in ipairs(song_directory) do
@@ -675,7 +677,7 @@ function clear_prepared_clicked(props, p)
     prepared_songs = {} -- required for monitor page
 	page_index = 0 -- required for monitor page
 	prepared_index = 0 -- required for monitor page
-    save_prepared()	
+    save_prepared()
     if source_active then
 	    load_source_song(load_source, false)
 	end
@@ -686,7 +688,7 @@ function clear_prepared_clicked(props, p)
     obs.obs_property_list_clear(prep_prop)
 	obs.obs_property_set_description(obs.obs_properties_get(props, "prop_prepared_list"), "<font color=#FFD966>Prepared</font>")
 	obs.obs_property_list_add_string(obs.obs_properties_get(props, "prop_prepared_list"), "*** LIST OF PREPARED SONGS ***", "")
-    obs.obs_data_set_string(script_sets, "prop_prepared_list", "*** LIST OF PREPARED SONGS ***")	
+    obs.obs_data_set_string(script_sets, "prop_prepared_list", "*** LIST OF PREPARED SONGS ***")
     local pp = obs.obs_properties_get(props, "edit_grp")
     if obs.obs_property_visible(pp) then
         obs.obs_property_set_visible(pp, false)
@@ -761,7 +763,7 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 -- DO LINKED Option (Progressive disclosure)
--- Shows list to allow linking extra sources 
+-- Shows list to allow linking extra sources
 ------------------------------------------------------------------------------------------------------------------------
 function do_linked_clicked(props, p)
     dbg_method("do_link_clicked")
@@ -773,7 +775,7 @@ function do_linked_clicked(props, p)
 end
 
 -----------------------------------------------------------------------------------------------------------------------
--- CLEAR LINKED Option 
+-- CLEAR LINKED Option
 -- Removes all additionally linked Show/Hide sources and hides Link Options in UI
 ------------------------------------------------------------------------------------------------------------------------
 function clear_linked_clicked(props, p)
@@ -926,26 +928,26 @@ function change_ctrl_visible(props, prop, settings)
     return true
 end
 -----------------------------------------------------------------------------------------------------------------------
--- Change state of the Fade Option  
+-- Change state of the Fade Option
 -- Fading enables or disables a number of other options like 0-100% and if backgrounds are faded
 ------------------------------------------------------------------------------------------------------------------------
 function change_fade_property(props, prop, settings)
     local text_fade_set = obs.obs_data_get_bool(settings, "text_fade_enabled")
     obs.obs_property_set_visible(obs.obs_properties_get(props, "text_fade_speed"), text_fade_set)
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "use100percent"), text_fade_set)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "allowBackFade"), text_fade_set)	
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "allowBackFade"), text_fade_set)
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), text_fade_set and allow_back_fade)
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), text_fade_set and allow_back_fade)
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), text_fade_set and allow_back_fade)
 	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), text_fade_set and allow_back_fade)
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_set and allow_back_fade)		
-	obs.obs_property_set_visible(obs.obs_properties_get(props, "refreshOP"), text_fade_enabled and not use100percent)	
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_set and allow_back_fade)
+	obs.obs_property_set_visible(obs.obs_properties_get(props, "refreshOP"), text_fade_enabled and not use100percent)
     local transition_set_prop = obs.obs_properties_get(props, "transition_enabled")
     obs.obs_property_set_enabled(transition_set_prop, not text_fade_set)
     return true
 end
 -----------------------------------------------------------------------------------------------------------------------
--- Change state of the 0-100% option 
+-- Change state of the 0-100% option
 -----------------------------------------------------------------------------------------------------------------------
 function change_100percent_property(props, prop, settings)
     use100percent = obs.obs_data_get_bool(settings, "use100percent")
@@ -957,18 +959,18 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 function change_back_fade_property(props, prop, settings)
     allow_back_fade = obs.obs_data_get_bool(settings, "allowBackFade")
-	if allow_back_fade then 
+	if allow_back_fade then
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), text_fade_enabled)
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), text_fade_enabled)
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), text_fade_enabled)
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), text_fade_enabled)
-		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_enabled)	
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), text_fade_enabled)
 	else
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_text_back"), false)
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_alternate_back"), false)
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_title_back"), false)
 		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_extra_back"), false)
-		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), false)	
+		obs.obs_property_set_visible(obs.obs_properties_get(props, "fade_static_back"), false)
 	end
     return true
 end
@@ -989,17 +991,18 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 -- Allow specifying meta tags for filtering songs
 -----------------------------------------------------------------------------------------------------------------------
+
 function filter_songs_clicked(props, p)
     local pp = obs.obs_properties_get(props, "meta")
     if not obs.obs_property_visible(pp) then
         obs.obs_property_set_visible(pp, true)
         local mpb = obs.obs_properties_get(props, "filter_songs_button")
-        obs.obs_property_set_description(mpb, "Clear Filters") -- change button function
-        meta_tags = obs.obs_data_get_string(script_sets, "prop_edit_metatags")
-        refresh_directory()
+        source_meta_tags = obs.obs_data_get_string(script_sets, "prop_edit_metatags")
+		use_meta_tags = true
+        obs.obs_property_set_description(mpb, "Clear Filters") -- change button function		
     else
         obs.obs_property_set_visible(pp, false)
-        meta_tags = "" -- clear meta tags
+		use_meta_tags = false
         refresh_directory()
         local mpb = obs.obs_properties_get(props, "filter_songs_button") --
         obs.obs_property_set_description(mpb, "Filter Titles by Meta Tags") -- reset button function
@@ -1070,10 +1073,10 @@ function save_edits_clicked(props, p)
     obs.obs_property_set_visible(pp, false)
     local mpb = obs.obs_properties_get(props, "prop_manage_button")
     obs.obs_property_set_description(mpb, "Edit Prepared Songs List")
-    
+
     if #prepared_songs > 0 then
 		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared (" .. #prepared_songs .. ")</font>")
-    else 
+    else
 		obs.obs_property_set_description(prop_prep_list, "<font color=#FFD966>Prepared</font>")
 	end
     obs.obs_properties_apply_settings(props, script_sets)
@@ -1145,21 +1148,21 @@ end
 -------------------------------------------------------------------------------------------------------------------------
 function setSourceOpacity(sourceName, fadeBackground)
 	dbg_method("set_Opacity")
-	if sourceName ~= nil and sourceName ~= "" then 
+	if sourceName ~= nil and sourceName ~= "" then
 		if text_fade_enabled then
-			local settings = obs.obs_data_create()		
+			local settings = obs.obs_data_create()
 			if use100percent then -- try to honor preset maximum opacities
 				obs.obs_data_set_int(settings, "opacity", text_opacity)  -- Set new text opacity to zero
 				obs.obs_data_set_int(settings, "outline_opacity", text_opacity)  -- Set new text outline opacity to zero
-				obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new gradient opacity 
+				obs.obs_data_set_int(settings, "gradient_opacity", text_opacity) -- Set new gradient opacity
 				if fadeBackground then
-					obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new background opacity	
+					obs.obs_data_set_int(settings, "bk_opacity", text_opacity) -- Set new background opacity
 				end
 			else
 				adj_text_opacity = text_opacity /100
 				obs.obs_data_set_int(settings, "opacity", adj_text_opacity * max_opacity[sourceName]["opacity"]) -- Set new text opacity to zero
 				obs.obs_data_set_int(settings, "outline_opacity", adj_text_opacity * max_opacity[sourceName]["outline"]) -- Set new text outline opacity to zero
-				obs.obs_data_set_int(settings, "gradient_opacity", adj_text_opacity * max_opacity[sourceName]["gradient"]) -- Set new gradient opacity 
+				obs.obs_data_set_int(settings, "gradient_opacity", adj_text_opacity * max_opacity[sourceName]["gradient"]) -- Set new gradient opacity
 				if fadeBackground then
 					obs.obs_data_set_int(settings, "bk_opacity", adj_text_opacity * max_opacity[sourceName]["background"]) -- Set new background opacity
 				end
@@ -1169,10 +1172,10 @@ function setSourceOpacity(sourceName, fadeBackground)
 				obs.obs_source_update(source, settings)
 			end
 			obs.obs_source_release(source)
-			obs.obs_data_release(settings)			
+			obs.obs_data_release(settings)
         else
 			dbg_inner("use on/off")
-			--  do preview scene item		
+			--  do preview scene item
             local sceneSource = obs.obs_frontend_get_current_preview_scene()
 			local sceneObj = obs.obs_scene_from_source(sceneSource)
 			local sceneItem = obs.obs_scene_find_source_recursive(sceneObj, sourceName)
@@ -1183,13 +1186,12 @@ function setSourceOpacity(sourceName, fadeBackground)
 				obs.obs_sceneitem_set_visible(sceneItem, false)
 			end
 		end
---		update_monitor()
 	end
 end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- APPLY SOURCE OPACITY
--- Uses SET SOURCE OPACITY to manage source opacities according to current options 
+-- Uses SET SOURCE OPACITY to manage source opacities according to current options
 -------------------------------------------------------------------------------------------------------------------------
 function apply_source_opacity()
 dbg_method("Apply Opacity")
@@ -1213,12 +1215,12 @@ dbg_method("Apply Opacity")
                     else -- check for filter named "Color Correction"
                         local color_filter = obs.obs_source_get_filter_by_name(extra_source, "Color Correction")
                         if color_filter ~= nil and text_fade_enabled then -- update filters opacity
-							local filter_settings = obs.obs_data_create()	
+							local filter_settings = obs.obs_data_create()
 							if use100percent then
-								obs.obs_data_set_double(filter_settings, "opacity", text_opacity/100)							
+								obs.obs_data_set_double(filter_settings, "opacity", text_opacity/100)
 							else
 								obs.obs_data_set_double(filter_settings, "opacity", (text_opacity/100) * max_opacity[sourceName]["CC-opacity"])
-							end	
+							end
                             obs.obs_source_update(color_filter, filter_settings)
                             obs.obs_data_release(filter_settings)
                             obs.obs_source_release(color_filter)
@@ -1231,7 +1233,7 @@ dbg_method("Apply Opacity")
                                 obs.obs_sceneitem_set_visible(sceneItem, true)
                             else
                                 obs.obs_sceneitem_set_visible(sceneItem, false)
-                            end							
+                            end
                         end
                     end
                 end
@@ -1246,24 +1248,25 @@ end
 -- This function reads the current opacity levels in settings.
 -------------------------------------------------------------------------------------------------------------------------
 function getSourceOpacity(sourceName)
-	if sourceName ~= nil and sourceName ~= "" then 
+	if sourceName ~= nil and sourceName ~= "" then
 		local source = obs.obs_get_source_by_name(sourceName)
 		local settings = obs.obs_source_get_settings(source)
 		max_opacity[sourceName]={}
 		max_opacity[sourceName]["opacity"] = obs.obs_data_get_int(settings, "opacity") -- text opacity
 		max_opacity[sourceName]["outline"] = obs.obs_data_get_int(settings, "outline_opacity") -- outline opacity
-	    max_opacity[sourceName]["gradient"] = obs.obs_data_get_int(settings, "gradient_opacity") --  gradient opacity 
-		max_opacity[sourceName]["background"] = obs.obs_data_get_int(settings, "bk_opacity") -- background opacity	
-		obs.obs_source_release(source)
+	    max_opacity[sourceName]["gradient"] = obs.obs_data_get_int(settings, "gradient_opacity") --  gradient opacity
+		max_opacity[sourceName]["background"] = obs.obs_data_get_int(settings, "bk_opacity") -- background opacity
 		obs.obs_data_release(settings)
+		obs.obs_source_release(source)
+
 	end
 end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- READ SOURCE OPACITY
--- Lyrics tries to honor maximum opacities that might have been set for effects.  If 0-100% is disabled then Lyrics 
+-- Lyrics tries to honor maximum opacities that might have been set for effects.  If 0-100% is disabled then Lyrics
 -- Will try to mark current maximum opacity levels of sources using getSourceOpacity and use that number
--- as the sources maximum opacity when fading sources out and back.  
+-- as the sources maximum opacity when fading sources out and back.
 -------------------------------------------------------------------------------------------------------------------------
 function read_source_opacity()
 	dbg_method("read_source_opacity")
@@ -1282,11 +1285,11 @@ function read_source_opacity()
 				if source_id == "text_gdiplus" or source_id == "text_ft2_source" then -- just another text object
 					getSourceOpacity(sourceName)
 				else -- check for filter named "Color Correction"
-			
+
 					local color_filter = obs.obs_source_get_filter_by_name(extra_source, "Color Correction")
 					if color_filter ~= nil then -- update filters opacity
 						local filter_settings = obs.obs_source_get_settings(color_filter)
-						max_opacity[sourceName]={}	
+						max_opacity[sourceName]={}
 						max_opacity[sourceName]["CC-opacity"] = obs.obs_data_get_double(filter_settings, "opacity")
 						obs.obs_data_release(filter_settings)
 						obs.obs_source_release(color_filter)
@@ -1300,15 +1303,14 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- SET TEXT VISIBILITY
--- Manages visibility of the text sources from Hidden, through fading in or out, to Visible. 
--------------------------------------------------------------------------------------------------------------------------    
+-- Manages visibility of the text sources from Hidden, through fading in or out, to Visible.
+-------------------------------------------------------------------------------------------------------------------------
 function set_text_visibility(end_status)
     dbg_method("set_text_visibility")
     -- if already at desired visibility, then exit
     if text_status == end_status then
         return
     end
-	print("text_status: " .. text_status)
     if end_status == TEXT_HIDE then
         text_opacity = 0
         text_status = TEXT_HIDDEN
@@ -1348,7 +1350,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- TRANSITION LYRIC TEXT
--- This function hides current lyric (with or without fading), changes to next page of lyrics, and then re-displays 
+-- This function hides current lyric (with or without fading), changes to next page of lyrics, and then re-displays
 -- the new page (with or without fading).
 -------------------------------------------------------------------------------------------------------------------------
 function transition_lyric_text(force_show)
@@ -1516,7 +1518,7 @@ end
 -------------------------------------------------------------------------------------------------------------------------
 -- FADE CALLBACK
 -- Gradually increments or decrements target source object opacities towards the target visibility state, stopping
--- the callback timer when the target visibility is reached.  
+-- the callback timer when the target visibility is reached.
 -------------------------------------------------------------------------------------------------------------------------
 function fade_callback()
     -- if not in a transitory state, exit callback
@@ -1559,7 +1561,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- PREPARE SONG BY NUMBER
--- Prepares a song by its position in the prepared lyrics list 
+-- Prepares a song by its position in the prepared lyrics list
 -------------------------------------------------------------------------------------------------------------------------
 function prepare_song_by_index(index)
     dbg_method("prepare_song_by_index")
@@ -1571,8 +1573,8 @@ end
 ---------------------------------------------------------------------------------------------------------------------
 -- PREPARE SONG BY NAME
 -- Function to parse and process markups within the lyrics and break the text into defined pages and verses
--- The first line of song/text files can contain an optional list of meta tags that organize the files into 
--- user defined genre or categories for later filtering during selection 
+-- The first line of song/text files can contain an optional list of meta tags that organize the files into
+-- user defined genre or categories for later filtering during selection
 
 -- Currently supported markups all start with # or //
 
@@ -1691,14 +1693,13 @@ function prepare_song_by_name(name)
             end
             local static_index = line:find("#S:") -- Single Static
             if static_index ~= nil then
-                line = line:sub(static_index + 3)
+                line = line:sub(static_index+3)
                 static_text = line
                 new_lines = 0
             end
             local title_index = line:find("#T:")  -- Set Title
             if title_index ~= nil then
-                local title_indexEnd = line:find("%s+", title_index + 1)
-                line = line:sub(title_indexEnd + 1)
+                line = line:sub(title_index+3)
                 alt_title = line
                 new_lines = 0
             end
@@ -1850,8 +1851,8 @@ function prepare_song_by_name(name)
                             end
                         end
                         singleAlternate = false
-                    else  -- Text goes to Refrain or Verse Lyrics 
-                        if recordRefrain then   
+                    else  -- Text goes to Refrain or Verse Lyrics
+                        if recordRefrain then
                             displaySize = refrain_display_lines   -- display lines controlled by Refrain Size
                         else
                             displaySize = adjusted_display_lines  -- display lines controlled by Lyric Size
@@ -1900,7 +1901,7 @@ function prepare_song_by_name(name)
             end
         end
     end
-    if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then  -- pad lines 
+    if ensure_lines and lyrics[#lyrics] ~= nil and cur_line > 1 then  -- pad lines
         for i = cur_line, displaySize, 1 do
             cur_line = i
             if use_alternate then
@@ -1923,8 +1924,8 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- GET INDEX IN LIST
--- Finds a specifically named song in the prepared list 
---------------------------------------------------------------------------------------------------------------------------- 
+-- Finds a specifically named song in the prepared list
+---------------------------------------------------------------------------------------------------------------------------
 function get_index_in_list(list, q_item)
     for index, item in ipairs(list) do
         if item == q_item then
@@ -1952,7 +1953,6 @@ function delete_song(name)
     end
     os.remove(path)  -- delete from OS
     table.remove(song_directory, get_index_in_list(song_directory, name)) -- delete from table
-    source_filter = false
     load_source_song_directory(false)
 end
 
@@ -1960,23 +1960,20 @@ end
 -- LOAD SONG DIRECTORY
 -- Loads the current song directory into a song_directory table
 -- optionally uses a filter based on a list of desired meta keys to include
--- If using a filter then only files that have those selected meta keys on their first line will be 
+-- If using a filter then only files that have those selected meta keys on their first line will be
 -- included in the directory table
 -------------------------------------------------------------------------------------------------------------------------
 function load_source_song_directory(use_filter)
     dbg_method("load_source_song_directory")
     local keytext = meta_tags
-    if source_filter then
+    if use_filter then
         keytext = source_meta_tags
     end
-    dbg_inner(keytext)
     local keys = ParseCSVLine(keytext)
-
     song_directory = {}
     local filenames = {}
     local tags = {}
     local dir = obs.os_opendir(get_songs_folder_path())
-    -- get_songs_folder_path())
     local entry
     local songExt
     local songTitle
@@ -1990,9 +1987,9 @@ function load_source_song_directory(use_filter)
          then
             songExt = obs.os_get_path_extension(entry.d_name)
             songTitle = string.sub(entry.d_name, 0, string.len(entry.d_name) - string.len(songExt))
-            tags = readTags(songTitle)
             goodEntry = true
             if use_filter and #keys > 0 then -- need to check files
+			    tags = readTags(songTitle)
                 for k = 1, #keys do
                     if keys[k] == "*" then
                         goodEntry = true -- okay to show untagged files
@@ -2055,8 +2052,8 @@ function readTags(name)
         file:close()
     end
     local meta_index = meta:find("//meta ") -- Look for meta block Set
-    if meta_index ~= nil then  
-        meta = meta:sub(meta_index + 7)
+    if meta_index ~= nil then
+        meta = meta:sub(meta_index + 6)
         return ParseCSVLine(meta)
     end
     return {}
@@ -2117,7 +2114,7 @@ local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-" -- 
 -- Encode invalid filename
 -- Encodes title/filename if it contains invalid filename characters
 -- Note: User should use valid filenames to prevent encoding and the override the title with '#t: title' in markup
---------------------------------------------------------------------------------------------------------------------------- 
+---------------------------------------------------------------------------------------------------------------------------
 function enc(data)
     return ((data:gsub(
         ".",
@@ -2222,7 +2219,7 @@ function save_song(name, text)
 end
 
 -------------------------------------------------------------------------------------------------------------------------
--- SAVE PREPARED SONGS to PREPARED.DAT 
+-- SAVE PREPARED SONGS to PREPARED.DAT
 -- User has option to store the List of Prepared songs in an external dat file with songs.
 -------------------------------------------------------------------------------------------------------------------------
 
@@ -2242,27 +2239,27 @@ end
 --
 function get_text()
     local source = obs.obs_get_source_by_name(source_name)
-	if source ~= nil then 
+	if source ~= nil then
 		local settings = obs.obs_source_get_settings(source)
-		if settings ~= nil then 
+		if settings ~= nil then
 			mon_lyric = obs.obs_data_get_string(settings,"text"):gsub("\n", "<br>&bull; ")
 			obs.obs_data_release(settings)
 		end
 	    obs.obs_source_release(source)
 	end
     local alt_source = obs.obs_get_source_by_name(alternate_source_name)
-	if alt_source ~= nil then 
+	if alt_source ~= nil then
 		local settings = obs.obs_source_get_settings(alt_source)
-		if settings ~= nil then 
+		if settings ~= nil then
 			mon_alt = obs.obs_data_get_string(settings,"text"):gsub("\n", "<br>&bull; ")
 			obs.obs_data_release(settings)
 		end
 	    obs.obs_source_release(alt_source)
-	end	
-    local title_source = obs.obs_get_source_by_name(title_source_name)	
-	if title_source ~= nil then 
+	end
+    local title_source = obs.obs_get_source_by_name(title_source_name)
+	if title_source ~= nil then
 		local settings = obs.obs_source_get_settings(title_source)
-		if settings ~= nil then 
+		if settings ~= nil then
 			mon_song = obs.obs_data_get_string(settings,"text")
 			obs.obs_data_release(settings)
 		end
@@ -2274,7 +2271,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------
 -- UPDATE MONITOR
--- Lyrics maintains an external Monitor.htm file in the songs directory that can be viewed externally or docked within 
+-- Lyrics maintains an external Monitor.htm file in the songs directory that can be viewed externally or docked within
 -- OBS as a browser option.  This function keeps that files HTML text updated.
 -------------------------------------------------------------------------------------------------------------------------
 function update_monitor()
@@ -2297,10 +2294,10 @@ function update_monitor()
     text =
         text ..
         "<div style = 'background-color:#332222;'><div style = 'color: #B0E0E6; float: left; ; margin: 2px; margin-right: 20px; '>"
-	if using_preview then 
+	if using_preview then
 			text = text .. "From <B style='color: #FFEF00;'>Preview</B></div>"
 	elseif using_source then
-			text = text .. "From <B style='color: #FFEF00;'>Source: <i><font color=#DDDDDD>" .. load_scene .. "</i></font></B></div>"		
+			text = text .. "From <B style='color: #FFEF00;'>Source: <i><font color=#DDDDDD>" .. load_scene .. "</i></font></B></div>"
     else
 		local indexText = "N/A"
 		if prepared_index ~= nil then
@@ -2313,14 +2310,14 @@ function update_monitor()
     end
     text =
         text ..
-        "<div style = 'color: #B0E0E6; float: left; margin: 2px; margin-right: 20px; '>Lyric Page: <B style='color: #FFEF00;'>" 
-	local pages = (#lyrics == 0) and 0 or #lyrics-1 
+        "<div style = 'color: #B0E0E6; float: left; margin: 2px; margin-right: 20px; '>Lyric Page: <B style='color: #FFEF00;'>"
+	local pages = (#lyrics == 0) and 0 or #lyrics-1
 	if page_index < #lyrics then
 		text = text .. page_index.. "</B><B style='color: #B0E0E6;'> of </B><B style='color: #FFEF00;'>" .. pages .. "</B></div>"
 	else
 			text = text .. "Blank</B></div>"
 	end
-	
+
     if #verses ~= nil and mon_verse > 0 then
         text =
             text ..
@@ -2451,19 +2448,20 @@ end
 --------
 
 -- A function named script_properties defines the properties that the user
--- can change for the entire script module.  
+-- can change for the entire script module.
 
 function script_description()
     return description
 end
 
-	
+
 -------------------------------------------------------------------------------------------------------------------------
 -- OBS PROPERTIES FUNCTION (See OBS Documentation)
 ------------------------------------------------------------------------------------------------------------------------
 function script_properties()
     dbg_method("script_properties")
     editVisSet = false
+	use_meta_tags = false
     script_props = obs.obs_properties_create()
     obs.obs_properties_add_button(script_props, "expand_all_button", "▲- HIDE ALL GROUPS -▲", expand_all_groups)
     -----------
@@ -2509,7 +2507,7 @@ function script_properties()
     obs.obs_properties_add_button(gp, "filter_songs_button", "Filter Titles by Meta Tags", filter_songs_clicked)
     local gps = obs.obs_properties_create()
     obs.obs_properties_add_text(gps, "prop_edit_metatags", "<font color=#FFD966>Filter MetaTags</font>", obs.OBS_TEXT_DEFAULT)
-    obs.obs_properties_add_button(gps, "dir_refresh", "Refresh Directory", refresh_directory_button_clicked)
+    obs.obs_properties_add_button(gps, "dir_refresh", "Filter by Tags (Could take time to complete)", refresh_directory_button_clicked)
     local meta_group_prop = obs.obs_properties_add_group(gp, "meta", " Filter Songs/Text", obs.OBS_GROUP_NORMAL, gps)
     gps = obs.obs_properties_create()
     local prepare_prop =
@@ -2524,12 +2522,12 @@ function script_properties()
     for _, name in ipairs(prepared_songs) do
         obs.obs_property_list_add_string(prepare_prop, name, name)
     end
-	obs.obs_data_set_string(script_sets, "prop_prepared_list", "*** LIST OF PREPARED SONGS ***")	
+	obs.obs_data_set_string(script_sets, "prop_prepared_list", "*** LIST OF PREPARED SONGS ***")
     obs.obs_property_set_modified_callback(prepare_prop, prepare_selection_made)
     local count = obs.obs_property_list_item_count(prepare_prop)
     if count > 1 then
 		obs.obs_property_set_description( prepare_prop, "<font color=#FFD966>Prepared (" .. count-1 .. ")</font>")
-    end	
+    end
     obs.obs_properties_add_button(gps, "prop_clear_button", "Clear All Prepared Songs/Text", clear_prepared_clicked)
     obs.obs_properties_add_button(gps, "prop_manage_button", "Edit Prepared List", edit_prepared_clicked)
     local eps = obs.obs_properties_create()
@@ -2553,7 +2551,7 @@ function script_properties()
     )
 	local saveExtProp = obs.obs_properties_add_bool(eps, "saveExternal", "Use external Prepared.dat file ")
 	obs.obs_property_set_modified_callback(saveExtProp, reLoadPrepared)
-	
+
     obs.obs_properties_add_group(gp, "prep_grp", "Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gps)
     obs.obs_properties_add_group(script_props, "mng_grp", "Manage Prepared Songs/Text", obs.OBS_GROUP_NORMAL, gp)
     ------------------
@@ -2589,21 +2587,21 @@ function script_properties()
         transition_prop,
         "Use with Studio Mode, duplicate sources, and OBS source transitions (beta)"
     )
-	
-    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable Fade Transitions") 
+
+    local fade_prop = obs.obs_properties_add_bool(gp, "text_fade_enabled", "Enable Fade Transitions")
     obs.obs_property_set_modified_callback(fade_prop, change_fade_property)
     local fp1 = obs.obs_properties_add_int_slider(gp, "text_fade_speed", "<font color=#FFD966>Fade Speed</font>", 1, 10, 1)
 	local fp2 = obs.obs_properties_add_bool(gp,"use100percent", "Use 0-100% opacity for fades")
-	local fp3 = obs.obs_properties_add_bool(gp,"allowBackFade", "Enable Background Fading")	
-    obs.obs_property_set_modified_callback(fp2, change_100percent_property)	
-    obs.obs_property_set_modified_callback(fp3, change_back_fade_property)		
+	local fp3 = obs.obs_properties_add_bool(gp,"allowBackFade", "Enable Background Fading")
+    obs.obs_property_set_modified_callback(fp2, change_100percent_property)
+    obs.obs_property_set_modified_callback(fp3, change_back_fade_property)
 	local oprefprop = obs.obs_properties_add_button(gp, "refreshOP", "Mark Max Opacity for Source Fades", read_source_opacity_clicked)
     obs.obs_properties_add_group(script_props, "disp_grp", "Display Options", obs.OBS_GROUP_NORMAL, gp)
-	
+
     -------------
     obs.obs_properties_add_button(script_props, "src_showing", "▲- HIDE SOURCE TEXT SELECTIONS -▲", change_src_visible)
     gp = obs.obs_properties_create()
-	
+
     local source_prop =
         obs.obs_properties_add_list(
         gp,
@@ -2612,7 +2610,7 @@ function script_properties()
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
-	local flbprop = obs.obs_properties_add_bool(gp, "fade_text_back", "Fade Text Background") 
+	local flbprop = obs.obs_properties_add_bool(gp, "fade_text_back", "Fade Text Background")
     local title_source_prop =
         obs.obs_properties_add_list(
         gp,
@@ -2621,7 +2619,7 @@ function script_properties()
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
-	local ftbprop = obs.obs_properties_add_bool(gp, "fade_title_back", "Fade Title Background") 
+	local ftbprop = obs.obs_properties_add_bool(gp, "fade_title_back", "Fade Title Background")
     local alternate_source_prop =
         obs.obs_properties_add_list(
         gp,
@@ -2630,7 +2628,7 @@ function script_properties()
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
-	local fabprop = obs.obs_properties_add_bool(gp, "fade_alternate_back", "Fade Alternate Background") 
+	local fabprop = obs.obs_properties_add_bool(gp, "fade_alternate_back", "Fade Alternate Background")
     local static_source_prop =
         obs.obs_properties_add_list(
         gp,
@@ -2639,9 +2637,9 @@ function script_properties()
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING
     )
-	local fsbprop = obs.obs_properties_add_bool(gp, "fade_static_back", "Fade Static Background") 
+	local fsbprop = obs.obs_properties_add_bool(gp, "fade_static_back", "Fade Static Background")
     obs.obs_properties_add_button(gp, "prop_refresh", "Refresh All Sources", refresh_button_clicked)
-	
+
 	local dlprop = obs.obs_properties_add_button(gp, "do_link_button", "Add Additional Linked Sources", do_linked_clicked)
     xgp = obs.obs_properties_create()
     local extra_linked_prop =
@@ -2665,8 +2663,8 @@ function script_properties()
         obs.OBS_COMBO_FORMAT_STRING
     )
     obs.obs_property_set_modified_callback(extra_source_prop, link_source_selected)
-    obs.obs_properties_add_bool(xgp, "link_extra_with_text", "Show/Hide Sources with Lyrics Text")	
-	local febprop = obs.obs_properties_add_bool(xgp, "fade_extra_back", "Fade Background for Text Sources") 	
+    obs.obs_properties_add_bool(xgp, "link_extra_with_text", "Show/Hide Sources with Lyrics Text")
+	local febprop = obs.obs_properties_add_bool(xgp, "fade_extra_back", "Fade Background for Text Sources")
     local clearcall_prop =
         obs.obs_properties_add_button(xgp, "linked_clear_button", "Clear Linked Sources", clear_linked_clicked)
     local extra_group_prop =
@@ -2674,7 +2672,7 @@ function script_properties()
     obs.obs_properties_add_group(script_props, "src_grp", "Text Sources in Scenes", obs.OBS_GROUP_NORMAL, gp)
     local count = obs.obs_property_list_item_count(extra_linked_prop)
     if count > 0 then
-        do_linked_clicked(script_props,dlprop) 
+        do_linked_clicked(script_props,dlprop)
 		obs.obs_property_set_description(
             extra_linked_prop,
             "Linked Sources (" .. count .. ")"
@@ -2717,15 +2715,15 @@ function script_properties()
     obs.obs_property_set_visible(meta_group_prop, false)
 	obs.obs_property_set_visible(fp1, text_fade_enabled)
 	obs.obs_property_set_visible(fp2, text_fade_enabled)
-	obs.obs_property_set_visible(fp3, text_fade_enabled)	
+	obs.obs_property_set_visible(fp3, text_fade_enabled)
 	obs.obs_property_set_visible(flbprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(ftbprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(fabprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(fsbprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(febprop, text_fade_enabled and allow_back_fade)
 	obs.obs_property_set_visible(oprefprop, text_fade_enabled and not use100percent)
-	
-	
+
+
 	read_source_opacity()
     return script_props
 end
@@ -2733,7 +2731,7 @@ end
 -------------------------------------------------------------------------------------------------------------------------
 -- SCRIPT UPDATE (See OBS Documentation)
 ------------------------------------------------------------------------------------------------------------------------
--- script_update is called when settings are changed
+-- script_update is called when settings are changed (Every KEYSTROKE Included)
 function script_update(settings)
     text_fade_enabled = obs.obs_data_get_bool(settings, "text_fade_enabled")
     text_fade_speed = obs.obs_data_get_int(settings, "text_fade_speed")
@@ -2752,7 +2750,7 @@ function script_update(settings)
 	fade_alternate_back = obs.obs_data_get_bool(settings, "fade_alternate_back") and allow_back_fade
 	fade_static_back = obs.obs_data_get_bool(settings, "fade_static_back") and allow_back_fade
 	fade_extra_back = obs.obs_data_get_bool(settings, "fade_extra_back") and allow_back_fade
-	update_monitor()
+	source_meta_tags = obs.obs_data_get_string(settings, "prop_edit_metatags")
 end
 
 -------------------------------------------------------------------------------------------------------------------------
@@ -2763,8 +2761,8 @@ function script_defaults(settings)
     obs.obs_data_set_default_int(settings, "prop_lines_counter", 2)
     obs.obs_data_set_default_string(settings, "hotkey-title", "Button Function\t\tAssigned Hotkey Sequence")
 	obs.obs_data_set_default_bool(settings,"use100percent", true)
-	obs.obs_data_set_default_bool(settings,"text_fade_enabled", false)	
-	obs.obs_data_set_default_int(settings,"text_fade_speed", 5)		
+	obs.obs_data_set_default_bool(settings,"text_fade_enabled", false)
+	obs.obs_data_set_default_int(settings,"text_fade_speed", 5)
     if os.getenv("HOME") == nil then
         windows_os = true
     end -- must be set prior to calling any file functions
@@ -2820,7 +2818,7 @@ dbg_method("Load Prepared")
 		end
 		obs.obs_data_array_release(prepared_songs_array)
 	end
-	if #prepared_songs > 0 then 
+	if #prepared_songs > 0 then
 	   prepared_index = 1
 	end
 end
@@ -2829,6 +2827,7 @@ end
 -- This is a FILE function to write prepared songs from an external file, but also a SETTINGS storage function
 -----------------------------------------------------------------------------------------------------------------------
 function save_prepared(settings)
+	if #prepared > 0 then
 		if saveExternal then -- saves preprepared songs in prepared.dat file
 			local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
 			for i, name in ipairs(prepared_songs) do
@@ -2846,6 +2845,7 @@ function save_prepared(settings)
 			obs.obs_data_set_array(settings, "prepared_songs_list", prepared_songs_array)
 			obs.obs_data_array_release(prepared_songs_array)
 		end
+	end
 end
 
 
@@ -2960,7 +2960,7 @@ function script_load(settings)
     local extra_sources_array = obs.obs_data_get_array(settings, "extra_link_sources")
     local count = obs.obs_data_array_count(extra_sources_array)
     if count > 0 then
-        for i = 0, count do
+        for i = 0, count-1 do
             local item = obs.obs_data_array_item(extra_sources_array, i)
             local sourceName = obs.obs_data_get_string(item, "value")
             if sourceName ~= "" then
@@ -2970,7 +2970,7 @@ function script_load(settings)
         end
     end
     obs.obs_data_array_release(extra_sources_array)
-	
+
 	if os.getenv("HOME") == nil then
 		windows_os = true
 	end -- must be set prior to calling any file functions
@@ -2985,9 +2985,6 @@ end
 -- This function "tries" to ensure sources are not abandoned with 0% opacity
 -----------------------------------------------------------------------------------------------------------------------
 function script_unload()   -- not sure this is working as expected
-	all_sources_fade = true   
-	text_opacity = 100
-	apply_source_opacity()
 end
 
 
@@ -3279,7 +3276,6 @@ end
 --
 function source_refresh_button_clicked(props, p)
     dbg_method("source_refresh_button")
-    source_filter = true
     dbg_inner("tags: " .. source_meta_tags)
     load_source_song_directory(true)
     table.sort(song_directory)
@@ -3316,8 +3312,7 @@ end
 -- Standard OBS get Properties function for OBS source dialog
 --
 source_def.get_properties = function(data)
-    source_filter = true
-    load_source_song_directory(true)
+    load_source_song_directory(false)
     local source_props = obs.obs_properties_create()
     local source_dir_list =
         obs.obs_properties_add_list(
@@ -3390,11 +3385,9 @@ end
 -- on_event setup when source load, detects when a scenes content changes or when the scene list changes, ignores other events
 function on_event(event)
     if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then -- scene changed so update HTML monitor page
-        dbg_bool("Active:", source_active)
         obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
     end
     if event == obs.OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED then -- scene list is different so rename sources to reflect changes
-        dbg_inner("Scene Change")
         obs.timer_add(rename_callback, 1000) -- delay until OBS has completed list change
     end
 end
@@ -3407,7 +3400,7 @@ function load_source_song(source, preview)
     if not preview or (preview and obs.obs_data_get_bool(settings, "source_activate_in_preview")) then
         local song = obs.obs_data_get_string(settings, "songs")
         using_source = true
-		using_preview = false		
+		using_preview = false
         load_source = source
         all_sources_fade = true -- fade title and source the first time
         set_text_visibility(TEXT_HIDE) -- if this is a transition turn it off so it can fade in
@@ -3531,6 +3524,6 @@ obs.obs_register_source(source_def)
 
 -- Base64 Lyrics+ Icon
 description =
-    [[ 
-<div><img style="float: left; margin: 0px 0px 0px 0px;" width="68"   src="data:image/gif;base64,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"/></div><span style="text-align: center;"><span style="color: #FFD966;"><b>OBS Lyrics+</b></span><span style="color: #B69DBB;"><b> Manages lyrics & other paged text</b></span><br><i>Ver: 2.0</i>&nbsp;&bull;&nbsp;Authors: Amirchev & DC Strato<br>with contributions from Taxilian</span>
+    [[
+<div><a href="https://github.com/amirchev/OBS-Lyrics/blob/master/README.md"><img style="float: left; margin: 0px 0px 0px 0px;" width="68"   src="data:image/gif;base64,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"/></a></div><span style="text-align: center;"><span style="color: #FFD966;"><b>OBS Lyrics+</b></span><span style="color: #B69DBB;"><b> Manages lyrics & other paged text</b></span><br><i>Ver: 2.0</i>&nbsp;&bull;&nbsp;Authors: Amirchev & DC Strato<br>with contributions from Taxilian - </span><i><a href="https://github.com/amirchev/OBS-Lyrics/blob/master/README.md">Lyrics+ Help</a></i>
 ]]
