@@ -81,6 +81,7 @@ song_directory = {}		-- holds list of current songs from song directory TODO: Mu
 prepared_songs = {} 	-- holds pre-prepared list of songs to use
 extra_sources = {} 		-- holder for extra sources settings
 max_opacity = {}  		-- record maximum opacity settings for sources
+loadLyric_items = {}
 
 link_text = false 		-- true if Title and Static should fade with text only during hide/show
 link_extras = false 	-- extras fade with text always when true, only during hide/show when false
@@ -1179,13 +1180,14 @@ function setSourceOpacity(sourceName, fadeBackground)
             local sceneSource = obs.obs_frontend_get_current_preview_scene()
 			local sceneObj = obs.obs_scene_from_source(sceneSource)
 			local sceneItem = obs.obs_scene_find_source_recursive(sceneObj, sourceName)
-			obs.obs_source_release(sceneSource)
+			--obs.obs_source_release(sceneSource)
 			if text_opacity > 50 then
 				obs.obs_sceneitem_set_visible(sceneItem, true)
 			else
 				obs.obs_sceneitem_set_visible(sceneItem, false)
 			end
 		end
+--		update_monitor()
 	end
 end
 
@@ -1256,9 +1258,8 @@ function getSourceOpacity(sourceName)
 		max_opacity[sourceName]["outline"] = obs.obs_data_get_int(settings, "outline_opacity") -- outline opacity
 	    max_opacity[sourceName]["gradient"] = obs.obs_data_get_int(settings, "gradient_opacity") --  gradient opacity
 		max_opacity[sourceName]["background"] = obs.obs_data_get_int(settings, "bk_opacity") -- background opacity
-		obs.obs_data_release(settings)
 		obs.obs_source_release(source)
-
+		obs.obs_data_release(settings)
 	end
 end
 
@@ -2751,6 +2752,7 @@ function script_update(settings)
 	fade_static_back = obs.obs_data_get_bool(settings, "fade_static_back") and allow_back_fade
 	fade_extra_back = obs.obs_data_get_bool(settings, "fade_extra_back") and allow_back_fade
 	source_meta_tags = obs.obs_data_get_string(settings, "prop_edit_metatags")
+--	update_monitor()
 end
 
 -------------------------------------------------------------------------------------------------------------------------
@@ -2827,7 +2829,6 @@ end
 -- This is a FILE function to write prepared songs from an external file, but also a SETTINGS storage function
 -----------------------------------------------------------------------------------------------------------------------
 function save_prepared(settings)
-	if #prepared > 0 then
 		if saveExternal then -- saves preprepared songs in prepared.dat file
 			local file = io.open(get_songs_folder_path() .. "/" .. "Prepared.dat", "w")
 			for i, name in ipairs(prepared_songs) do
@@ -2845,7 +2846,6 @@ function save_prepared(settings)
 			obs.obs_data_set_array(settings, "prepared_songs_list", prepared_songs_array)
 			obs.obs_data_array_release(prepared_songs_array)
 		end
-	end
 end
 
 
@@ -2960,7 +2960,7 @@ function script_load(settings)
     local extra_sources_array = obs.obs_data_get_array(settings, "extra_link_sources")
     local count = obs.obs_data_array_count(extra_sources_array)
     if count > 0 then
-        for i = 0, count-1 do
+        for i = 0, count do
             local item = obs.obs_data_array_item(extra_sources_array, i)
             local sourceName = obs.obs_data_get_string(item, "value")
             if sourceName ~= "" then
@@ -3194,9 +3194,9 @@ function rename_source()
                             local settings = obs.obs_source_get_settings(source) -- Get settings for this Prepare_Lyric source
                             local index = obs.obs_data_get_string(settings, "index") -- Get index for this source (set earlier)
                             if loadLyric_items[index] == nil then
-                                loadLyric_items[index] = 1 -- First time to find this source so mark with 1
+                                loadLyric_items[index] = "x" -- First time to find this source so mark with x
                             else
-                                loadLyric_items[index] = loadLyric_items[index] + 1 -- Found this source again so increment
+                                loadLyric_items[index] = "*" -- Found this source again so mark with *
                             end
                             obs.obs_data_release(settings) -- release memory
                         end
@@ -3217,13 +3217,11 @@ function rename_source()
                 local song = obs.obs_data_get_string(settings, "songs") -- Get the current song name to load
                 local index = obs.obs_data_get_string(settings, "index") -- get index
                 if (song ~= nil) then
-                    local name = "<meta " .. t - i .. " />Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
+                    local name = t - i .. ". Load lyrics for: <i><b>" .. song .. "</i></b>" -- use index for compare
                     -- Mark Duplicates
                     if index ~= nil then
-                        if loadLyric_items[index] > 1 then
-                            name =
-                                '<span style="color:#FF6050;">' ..
-                                name .. " <sup>" .. loadLyric_items[index] .. "</sup></span>"
+                        if loadLyric_items[index] == "*" then
+                            name = '<span style="color:#FF6050;">' .. name .. " * </span>"
                         end
                         if (c_name ~= name) then
                             obs.obs_source_set_name(source, name)
@@ -3303,9 +3301,9 @@ end
 function source_selection_made(props, prop, settings)
     dbg_method("source_selection")
     local name = obs.obs_data_get_string(settings, "songs")
-    saved = false -- mark properties changed
     using_source = true
     prepare_selected(name)
+    saved = false -- mark properties changed	
     return true
 end
 
@@ -3385,9 +3383,11 @@ end
 -- on_event setup when source load, detects when a scenes content changes or when the scene list changes, ignores other events
 function on_event(event)
     if event == obs.OBS_FRONTEND_EVENT_SCENE_CHANGED then -- scene changed so update HTML monitor page
+        dbg_bool("Active:", source_active)
         obs.timer_add(update_source_callback, 100) -- delay updating source text until all sources have been removed by OBS
     end
     if event == obs.OBS_FRONTEND_EVENT_SCENE_LIST_CHANGED then -- scene list is different so rename sources to reflect changes
+        dbg_inner("Scene Change")
         obs.timer_add(rename_callback, 1000) -- delay until OBS has completed list change
     end
 end
