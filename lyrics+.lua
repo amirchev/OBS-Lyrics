@@ -2952,8 +2952,6 @@ function script_load(settings)
     script_sets = settings
     source_name = obs.obs_data_get_string(settings, "prop_source_list")
 
-    extra_sources_array = obs.obs_data_get_array(settings, "extra_link_sources")
-
     -- load previously defined extra sources from settings array into table
     -- script_properties function will take them from the table and restore them as UI properties
     --
