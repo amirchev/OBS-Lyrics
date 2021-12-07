@@ -590,7 +590,6 @@ end
 -- applies current source opacity to the necessary sources
 function apply_source_opacity()
     --    dbg_method("apply_source_visiblity")
-
     local settings = obs.obs_data_create()
     obs.obs_data_set_int(settings, "opacity", text_opacity) -- Set new text opacity to zero
     obs.obs_data_set_int(settings, "outline_opacity", text_opacity) -- Set new text outline opacity to zero
