@@ -1404,8 +1404,9 @@ function transition_lyric_text(force_show)
         dbg_custom("Instant On")
         -- if text fade is not enabled, then we can cancel the all_sources_fade
         all_sources_fade = false
-        set_text_visibility(TEXT_VISIBLE) -- does update_source_text()
+        set_text_visibility(TEXT_HIDDEN) -- does update_source_text()
         update_source_text()
+	set_text_visibility(TEXT_VISIBLE)
         dbg_inner("no text fade")
     else -- initiate fade out/in
         dbg_custom("Transition Timer")
