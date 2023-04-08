@@ -93,7 +93,7 @@ This line will be the only one on the 2nd page ###
 Duplicate a line multiple times.
 Try it: 
 ```
-#D3: Sing this line 3 times!!!
+#D:3 Sing this line 3 times!!!
 ```
 [Back to Top](#table-of-contents)
 ### Set number of lines to be displayed per page
