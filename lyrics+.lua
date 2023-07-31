@@ -1143,6 +1143,36 @@ function prepare_selected(name)
     return true
 end
 
+function sceneFindSceneItemBySourceNameRecursive(inScene, findSourceName)
+	dbg_method("findSceneBySource: " .. findSourceName)
+	local returnValue = nil
+	local sceneItems = obs.obs_scene_enum_items(inScene)
+	
+	for _, tempSceneItem in ipairs(sceneItems) do
+		local sceneItemAsSource = obs.obs_sceneitem_get_source(tempSceneItem)
+		local sceneItemSourceName = obs.obs_source_get_name(sceneItemAsSource)
+		dbg_inner("tempSceneItem: " .. sceneItemSourceName)
+		
+		if sceneItemSourceName == findSourceName then
+			returnValue = tempSceneItem
+			break
+		end
+		
+		local tempSceneObj = obs.obs_group_or_scene_from_source(sceneItemAsSource)
+		
+		if tempSceneObj ~= nil then
+			returnValue = sceneFindSceneItemBySourceNameRecursive(tempSceneObj, findSourceName)
+			if returnValue ~= nil then
+				break
+			end
+		end
+	end
+	
+	obs.sceneitem_list_release(sceneItems)
+	return returnValue
+
+end
+
 -------------------------------------------------------------------------------------------------------------------------
 -- SET SOURCE OPACITY
 -- Working function to set source opacities in Settings
@@ -1174,18 +1204,19 @@ function setSourceOpacity(sourceName, fadeBackground)
 			end
 			obs.obs_source_release(source)
 			obs.obs_data_release(settings)
-        else
+		else
 			dbg_inner("use on/off")
 			--  do preview scene item
-            local sceneSource = obs.obs_frontend_get_current_preview_scene()
+			local sceneSource = obs.obs_frontend_get_current_preview_scene()
 			local sceneObj = obs.obs_scene_from_source(sceneSource)
-			local sceneItem = obs.obs_scene_find_source_recursive(sceneObj, sourceName)
-			--obs.obs_source_release(sceneSource)
+			local sceneItem = sceneFindSceneItemBySourceNameRecursive(sceneObj, sourceName)
+			
 			if text_opacity > 50 then
 				obs.obs_sceneitem_set_visible(sceneItem, true)
 			else
 				obs.obs_sceneitem_set_visible(sceneItem, false)
 			end
+			obs.obs_source_release(sceneSource)
 		end
 --		update_monitor()
 	end
@@ -1373,8 +1404,9 @@ function transition_lyric_text(force_show)
         dbg_custom("Instant On")
         -- if text fade is not enabled, then we can cancel the all_sources_fade
         all_sources_fade = false
-        set_text_visibility(TEXT_VISIBLE) -- does update_source_text()
+        set_text_visibility(TEXT_HIDDEN) -- does update_source_text()
         update_source_text()
+	set_text_visibility(TEXT_VISIBLE)
         dbg_inner("no text fade")
     else -- initiate fade out/in
         dbg_custom("Transition Timer")
