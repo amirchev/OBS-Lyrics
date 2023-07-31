@@ -814,6 +814,7 @@ function update_source_text()
         if (next_lyric == nil) then
             next_lyric = ""
         end
+        force_transform_change(source_name)
     end
     if alt_source ~= nil then
         local settings = obs.obs_data_create() -- setup TEXT settings with opacity values
@@ -824,18 +825,21 @@ function update_source_text()
         if (next_alternate == nil) then
             next_alternate = ""
         end
+        force_transform_change(alternate_source_name)
     end
     if stat_source ~= nil then
         local settings = obs.obs_data_create()
         obs.obs_data_set_string(settings, "text", static)
         obs.obs_source_update(stat_source, settings)
         obs.obs_data_release(settings)
+        force_transform_change(static_source_name)
     end
     if title_source ~= nil then
         local settings = obs.obs_data_create()
         obs.obs_data_set_string(settings, "text", title)
         obs.obs_source_update(title_source, settings)
         obs.obs_data_release(settings)
+        force_transform_change(title_source_name)
     end
     -- release source references
     obs.obs_source_release(source)
@@ -2154,6 +2158,28 @@ function change_fade_property(props, prop, settings)
     local transition_set_prop = obs.obs_properties_get(props, "transition_enabled")
     obs.obs_property_set_enabled(transition_set_prop, not text_fade_set)
     return true
+end
+
+-- force transform change to bitfocus companion sees update
+function force_transform_change(source_name)
+    local objScene
+    local sceneitem
+    local colScenes = obs.obs_frontend_get_scenes()
+    for _, objScene in ipairs(colScenes) do
+        local scene_source = obs.obs_scene_from_source(objScene)
+        local sceneitems = obs.obs_scene_enum_items(scene_source)
+        for _, sceneitem in ipairs(sceneitems) do
+            local itemsource = obs.obs_sceneitem_get_source(sceneitem)
+            local isn = obs.obs_source_get_name(itemsource)
+            if source_name == isn then
+                local pos = obs.vec2()
+                obs.obs_sceneitem_get_pos(sceneitem, pos)
+                obs.obs_sceneitem_set_pos(sceneitem, pos)
+            end
+        end
+        obs.sceneitem_list_release(sceneitems)
+    end
+    obs.source_list_release(colScenes)
 end
 
 function show_help_button(props, prop, settings)
